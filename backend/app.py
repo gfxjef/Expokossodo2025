@@ -7,8 +7,14 @@ from dotenv import load_dotenv
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from datetime import datetime, timedelta
 import json
+import qrcode
+from PIL import Image
+import io
+import time
+import re
 
 load_dotenv()
 
@@ -32,6 +38,129 @@ def get_db_connection():
     except Error as e:
         print(f"Error conectando a la base de datos: {e}")
         return None
+
+# ===== FUNCIONES DE GENERACIÓN QR =====
+
+def generar_texto_qr(nombres, numero, cargo, empresa):
+    """
+    Generar texto QR con formato: {3_LETRAS_NOMBRE}|{DNI}|{CARGO}|{EMPRESA}|{TIMESTAMP}
+    
+    Args:
+        nombres (str): Nombre completo del usuario
+        numero (str): Número de documento/DNI 
+        cargo (str): Cargo del usuario
+        empresa (str): Empresa del usuario
+    
+    Returns:
+        str: Texto QR formateado
+    """
+    try:
+        # Obtener primeras 3 letras del nombre (solo letras)
+        nombres_clean = re.sub(r'[^a-zA-ZáéíóúÁÉÍÓÚñÑ]', '', nombres.upper())
+        tres_letras = nombres_clean[:3].ljust(3, 'X')  # Rellenar con X si es muy corto
+        
+        # Limpiar campos para evitar problemas con pipe |
+        numero_clean = str(numero).replace('|', '-')
+        cargo_clean = str(cargo).replace('|', '-')
+        empresa_clean = str(empresa).replace('|', '-')
+        
+        # Generar timestamp único en segundos
+        timestamp = int(time.time())
+        
+        # Crear texto QR
+        qr_text = f"{tres_letras}|{numero_clean}|{cargo_clean}|{empresa_clean}|{timestamp}"
+        
+        return qr_text
+        
+    except Exception as e:
+        print(f"Error generando texto QR: {e}")
+        return None
+
+def generar_imagen_qr(qr_text):
+    """
+    Generar imagen QR a partir del texto
+    
+    Args:
+        qr_text (str): Texto para convertir en QR
+    
+    Returns:
+        bytes: Imagen QR en formato PNG como bytes
+    """
+    try:
+        # Configurar generador QR
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        
+        # Agregar datos y generar
+        qr.add_data(qr_text)
+        qr.make(fit=True)
+        
+        # Crear imagen
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convertir a bytes
+        img_buffer = io.BytesIO()
+        img.save(img_buffer, format='PNG')
+        img_bytes = img_buffer.getvalue()
+        
+        return img_bytes
+        
+    except Exception as e:
+        print(f"Error generando imagen QR: {e}")
+        return None
+
+def validar_formato_qr(qr_text):
+    """
+    Validar que el texto QR tenga el formato correcto
+    
+    Args:
+        qr_text (str): Texto QR a validar
+    
+    Returns:
+        dict: {valid: bool, parsed: dict o None}
+    """
+    try:
+        if not qr_text or not isinstance(qr_text, str):
+            return {"valid": False, "parsed": None}
+        
+        # Dividir por pipes
+        parts = qr_text.split('|')
+        
+        if len(parts) != 5:
+            return {"valid": False, "parsed": None}
+        
+        tres_letras, numero, cargo, empresa, timestamp = parts
+        
+        # Validaciones básicas
+        if len(tres_letras) != 3 or not tres_letras.isalpha():
+            return {"valid": False, "parsed": None}
+        
+        if not numero or not cargo or not empresa:
+            return {"valid": False, "parsed": None}
+        
+        # Validar timestamp
+        try:
+            timestamp_int = int(timestamp)
+        except ValueError:
+            return {"valid": False, "parsed": None}
+        
+        parsed_data = {
+            "tres_letras": tres_letras,
+            "numero": numero,
+            "cargo": cargo,
+            "empresa": empresa,
+            "timestamp": timestamp_int
+        }
+        
+        return {"valid": True, "parsed": parsed_data}
+        
+    except Exception as e:
+        print(f"Error validando QR: {e}")
+        return {"valid": False, "parsed": None}
 
 def init_database():
     """Inicializar tablas de la base de datos"""
@@ -118,8 +247,93 @@ def init_database():
             )
         """)
         
+        # ===== NUEVAS TABLAS PARA SISTEMA QR Y VERIFICACIÓN =====
+        
+        # Tabla de asistencias generales
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS expokossodo_asistencias_generales (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                registro_id INT NOT NULL,
+                qr_escaneado VARCHAR(500) NOT NULL,
+                fecha_escaneo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                verificado_por VARCHAR(100) DEFAULT 'Sistema',
+                ip_verificacion VARCHAR(45),
+                FOREIGN KEY (registro_id) REFERENCES expokossodo_registros(id) ON DELETE CASCADE,
+                INDEX idx_registro_fecha (registro_id, fecha_escaneo),
+                INDEX idx_qr_escaneado (qr_escaneado)
+            )
+        """)
+        
+        # Tabla de asistencias por sala específica
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS expokossodo_asistencias_por_sala (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                registro_id INT NOT NULL,
+                evento_id INT NOT NULL,
+                qr_escaneado VARCHAR(500) NOT NULL,
+                fecha_ingreso TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                asesor_verificador VARCHAR(100) NOT NULL,
+                ip_verificacion VARCHAR(45),
+                notas TEXT,
+                FOREIGN KEY (registro_id) REFERENCES expokossodo_registros(id) ON DELETE CASCADE,
+                FOREIGN KEY (evento_id) REFERENCES expokossodo_eventos(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_registro_evento_ingreso (registro_id, evento_id),
+                INDEX idx_evento_fecha (evento_id, fecha_ingreso),
+                INDEX idx_qr_escaneado (qr_escaneado)
+            )
+        """)
+        
+        # Agregar nuevas columnas a tabla expokossodo_registros para QR
+        try:
+            cursor.execute("""
+                ALTER TABLE expokossodo_registros 
+                ADD COLUMN qr_code VARCHAR(500) AFTER eventos_seleccionados
+            """)
+            print("✅ Columna 'qr_code' agregada exitosamente")
+        except Error as e:
+            if "Duplicate column name" in str(e):
+                print("ℹ️ Columna 'qr_code' ya existe")
+            else:
+                print(f"Error agregando columna qr_code: {e}")
+        
+        try:
+            cursor.execute("""
+                ALTER TABLE expokossodo_registros 
+                ADD COLUMN qr_generado_at TIMESTAMP NULL AFTER qr_code
+            """)
+            print("✅ Columna 'qr_generado_at' agregada exitosamente")
+        except Error as e:
+            if "Duplicate column name" in str(e):
+                print("ℹ️ Columna 'qr_generado_at' ya existe")
+            else:
+                print(f"Error agregando columna qr_generado_at: {e}")
+        
+        try:
+            cursor.execute("""
+                ALTER TABLE expokossodo_registros 
+                ADD COLUMN asistencia_general_confirmada BOOLEAN DEFAULT FALSE AFTER qr_generado_at
+            """)
+            print("✅ Columna 'asistencia_general_confirmada' agregada exitosamente")
+        except Error as e:
+            if "Duplicate column name" in str(e):
+                print("ℹ️ Columna 'asistencia_general_confirmada' ya existe")
+            else:
+                print(f"Error agregando columna asistencia_general_confirmada: {e}")
+        
+        try:
+            cursor.execute("""
+                ALTER TABLE expokossodo_registros 
+                ADD COLUMN fecha_asistencia_general TIMESTAMP NULL AFTER asistencia_general_confirmada
+            """)
+            print("✅ Columna 'fecha_asistencia_general' agregada exitosamente")
+        except Error as e:
+            if "Duplicate column name" in str(e):
+                print("ℹ️ Columna 'fecha_asistencia_general' ya existe")
+            else:
+                print(f"Error agregando columna fecha_asistencia_general: {e}")
+        
         connection.commit()
-        print("✅ Tablas creadas exitosamente")
+        print("✅ Tablas y columnas QR creadas exitosamente")
         
         # Verificar si ya hay datos de ejemplo
         cursor.execute("SELECT COUNT(*) FROM expokossodo_eventos")
@@ -228,8 +442,8 @@ def populate_sample_data(cursor, connection):
     except Error as e:
         print(f"Error insertando datos de ejemplo: {e}")
 
-def send_confirmation_email(user_data, selected_events):
-    """Enviar email de confirmación"""
+def send_confirmation_email(user_data, selected_events, qr_text=None):
+    """Enviar email de confirmación con código QR adjunto"""
     try:
         smtp_server = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
         smtp_port = int(os.getenv('EMAIL_PORT', 587))
@@ -284,6 +498,14 @@ def send_confirmation_email(user_data, selected_events):
                     <p>• <strong>Llegada:</strong> Te recomendamos llegar 15 minutos antes</p>
                 </div>
                 
+                <div style="background-color: #DBEAFE; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <h4>📱 Tu Código QR Personal:</h4>
+                    <p>• Hemos adjuntado tu <strong>código QR único</strong> a este email</p>
+                    <p>• <strong>Guárdalo en tu teléfono</strong> - lo necesitarás para ingresar al evento</p>
+                    <p>• Presenta el QR en recepción y en cada charla para registrar tu asistencia</p>
+                    <p>• <strong>¡No lo compartas!</strong> Es único e intransferible</p>
+                </div>
+                
                 <p>¡Esperamos verte pronto en ExpoKossodo 2024!</p>
                 
                 <div style="text-align: center; margin-top: 30px;">
@@ -296,6 +518,24 @@ def send_confirmation_email(user_data, selected_events):
         """
         
         msg.attach(MIMEText(html_body, 'html'))
+        
+        # ===== ADJUNTAR CÓDIGO QR =====
+        if qr_text:
+            try:
+                # Generar imagen QR
+                qr_image_bytes = generar_imagen_qr(qr_text)
+                if qr_image_bytes:
+                    # Crear adjunto de imagen
+                    qr_attachment = MIMEImage(qr_image_bytes)
+                    qr_attachment.add_header('Content-Disposition', 
+                                           f'attachment; filename="QR_ExpoKossodo_{user_data["nombres"].replace(" ", "_")}.png"')
+                    qr_attachment.add_header('Content-ID', '<qr_code>')
+                    msg.attach(qr_attachment)
+                    print("✅ Código QR adjuntado al email exitosamente")
+                else:
+                    print("⚠️ No se pudo generar la imagen QR para adjuntar")
+            except Exception as e:
+                print(f"⚠️ Error adjuntando QR al email: {e}")
         
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
@@ -405,11 +645,23 @@ def crear_registro():
                 "error": "No puede seleccionar múltiples eventos en el mismo horario"
             }), 400
         
-        # Insertar registro
+        # ===== GENERAR CÓDIGO QR =====
+        qr_text = generar_texto_qr(
+            data['nombres'], 
+            data['numero'], 
+            data['cargo'], 
+            data['empresa']
+        )
+        
+        if not qr_text:
+            return jsonify({"error": "Error generando código QR"}), 500
+        
+        # Insertar registro con QR
         cursor.execute("""
             INSERT INTO expokossodo_registros 
-            (nombres, correo, empresa, cargo, numero, expectativas, eventos_seleccionados)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            (nombres, correo, empresa, cargo, numero, expectativas, eventos_seleccionados, 
+             qr_code, qr_generado_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
         """, (
             data['nombres'],
             data['correo'],
@@ -417,7 +669,8 @@ def crear_registro():
             data['cargo'],
             data['numero'],
             data.get('expectativas', ''),
-            json.dumps(evento_ids)
+            json.dumps(evento_ids),
+            qr_text
         ))
         
         registro_id = cursor.lastrowid
@@ -446,12 +699,14 @@ def crear_registro():
         
         eventos_completos = cursor.fetchall()
         
-        # Enviar email de confirmación
-        email_sent = send_confirmation_email(data, eventos_completos)
+        # Enviar email de confirmación con QR
+        email_sent = send_confirmation_email(data, eventos_completos, qr_text)
         
         return jsonify({
             "message": "Registro creado exitosamente",
             "registro_id": registro_id,
+            "qr_code": qr_text,
+            "qr_generated": True,
             "email_sent": email_sent
         })
         
@@ -659,6 +914,351 @@ def get_evento_detalle(evento_id):
     except Error as e:
         print(f"Error obteniendo evento {evento_id}: {e}")
         return jsonify({'error': 'Error obteniendo evento'}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+# ===== ENDPOINTS DE VERIFICACIÓN QR =====
+
+@app.route('/api/verificar/buscar-usuario', methods=['POST'])
+def buscar_usuario_por_qr():
+    """Buscar usuario por código QR escaneado"""
+    data = request.get_json()
+    
+    if not data or 'qr_code' not in data:
+        return jsonify({"error": "Código QR requerido"}), 400
+    
+    qr_code = data['qr_code']
+    
+    # Validar formato QR
+    validacion = validar_formato_qr(qr_code)
+    if not validacion['valid']:
+        return jsonify({"error": "Código QR inválido"}), 400
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Buscar usuario por código QR
+        cursor.execute("""
+            SELECT r.*, 
+                   CASE WHEN r.asistencia_general_confirmada = 1 THEN 'confirmada' ELSE 'pendiente' END as estado_asistencia
+            FROM expokossodo_registros r
+            WHERE r.qr_code = %s
+        """, (qr_code,))
+        
+        usuario = cursor.fetchone()
+        
+        if not usuario:
+            return jsonify({"error": "Usuario no encontrado"}), 404
+        
+        # Obtener eventos registrados del usuario
+        cursor.execute("""
+            SELECT e.id, e.fecha, e.hora, e.sala, e.titulo_charla, e.expositor, e.pais,
+                   CASE WHEN aps.id IS NOT NULL THEN 'presente' ELSE 'ausente' END as estado_sala
+            FROM expokossodo_eventos e
+            INNER JOIN expokossodo_registro_eventos re ON e.id = re.evento_id
+            LEFT JOIN expokossodo_asistencias_por_sala aps ON e.id = aps.evento_id AND aps.registro_id = %s
+            WHERE re.registro_id = %s
+            ORDER BY e.fecha, e.hora
+        """, (usuario['id'], usuario['id']))
+        
+        eventos = cursor.fetchall()
+        
+        # Verificar si ya tiene asistencia general registrada
+        cursor.execute("""
+            SELECT fecha_escaneo 
+            FROM expokossodo_asistencias_generales 
+            WHERE registro_id = %s 
+            ORDER BY fecha_escaneo DESC 
+            LIMIT 1
+        """, (usuario['id'],))
+        
+        asistencia_general = cursor.fetchone()
+        
+        return jsonify({
+            "usuario": {
+                "id": usuario['id'],
+                "nombres": usuario['nombres'],
+                "correo": usuario['correo'],
+                "empresa": usuario['empresa'],
+                "cargo": usuario['cargo'],
+                "numero": usuario['numero'],
+                "fecha_registro": usuario['fecha_registro'].isoformat() if usuario['fecha_registro'] else None,
+                "asistencia_confirmada": usuario['asistencia_general_confirmada'],
+                "estado_asistencia": usuario['estado_asistencia']
+            },
+            "eventos": eventos,
+            "asistencia_general": asistencia_general,
+            "qr_validado": validacion['parsed']
+        })
+        
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.route('/api/verificar/confirmar-asistencia', methods=['POST'])
+def confirmar_asistencia_general():
+    """Confirmar asistencia general del usuario"""
+    data = request.get_json()
+    
+    required_fields = ['registro_id', 'qr_code']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"error": f"Campo requerido: {field}"}), 400
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Verificar que el usuario existe
+        cursor.execute("""
+            SELECT id, nombres FROM expokossodo_registros 
+            WHERE id = %s AND qr_code = %s
+        """, (data['registro_id'], data['qr_code']))
+        
+        usuario = cursor.fetchone()
+        if not usuario:
+            return jsonify({"error": "Usuario no encontrado"}), 404
+        
+        # Verificar si ya tiene asistencia confirmada
+        cursor.execute("""
+            SELECT id FROM expokossodo_asistencias_generales 
+            WHERE registro_id = %s
+        """, (data['registro_id'],))
+        
+        if cursor.fetchone():
+            return jsonify({"error": "Asistencia ya confirmada previamente"}), 400
+        
+        # Registrar asistencia general
+        cursor.execute("""
+            INSERT INTO expokossodo_asistencias_generales 
+            (registro_id, qr_escaneado, verificado_por, ip_verificacion)
+            VALUES (%s, %s, %s, %s)
+        """, (
+            data['registro_id'],
+            data['qr_code'],
+            data.get('verificado_por', 'Sistema'),
+            request.remote_addr
+        ))
+        
+        # Actualizar campo en tabla de registros
+        cursor.execute("""
+            UPDATE expokossodo_registros 
+            SET asistencia_general_confirmada = TRUE, fecha_asistencia_general = NOW()
+            WHERE id = %s
+        """, (data['registro_id'],))
+        
+        connection.commit()
+        
+        return jsonify({
+            "message": f"Asistencia confirmada para {usuario['nombres']}",
+            "registro_id": data['registro_id'],
+            "confirmado": True
+        })
+        
+    except Error as e:
+        connection.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+# ===== ENDPOINTS DE VERIFICACIÓN POR SALA =====
+
+@app.route('/api/verificar-sala/eventos', methods=['GET'])
+def get_eventos_verificacion():
+    """Obtener eventos para verificación por sala"""
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        cursor.execute("""
+            SELECT e.*,
+                   COUNT(re.registro_id) as registrados,
+                   COUNT(aps.registro_id) as presentes
+            FROM expokossodo_eventos e
+            LEFT JOIN expokossodo_registro_eventos re ON e.id = re.evento_id
+            LEFT JOIN expokossodo_asistencias_por_sala aps ON e.id = aps.evento_id
+            GROUP BY e.id
+            ORDER BY e.fecha, e.hora, e.sala
+        """)
+        
+        eventos = cursor.fetchall()
+        
+        return jsonify(eventos)
+        
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.route('/api/verificar-sala/verificar', methods=['POST'])
+def verificar_acceso_sala():
+    """Verificar acceso del usuario a sala específica"""
+    data = request.get_json()
+    
+    required_fields = ['qr_code', 'evento_id', 'asesor_verificador']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"error": f"Campo requerido: {field}"}), 400
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Validar QR
+        validacion = validar_formato_qr(data['qr_code'])
+        if not validacion['valid']:
+            return jsonify({"error": "Código QR inválido"}), 400
+        
+        # Buscar usuario
+        cursor.execute("""
+            SELECT id, nombres, empresa, cargo 
+            FROM expokossodo_registros 
+            WHERE qr_code = %s
+        """, (data['qr_code'],))
+        
+        usuario = cursor.fetchone()
+        if not usuario:
+            return jsonify({"error": "Usuario no encontrado"}), 404
+        
+        # Verificar que el usuario esté registrado en ese evento
+        cursor.execute("""
+            SELECT e.titulo_charla, e.hora, e.sala
+            FROM expokossodo_eventos e
+            INNER JOIN expokossodo_registro_eventos re ON e.id = re.evento_id
+            WHERE e.id = %s AND re.registro_id = %s
+        """, (data['evento_id'], usuario['id']))
+        
+        evento = cursor.fetchone()
+        if not evento:
+            return jsonify({
+                "error": "Usuario no registrado en este evento",
+                "usuario": usuario['nombres']
+            }), 403
+        
+        # Verificar si ya ingresó a esta sala
+        cursor.execute("""
+            SELECT id, fecha_ingreso 
+            FROM expokossodo_asistencias_por_sala 
+            WHERE registro_id = %s AND evento_id = %s
+        """, (usuario['id'], data['evento_id']))
+        
+        if cursor.fetchone():
+            return jsonify({
+                "error": "Usuario ya registró ingreso a esta sala",
+                "usuario": usuario['nombres'],
+                "evento": evento['titulo_charla']
+            }), 400
+        
+        # Registrar ingreso a sala
+        cursor.execute("""
+            INSERT INTO expokossodo_asistencias_por_sala 
+            (registro_id, evento_id, qr_escaneado, asesor_verificador, ip_verificacion, notas)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            usuario['id'],
+            data['evento_id'],
+            data['qr_code'],
+            data['asesor_verificador'],
+            request.remote_addr,
+            data.get('notas', '')
+        ))
+        
+        connection.commit()
+        
+        return jsonify({
+            "message": "Acceso autorizado y registrado",
+            "usuario": {
+                "nombres": usuario['nombres'],
+                "empresa": usuario['empresa'],
+                "cargo": usuario['cargo']
+            },
+            "evento": {
+                "titulo": evento['titulo_charla'],
+                "hora": evento['hora'],
+                "sala": evento['sala']
+            },
+            "verificado_por": data['asesor_verificador'],
+            "autorizado": True
+        })
+        
+    except Error as e:
+        connection.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.route('/api/verificar-sala/asistentes/<int:evento_id>', methods=['GET'])
+def get_asistentes_evento(evento_id):
+    """Obtener asistentes de un evento específico"""
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Información del evento
+        cursor.execute("""
+            SELECT titulo_charla, hora, sala, fecha 
+            FROM expokossodo_eventos 
+            WHERE id = %s
+        """, (evento_id,))
+        
+        evento = cursor.fetchone()
+        if not evento:
+            return jsonify({"error": "Evento no encontrado"}), 404
+        
+        # Asistentes registrados
+        cursor.execute("""
+            SELECT r.id, r.nombres, r.empresa, r.cargo, r.correo,
+                   CASE WHEN aps.id IS NOT NULL THEN 'presente' ELSE 'registrado' END as estado,
+                   aps.fecha_ingreso
+            FROM expokossodo_registros r
+            INNER JOIN expokossodo_registro_eventos re ON r.id = re.registro_id
+            LEFT JOIN expokossodo_asistencias_por_sala aps ON r.id = aps.registro_id AND aps.evento_id = %s
+            WHERE re.evento_id = %s
+            ORDER BY aps.fecha_ingreso DESC, r.nombres
+        """, (evento_id, evento_id))
+        
+        asistentes = cursor.fetchall()
+        
+        # Estadísticas
+        total_registrados = len(asistentes)
+        presentes = len([a for a in asistentes if a['estado'] == 'presente'])
+        ausentes = total_registrados - presentes
+        
+        return jsonify({
+            "evento": evento,
+            "asistentes": asistentes,
+            "estadisticas": {
+                "total_registrados": total_registrados,
+                "presentes": presentes,
+                "ausentes": ausentes,
+                "porcentaje_asistencia": round((presentes / total_registrados * 100) if total_registrados > 0 else 0, 1)
+            }
+        })
+        
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
         connection.close()

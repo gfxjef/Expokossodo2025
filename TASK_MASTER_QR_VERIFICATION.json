@@ -1,0 +1,457 @@
+{
+  "project": "ExpoKossodo 2024 - Sistema QR y Verificación",
+  "version": "2.0.0",
+  "created": "2024-12-29",
+  "phases": {
+    "FASE_1_BASE_DATOS": {
+      "title": "Preparación Base de Datos",
+      "priority": "ALTA",
+      "duration_estimate": "2 horas",
+      "tasks": [
+        {
+          "id": "BD-001",
+          "title": "Crear nuevas tablas de asistencia",
+          "description": "Crear tablas expokossodo_asistencias_generales y expokossodo_asistencias_por_sala",
+          "type": "database",
+          "status": "pending",
+          "estimated_time": "30 min",
+          "dependencies": [],
+          "files_affected": ["backend/app.py"],
+          "acceptance_criteria": [
+            "Tablas creadas con estructura correcta",
+            "Foreign keys establecidas",
+            "Índices optimizados agregados",
+            "Constraints de unicidad aplicados"
+          ]
+        },
+        {
+          "id": "BD-002", 
+          "title": "Modificar tabla expokossodo_registros",
+          "description": "Agregar columnas qr_code, qr_generado_at, asistencia_general_confirmada, fecha_asistencia_general",
+          "type": "database",
+          "status": "pending",
+          "estimated_time": "20 min",
+          "dependencies": ["BD-001"],
+          "files_affected": ["backend/app.py"],
+          "acceptance_criteria": [
+            "Columnas agregadas sin afectar datos existentes",
+            "Valores por defecto establecidos",
+            "Migration exitosa en base de datos"
+          ]
+        },
+        {
+          "id": "BD-003",
+          "title": "Actualizar función init_database()",
+          "description": "Modificar función para incluir nuevas tablas y columnas en inicialización",
+          "type": "backend",
+          "status": "pending", 
+          "estimated_time": "20 min",
+          "dependencies": ["BD-001", "BD-002"],
+          "files_affected": ["backend/app.py"],
+          "acceptance_criteria": [
+            "Función actualizada con nuevas estructuras",
+            "Manejo de errores para bases existentes",
+            "Logs informativos de creación"
+          ]
+        }
+      ]
+    },
+    "FASE_2_QR_GENERACION": {
+      "title": "Sistema de Generación QR",
+      "priority": "ALTA", 
+      "duration_estimate": "4 horas",
+      "tasks": [
+        {
+          "id": "QR-001",
+          "title": "Instalar dependencias QR",
+          "description": "Instalar librerías qrcode, Pillow para generación de códigos QR",
+          "type": "setup",
+          "status": "pending",
+          "estimated_time": "10 min",
+          "dependencies": [],
+          "files_affected": ["backend/requirements.txt"],
+          "acceptance_criteria": [
+            "Librerías instaladas correctamente",
+            "requirements.txt actualizado",
+            "Imports funcionando sin errores"
+          ]
+        },
+        {
+          "id": "QR-002",
+          "title": "Crear función generadora de QR",
+          "description": "Función que genere texto QR con formato: 3LETRAS|DNI|CARGO|EMPRESA|TIMESTAMP",
+          "type": "backend",
+          "status": "pending",
+          "estimated_time": "45 min",
+          "dependencies": ["QR-001"],
+          "files_affected": ["backend/app.py"],
+          "acceptance_criteria": [
+            "Función genera texto QR con formato correcto",
+            "Manejo de casos especiales (nombres cortos, caracteres especiales)",
+            "Timestamp único por registro",
+            "Validaciones de entrada"
+          ]
+        },
+        {
+          "id": "QR-003",
+          "title": "Crear función generadora de imagen QR",
+          "description": "Función que convierta texto QR en imagen PNG",
+          "type": "backend", 
+          "status": "pending",
+          "estimated_time": "30 min",
+          "dependencies": ["QR-002"],
+          "files_affected": ["backend/app.py"],
+          "acceptance_criteria": [
+            "Genera imagen QR válida en formato PNG",
+            "Tamaño optimizado para email",
+            "Calidad de lectura adecuada",
+            "Manejo de errores en generación"
+          ]
+        },
+        {
+          "id": "QR-004",
+          "title": "Integrar QR en endpoint de registro",
+          "description": "Modificar /api/registro para generar y guardar QR al crear usuario",
+          "type": "backend",
+          "status": "pending", 
+          "estimated_time": "60 min",
+          "dependencies": ["QR-003", "BD-002"],
+          "files_affected": ["backend/app.py"],
+          "acceptance_criteria": [
+            "QR se genera automáticamente en registro",
+            "Texto QR se guarda en base de datos",
+            "Proceso no afecta velocidad de registro",
+            "Manejo de errores en generación QR"
+          ]
+        },
+        {
+          "id": "QR-005",
+          "title": "Actualizar email con QR adjunto",
+          "description": "Modificar función de email para incluir imagen QR como adjunto",
+          "type": "backend",
+          "status": "pending",
+          "estimated_time": "75 min", 
+          "dependencies": ["QR-004"],
+          "files_affected": ["backend/app.py"],
+          "acceptance_criteria": [
+            "Email incluye QR como adjunto PNG",
+            "Instrucciones de uso del QR en email",
+            "Plantilla email actualizada",
+            "QR visible correctamente en clientes email"
+          ]
+        }
+      ]
+    },
+    "FASE_3_VERIFICADOR_GENERAL": {
+      "title": "Verificador de Asistencia General (/verificar)",
+      "priority": "ALTA",
+      "duration_estimate": "5 horas", 
+      "tasks": [
+        {
+          "id": "VG-001",
+          "title": "Instalar dependencias de cámara React",
+          "description": "Instalar html5-qrcode o react-qr-scanner para escaneo QR",
+          "type": "setup",
+          "status": "pending",
+          "estimated_time": "15 min",
+          "dependencies": [],
+          "files_affected": ["frontend/package.json"],
+          "acceptance_criteria": [
+            "Librería de QR scanner instalada",
+            "package.json actualizado",
+            "Dependencias compatibles con React actual"
+          ]
+        },
+        {
+          "id": "VG-002",
+          "title": "Crear componente QRScanner",
+          "description": "Componente reutilizable para escaneo de códigos QR",
+          "type": "frontend",
+          "status": "pending",
+          "estimated_time": "90 min",
+          "dependencies": ["VG-001"],
+          "files_affected": ["frontend/src/components/QRScanner.js"],
+          "acceptance_criteria": [
+            "Activa cámara automáticamente",
+            "Detecta y decodifica QR en tiempo real",
+            "Manejo de errores de cámara",
+            "Feedback visual de escaneo",
+            "Props para callback de resultado"
+          ]
+        },
+        {
+          "id": "VG-003",
+          "title": "Crear endpoint /api/verificar/buscar-usuario",
+          "description": "Endpoint que busque usuario por código QR escaneado",
+          "type": "backend",
+          "status": "pending",
+          "estimated_time": "45 min",
+          "dependencies": ["BD-003"],
+          "files_affected": ["backend/app.py"],
+          "acceptance_criteria": [
+            "Valida formato de QR recibido",
+            "Busca usuario por código QR",
+            "Retorna datos completos del usuario",
+            "Incluye eventos registrados",
+            "Manejo de QR no encontrados"
+          ]
+        },
+        {
+          "id": "VG-004",
+          "title": "Crear endpoint /api/verificar/confirmar-asistencia",
+          "description": "Endpoint para marcar asistencia general del usuario",
+          "type": "backend",
+          "status": "pending",
+          "estimated_time": "30 min",
+          "dependencies": ["VG-003"],
+          "files_affected": ["backend/app.py"],
+          "acceptance_criteria": [
+            "Registra asistencia en tabla expokossodo_asistencias_generales",
+            "Actualiza campo asistencia_general_confirmada",
+            "Previene registros duplicados",
+            "Retorna confirmación exitosa"
+          ]
+        },
+        {
+          "id": "VG-005",
+          "title": "Crear componente VerificadorGeneral",
+          "description": "Página principal del verificador con layout de 2 columnas",
+          "type": "frontend",
+          "status": "pending",
+          "estimated_time": "120 min",
+          "dependencies": ["VG-002", "VG-004"],
+          "files_affected": ["frontend/src/components/VerificadorGeneral.js"],
+          "acceptance_criteria": [
+            "Layout responsivo 2 columnas",
+            "Columna izquierda: QRScanner activo",
+            "Columna derecha: información usuario",
+            "Estados loading/error/success",
+            "Botón confirmar asistencia",
+            "Feedback visual de confirmación"
+          ]
+        },
+        {
+          "id": "VG-006",
+          "title": "Agregar ruta /verificar en App.js",
+          "description": "Configurar routing para el verificador general",
+          "type": "frontend",
+          "status": "pending",
+          "estimated_time": "10 min",
+          "dependencies": ["VG-005"],
+          "files_affected": ["frontend/src/App.js"],
+          "acceptance_criteria": [
+            "Ruta /verificar configurada",
+            "Componente se carga correctamente",
+            "Acceso directo por URL funciona"
+          ]
+        }
+      ]
+    },
+    "FASE_4_VERIFICADOR_SALA": {
+      "title": "Verificador por Sala (/verificarSala)",
+      "priority": "ALTA",
+      "duration_estimate": "6 horas",
+      "tasks": [
+        {
+          "id": "VS-001",
+          "title": "Crear endpoint /api/verificar-sala/eventos",
+          "description": "Endpoint que retorne todas las charlas para selección",
+          "type": "backend",
+          "status": "pending",
+          "estimated_time": "30 min",
+          "dependencies": ["BD-003"],
+          "files_affected": ["backend/app.py"],
+          "acceptance_criteria": [
+            "Retorna lista completa de eventos",
+            "Incluye información de asistencias por evento",
+            "Ordenado por fecha y hora",
+            "Filtros opcionales por fecha/sala"
+          ]
+        },
+        {
+          "id": "VS-002",
+          "title": "Crear endpoint /api/verificar-sala/verificar",
+          "description": "Endpoint para verificar acceso a sala específica",
+          "type": "backend",
+          "status": "pending",
+          "estimated_time": "60 min",
+          "dependencies": ["VS-001"],
+          "files_affected": ["backend/app.py"],
+          "acceptance_criteria": [
+            "Valida QR y encuentra usuario",
+            "Verifica que usuario esté registrado en esa charla",
+            "Previene ingresos duplicados",
+            "Registra en expokossodo_asistencias_por_sala",
+            "Retorna estado de verificación"
+          ]
+        },
+        {
+          "id": "VS-003",
+          "title": "Crear endpoint /api/verificar-sala/asistentes/:evento_id",
+          "description": "Endpoint que retorne asistentes de una charla específica",
+          "type": "backend",
+          "status": "pending",
+          "estimated_time": "30 min",
+          "dependencies": ["VS-002"],
+          "files_affected": ["backend/app.py"],
+          "acceptance_criteria": [
+            "Lista usuarios registrados en esa charla",
+            "Indica estado de asistencia (presente/ausente)",
+            "Información completa del usuario",
+            "Timestamp de ingreso si aplica"
+          ]
+        },
+        {
+          "id": "VS-004",
+          "title": "Crear componente SelectorCharlas",
+          "description": "Grid/lista para seleccionar charla a verificar",
+          "type": "frontend",
+          "status": "pending",
+          "estimated_time": "90 min",
+          "dependencies": ["VS-001"],
+          "files_affected": ["frontend/src/components/SelectorCharlas.js"],
+          "acceptance_criteria": [
+            "Grid responsivo de charlas",
+            "Información clara por charla",
+            "Filtros por fecha/hora/sala",
+            "Navegación a verificador específico",
+            "Indicadores de asistencia actual"
+          ]
+        },
+        {
+          "id": "VS-005",
+          "title": "Crear componente VerificadorSala",
+          "description": "Verificador específico para una charla seleccionada",
+          "type": "frontend",
+          "status": "pending",
+          "estimated_time": "150 min",
+          "dependencies": ["VS-004", "VG-002"],
+          "files_affected": ["frontend/src/components/VerificadorSala.js"],
+          "acceptance_criteria": [
+            "Header con información de charla",
+            "Layout 2 columnas: scanner + lista asistentes",
+            "QRScanner integrado",
+            "Lista tiempo real de asistentes",
+            "Feedback de verificación exitosa/fallida",
+            "Estados de loading/error"
+          ]
+        },
+        {
+          "id": "VS-006",
+          "title": "Crear componente ListaAsistentes",
+          "description": "Componente para mostrar asistentes de charla específica",
+          "type": "frontend",
+          "status": "pending",
+          "estimated_time": "60 min",
+          "dependencies": ["VS-003"],
+          "files_affected": ["frontend/src/components/ListaAsistentes.js"],
+          "acceptance_criteria": [
+            "Lista scrolleable de asistentes",
+            "Estados visuales (registrado/presente/ausente)",
+            "Información básica del asistente", 
+            "Actualización en tiempo real",
+            "Buscar asistente por nombre"
+          ]
+        },
+        {
+          "id": "VS-007",
+          "title": "Agregar ruta /verificarSala en App.js",
+          "description": "Configurar routing para verificador de sala",
+          "type": "frontend",
+          "status": "pending",
+          "estimated_time": "15 min",
+          "dependencies": ["VS-005"],
+          "files_affected": ["frontend/src/App.js"],
+          "acceptance_criteria": [
+            "Ruta /verificarSala configurada",
+            "Subrutas para charlas específicas",
+            "Navegación entre componentes funciona"
+          ]
+        }
+      ]
+    },
+    "FASE_5_TESTING_OPTIMIZACION": {
+      "title": "Testing y Optimización",
+      "priority": "MEDIA",
+      "duration_estimate": "3 horas",
+      "tasks": [
+        {
+          "id": "TO-001",
+          "title": "Testing generación QR",
+          "description": "Probar generación QR con diferentes tipos de datos",
+          "type": "testing",
+          "status": "pending",
+          "estimated_time": "45 min",
+          "dependencies": ["QR-005"],
+          "acceptance_criteria": [
+            "QR se genera correctamente con datos válidos",
+            "Manejo correcto de caracteres especiales",
+            "Imágenes QR son legibles",
+            "Email llega con QR adjunto"
+          ]
+        },
+        {
+          "id": "TO-002",
+          "title": "Testing verificadores",
+          "description": "Probar funcionalidad completa de verificadores",
+          "type": "testing",
+          "status": "pending",
+          "estimated_time": "90 min",
+          "dependencies": ["VG-006", "VS-007"],
+          "acceptance_criteria": [
+            "Cámara se activa correctamente",
+            "QR se escanea y decodifica",
+            "Datos se muestran correctamente",
+            "Asistencias se registran en BD",
+            "Prevención de duplicados funciona"
+          ]
+        },
+        {
+          "id": "TO-003",
+          "title": "Optimización rendimiento",
+          "description": "Optimizar consultas BD y respuesta frontend",
+          "type": "optimization",
+          "status": "pending",
+          "estimated_time": "60 min",
+          "dependencies": ["TO-002"],
+          "acceptance_criteria": [
+            "Consultas BD optimizadas con índices",
+            "Tiempo respuesta < 3 segundos",
+            "Caché implementado donde aplique",
+            "Frontend responsivo en móviles"
+          ]
+        },
+        {
+          "id": "TO-004",
+          "title": "Documentación técnica",
+          "description": "Crear documentación de nuevas funcionalidades",
+          "type": "documentation",
+          "status": "pending",
+          "estimated_time": "45 min",
+          "dependencies": ["TO-003"],
+          "files_affected": ["DOCUMENTACION_QR_VERIFICACION.md"],
+          "acceptance_criteria": [
+            "Endpoints documentados",
+            "Flujos de usuario explicados",
+            "Guía de troubleshooting",
+            "Ejemplos de uso"
+          ]
+        }
+      ]
+    }
+  },
+  "estimated_total_duration": "20 horas",
+  "critical_path": ["FASE_1_BASE_DATOS", "FASE_2_QR_GENERACION", "FASE_3_VERIFICADOR_GENERAL", "FASE_4_VERIFICADOR_SALA"],
+  "technologies_required": {
+    "backend": ["qrcode", "Pillow", "mysql-connector-python"],
+    "frontend": ["html5-qrcode", "react-webcam"],
+    "database": ["MySQL 8.0+"]
+  },
+  "deployment_notes": [
+    "Actualizar requirements.txt antes de deployment",
+    "Ejecutar migrations de BD en servidor",
+    "Verificar permisos de cámara en browsers",
+    "Configurar HTTPS para acceso a cámara",
+    "Testing en dispositivos móviles requerido"
+  ]
+} 
