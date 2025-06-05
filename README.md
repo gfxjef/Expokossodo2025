@@ -273,4 +273,5 @@ Proyecto desarrollado para ExpoKossodo 2024.
 
 **🎉 ¡Sistema listo para registrar participantes en ExpoKossodo 2024!** #   E x p o k o s s o d o 2 0 2 5  
  #   E x p o k o s s o d o 2 0 2 5  
+ #   E x p o k o s s o d o 2 0 2 5  
  
