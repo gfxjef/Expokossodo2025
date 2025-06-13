@@ -72,6 +72,70 @@ export const adminService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  // ===== NUEVOS MÉTODOS PARA GESTIÓN DE HORARIOS =====
+  
+  // Obtener todos los horarios con estadísticas
+  getHorarios: async () => {
+    try {
+      const response = await adminApi.get('/horarios');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Activar/Desactivar un horario
+  toggleHorario: async (horario) => {
+    try {
+      const response = await adminApi.put(`/horario/${encodeURIComponent(horario)}/toggle`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Obtener solo horarios activos
+  getHorariosActivos: async () => {
+    try {
+      const response = await adminApi.get('/horarios/activos');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // ===== NUEVOS MÉTODOS PARA GESTIÓN DE INFORMACIÓN POR FECHA =====
+  
+  // Obtener información de todas las fechas (para admin)
+  getFechasInfo: async () => {
+    try {
+      const response = await adminApi.get('/fechas-info');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Actualizar información de una fecha específica
+  updateFechaInfo: async (fechaId, fechaData) => {
+    try {
+      const response = await adminApi.put(`/fecha-info/${fechaId}`, fechaData);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Activar/Desactivar información de una fecha
+  toggleFechaInfo: async (fechaId) => {
+    try {
+      const response = await adminApi.put(`/fecha-info/${fechaId}/toggle`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 };
 

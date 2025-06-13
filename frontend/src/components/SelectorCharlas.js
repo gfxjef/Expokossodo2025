@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { eventService } from '../services/api';
 
 const SelectorCharlas = () => {
   const [eventos, setEventos] = useState([]);
@@ -9,24 +10,35 @@ const SelectorCharlas = () => {
   const [filtroSala, setFiltroSala] = useState('');
   const navigate = useNavigate();
 
-  // Cargar eventos al montar el componente
+  // Cargar eventos al montar el componente - SIEMPRE CON DATOS FRESCOS
   useEffect(() => {
-    cargarEventos();
+    cargarEventos(true); // Forzar refresh en carga inicial
   }, []);
 
-  const cargarEventos = async () => {
+  const cargarEventos = async (forceRefresh = false) => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/verificar-sala/eventos');
+      setError(null);
       
-      if (!response.ok) {
-        throw new Error('Error cargando eventos');
-      }
-
-      const data = await response.json();
+      // SIEMPRE forzar refresh en primera carga o cuando se solicite explícitamente
+      const data = await eventService.getVerificationEvents(forceRefresh);
       setEventos(data.eventos || []);
+      
+      console.log('📊 Eventos cargados:', data.eventos?.length || 0);
+      
+      // Debug: mostrar algunos eventos con sus datos
+      if (data.eventos && data.eventos.length > 0) {
+        const eventosConRegistros = data.eventos.filter(e => e.registrados > 0);
+        console.log('🎯 Eventos con registros:', eventosConRegistros.map(e => ({
+          id: e.id,
+          titulo: e.titulo_charla,
+          registrados: e.registrados,
+          presentes: e.presentes
+        })));
+      }
+      
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error cargando eventos:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -71,7 +83,13 @@ const SelectorCharlas = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando eventos...</p>
+          <p className="text-gray-600 text-lg font-medium">Cargando eventos y registros...</p>
+          <p className="text-gray-500 text-sm mt-2">Esto puede tardar unos segundos</p>
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 max-w-md mx-auto">
+            <p className="text-blue-700 text-sm">
+              📊 Consultando base de datos de eventos y asistencias
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -139,7 +157,7 @@ const SelectorCharlas = () => {
 
             <div className="flex items-end">
               <button
-                onClick={cargarEventos}
+                onClick={() => cargarEventos(true)} // FORZAR refresh completo
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 🔄 Actualizar
@@ -260,13 +278,13 @@ const SelectorCharlas = () => {
                     <div className="grid grid-cols-2 gap-4 text-center">
                       <div>
                         <div className="text-xl font-bold text-blue-600">
-                          {evento.total_registrados || 0}
+                          {evento.registrados || 0}
                         </div>
                         <div className="text-xs text-gray-600">Registrados</div>
                       </div>
                       <div>
                         <div className="text-xl font-bold text-green-600">
-                          {evento.total_presentes || 0}
+                          {evento.presentes || 0}
                         </div>
                         <div className="text-xs text-gray-600">Presentes</div>
                       </div>

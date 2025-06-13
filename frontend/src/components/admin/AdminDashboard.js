@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Users, BarChart3, Settings, ChevronLeft, ChevronRight, Home } from 'lucide-react';
+import { Calendar, Users, BarChart3, Settings, ChevronLeft, ChevronRight, Home, Clock, Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { adminService, adminUtils } from '../../services/adminService';
 import AdminEventGrid from './AdminEventGrid';
+import ScheduleManager from './ScheduleManager';
+import DateInfoManager from './DateInfoManager';
 import LoadingSpinner from '../LoadingSpinner';
 
 const AdminDashboard = () => {
   // Estados principales
+  const [currentTab, setCurrentTab] = useState('eventos'); // 'eventos' | 'horarios' | 'fechas'
   const [currentDateIndex, setCurrentDateIndex] = useState(0);
   const [eventsData, setEventsData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -193,62 +196,125 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Navigation */}
+      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h2 className="text-2xl font-bold text-gray-900">Gestión de Eventos</h2>
-              <div className="flex items-center space-x-2 bg-indigo-50 px-3 py-1 rounded-full">
-                <Calendar className="h-4 w-4 text-indigo-600" />
-                <span className="text-sm font-medium text-indigo-600">{dateNames[currentDateIndex]}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
+        {/* Pestañas de navegación */}
+        <div className="bg-white rounded-lg shadow-sm mb-6">
+          <div className="border-b border-gray-200">
+            <div className="flex space-x-8 px-6">
               <button
-                onClick={goToPreviousDate}
-                disabled={currentDateIndex === 0}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                onClick={() => setCurrentTab('eventos')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  currentTab === 'eventos'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               >
-                <ChevronLeft className="h-4 w-4" />
-                <span>Anterior</span>
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>Gestión de Eventos</span>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => setCurrentTab('horarios')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  currentTab === 'horarios'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4" />
+                  <span>Gestión de Horarios</span>
+                </div>
               </button>
 
-              <div className="flex space-x-2">
-                {eventDates.map((date, index) => (
-                  <button
-                    key={date}
-                    onClick={() => setCurrentDateIndex(index)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      index === currentDateIndex
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Día {index + 1}
-                  </button>
-                ))}
-              </div>
-
               <button
-                onClick={goToNextDate}
-                disabled={currentDateIndex === eventDates.length - 1}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                onClick={() => setCurrentTab('fechas')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  currentTab === 'fechas'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               >
-                <span>Siguiente</span>
-                <ChevronRight className="h-4 w-4" />
+                <div className="flex items-center space-x-2">
+                  <Info className="h-4 w-4" />
+                  <span>Gestión de Fechas</span>
+                </div>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Event Grid */}
-        <AdminEventGrid
-          eventos={currentEvents}
-          fecha={eventDates[currentDateIndex]}
-          onEventUpdate={handleEventUpdate}
-        />
+        {/* Contenido de las pestañas */}
+        {currentTab === 'eventos' && (
+          <>
+            {/* Navigation para eventos */}
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <h2 className="text-2xl font-bold text-gray-900">Gestión de Eventos</h2>
+                  <div className="flex items-center space-x-2 bg-indigo-50 px-3 py-1 rounded-full">
+                    <Calendar className="h-4 w-4 text-indigo-600" />
+                    <span className="text-sm font-medium text-indigo-600">{dateNames[currentDateIndex]}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={goToPreviousDate}
+                    disabled={currentDateIndex === 0}
+                    className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span>Anterior</span>
+                  </button>
+
+                  <div className="flex space-x-2">
+                    {eventDates.map((date, index) => (
+                      <button
+                        key={date}
+                        onClick={() => setCurrentDateIndex(index)}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          index === currentDateIndex
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Día {index + 1}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={goToNextDate}
+                    disabled={currentDateIndex === eventDates.length - 1}
+                    className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <span>Siguiente</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Event Grid */}
+            <AdminEventGrid
+              eventos={currentEvents}
+              fecha={eventDates[currentDateIndex]}
+              onEventUpdate={handleEventUpdate}
+            />
+          </>
+        )}
+
+        {currentTab === 'horarios' && (
+          <ScheduleManager />
+        )}
+
+        {currentTab === 'fechas' && (
+          <DateInfoManager />
+        )}
       </div>
 
       {/* Footer */}

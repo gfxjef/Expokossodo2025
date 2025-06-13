@@ -191,6 +191,109 @@ def init_database():
             )
         """)
         
+        # Nueva tabla para gestionar horarios
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS expokossodo_horarios (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                horario VARCHAR(20) NOT NULL UNIQUE,
+                activo BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_horario (horario),
+                INDEX idx_activo (activo)
+            )
+        """)
+        
+        # Insertar horarios por defecto si no existen
+        horarios_default = ['09:00-10:00', '10:30-11:30', '12:00-13:00', '14:00-15:00', '15:30-16:30']
+        for horario in horarios_default:
+            cursor.execute("""
+                INSERT IGNORE INTO expokossodo_horarios (horario, activo) 
+                VALUES (%s, %s)
+            """, (horario, True))
+        
+        # ===== NUEVA TABLA: INFORMACIÓN POR FECHA =====
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS expokossodo_fecha_info (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                fecha DATE NOT NULL UNIQUE,
+                rubro VARCHAR(100) NOT NULL,
+                titulo_dia VARCHAR(200) NOT NULL,
+                descripcion TEXT,
+                ponentes_destacados JSON,
+                marcas_patrocinadoras JSON,
+                paises_participantes JSON,
+                imagen_url VARCHAR(500),
+                activo BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_fecha (fecha),
+                INDEX idx_activo (activo),
+                INDEX idx_rubro (rubro)
+            )
+        """)
+
+        # Insertar información por defecto de fechas
+        fechas_info_default = [
+            {
+                'fecha': '2024-07-22',
+                'rubro': 'Inteligencia Artificial y Diagnóstico',
+                'titulo_dia': 'Día 1 - IA Revolucionando la Medicina',
+                'descripcion': 'Explora cómo la inteligencia artificial está transformando el diagnóstico médico y la atención al paciente.',
+                'ponentes_destacados': '["Dr. María González", "Dr. Hiroshi Tanaka", "Prof. Chen Wei"]',
+                'marcas_patrocinadoras': '["TechMed Solutions", "AI Healthcare", "MedTech Innovations"]',
+                'paises_participantes': '["España", "Japón", "China", "Estados Unidos"]',
+                'imagen_url': 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
+            },
+            {
+                'fecha': '2024-07-23',
+                'rubro': 'Biotecnología y Medicina Regenerativa',
+                'titulo_dia': 'Día 2 - Innovación Biotecnológica',
+                'descripcion': 'Descubre las últimas innovaciones en biotecnología, terapias génicas y medicina regenerativa.',
+                'ponentes_destacados': '["Dr. John Smith", "Dr. Sarah Johnson", "Dr. Pierre Dubois"]',
+                'marcas_patrocinadoras': '["BioTech Labs", "RegenerativeMed", "GenTherapy Corp"]',
+                'paises_participantes': '["Estados Unidos", "Reino Unido", "Francia", "Alemania"]',
+                'imagen_url': 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
+            },
+            {
+                'fecha': '2024-07-24',
+                'rubro': 'Telemedicina y Salud Digital',
+                'titulo_dia': 'Día 3 - Transformación Digital en Salud',
+                'descripcion': 'Conoce cómo la telemedicina y las tecnologías digitales están democratizando el acceso a la salud.',
+                'ponentes_destacados': '["Dra. Ana Rodríguez", "Dr. Kim Jong-Su", "Dra. Camila Silva"]',
+                'marcas_patrocinadoras': '["TeleMed Global", "HealthTech Solutions", "Digital Care"]',
+                'paises_participantes': '["México", "Corea del Sur", "Brasil", "Canadá"]',
+                'imagen_url': 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
+            },
+            {
+                'fecha': '2024-07-25',
+                'rubro': 'Especialidades Médicas Avanzadas',
+                'titulo_dia': 'Día 4 - Medicina Especializada del Futuro',
+                'descripcion': 'Explora los avances en cardiología, neurociencia, oncología y otras especialidades médicas.',
+                'ponentes_destacados': '["Dr. Raj Patel", "Dr. Lars Anderson", "Dr. Ahmed Hassan"]',
+                'marcas_patrocinadoras': '["CardioTech", "NeuroScience Pro", "OncoMed Innovations"]',
+                'paises_participantes': '["India", "Suecia", "Egipto", "Australia"]',
+                'imagen_url': 'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
+            }
+        ]
+
+        for fecha_info in fechas_info_default:
+            cursor.execute("""
+                INSERT IGNORE INTO expokossodo_fecha_info 
+                (fecha, rubro, titulo_dia, descripcion, ponentes_destacados, marcas_patrocinadoras, paises_participantes, imagen_url, activo)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                fecha_info['fecha'],
+                fecha_info['rubro'], 
+                fecha_info['titulo_dia'],
+                fecha_info['descripcion'],
+                fecha_info['ponentes_destacados'],
+                fecha_info['marcas_patrocinadoras'],
+                fecha_info['paises_participantes'],
+                fecha_info['imagen_url'],
+                True
+            ))
+        
         # Agregar columna descripcion si no existe (para bases de datos existentes)
         try:
             cursor.execute("""
@@ -552,7 +655,7 @@ def send_confirmation_email(user_data, selected_events, qr_text=None):
 # Rutas de la API
 @app.route('/api/eventos', methods=['GET'])
 def get_eventos():
-    """Obtener todos los eventos organizados por fecha"""
+    """Obtener todos los eventos organizados por fecha (solo horarios activos)"""
     connection = get_db_connection()
     if not connection:
         return jsonify({"error": "Error de conexión a la base de datos"}), 500
@@ -560,9 +663,12 @@ def get_eventos():
     cursor = connection.cursor(dictionary=True)
     
     try:
+        # Obtener eventos solo para horarios activos
         cursor.execute("""
-            SELECT * FROM expokossodo_eventos 
-            ORDER BY fecha, hora, sala
+            SELECT e.* FROM expokossodo_eventos e
+            INNER JOIN expokossodo_horarios h ON e.hora = h.horario
+            WHERE h.activo = TRUE
+            ORDER BY e.fecha, e.hora, e.sala
         """)
         eventos = cursor.fetchall()
         
@@ -583,6 +689,8 @@ def get_eventos():
                 'titulo_charla': evento['titulo_charla'],
                 'expositor': evento['expositor'],
                 'pais': evento['pais'],
+                'descripcion': evento.get('descripcion', ''),
+                'imagen_url': evento.get('imagen_url', ''),
                 'slots_disponibles': evento['slots_disponibles'],
                 'slots_ocupados': evento['slots_ocupados'],
                 'disponible': evento['slots_ocupados'] < evento['slots_disponibles']
@@ -619,9 +727,21 @@ def crear_registro():
         if not evento_ids:
             return jsonify({"error": "Debe seleccionar al menos un evento"}), 400
         
+        # Verificar si el usuario ya está registrado (por correo)
+        cursor.execute("""
+            SELECT id, nombres FROM expokossodo_registros 
+            WHERE correo = %s
+        """, (data['correo'],))
+        
+        usuario_existente = cursor.fetchone()
+        if usuario_existente:
+            return jsonify({
+                "error": f"El correo {data['correo']} ya está registrado a nombre de {usuario_existente['nombres']}"
+            }), 400
+
         placeholders = ','.join(['%s'] * len(evento_ids))
         cursor.execute(f"""
-            SELECT id, titulo_charla, slots_disponibles, slots_ocupados, hora
+            SELECT id, titulo_charla, slots_disponibles, slots_ocupados, hora, fecha
             FROM expokossodo_eventos 
             WHERE id IN ({placeholders})
         """, evento_ids)
@@ -638,12 +758,20 @@ def crear_registro():
                     "error": f"El evento '{evento['titulo_charla']}' ya no tiene cupos disponibles"
                 }), 400
         
-        # Verificar horarios únicos (no más de un evento por hora)
-        horarios = [evento['hora'] for evento in eventos]
-        if len(horarios) != len(set(horarios)):
-            return jsonify({
-                "error": "No puede seleccionar múltiples eventos en el mismo horario"
-            }), 400
+        # Verificar horarios únicos POR DÍA (no más de un evento por hora en el mismo día)
+        eventos_por_fecha = {}
+        for evento in eventos:
+            fecha_str = evento['fecha'].strftime('%Y-%m-%d')
+            if fecha_str not in eventos_por_fecha:
+                eventos_por_fecha[fecha_str] = []
+            eventos_por_fecha[fecha_str].append(evento['hora'])
+        
+        # Verificar que no haya conflictos de horario en el mismo día
+        for fecha, horarios in eventos_por_fecha.items():
+            if len(horarios) != len(set(horarios)):
+                return jsonify({
+                    "error": f"No puede seleccionar múltiples eventos en el mismo horario el día {fecha}"
+                }), 400
         
         # ===== GENERAR CÓDIGO QR =====
         qr_text = generar_texto_qr(
@@ -1076,7 +1204,7 @@ def confirmar_asistencia_general():
 
 @app.route('/api/verificar-sala/eventos', methods=['GET'])
 def get_eventos_verificacion():
-    """Obtener eventos para verificación por sala"""
+    """Obtener eventos para verificación por sala - OPTIMIZADO"""
     connection = get_db_connection()
     if not connection:
         return jsonify({"error": "Error de conexión a la base de datos"}), 500
@@ -1084,22 +1212,118 @@ def get_eventos_verificacion():
     cursor = connection.cursor(dictionary=True)
     
     try:
+        # UNA SOLA CONSULTA SUPER OPTIMIZADA con conteos agregados
         cursor.execute("""
-            SELECT e.*,
-                   COUNT(re.registro_id) as registrados,
-                   COUNT(aps.registro_id) as presentes
+            SELECT 
+                e.id,
+                e.fecha,
+                e.hora,
+                e.sala,
+                e.titulo_charla,
+                e.expositor,
+                e.pais,
+                e.slots_disponibles,
+                e.slots_ocupados,
+                COUNT(DISTINCT re.registro_id) as registrados,
+                COUNT(DISTINCT aps.registro_id) as presentes
             FROM expokossodo_eventos e
             LEFT JOIN expokossodo_registro_eventos re ON e.id = re.evento_id
             LEFT JOIN expokossodo_asistencias_por_sala aps ON e.id = aps.evento_id
-            GROUP BY e.id
+            GROUP BY e.id, e.fecha, e.hora, e.sala, e.titulo_charla, e.expositor, e.pais, e.slots_disponibles, e.slots_ocupados
             ORDER BY e.fecha, e.hora, e.sala
         """)
         
         eventos = cursor.fetchall()
         
-        return jsonify(eventos)
+        # Convertir a formato JSON optimizado
+        eventos_optimizados = []
+        for evento in eventos:
+            # Debug log solo para eventos con datos
+            if evento['registrados'] > 0 or evento['presentes'] > 0:
+                print(f"✅ Evento {evento['id']} ({evento['titulo_charla']}): {evento['registrados']} registrados, {evento['presentes']} presentes")
+            
+            eventos_optimizados.append({
+                'id': evento['id'],
+                'fecha': evento['fecha'].strftime('%Y-%m-%d'),
+                'hora': evento['hora'],
+                'sala': evento['sala'],
+                'titulo_charla': evento['titulo_charla'],
+                'expositor': evento['expositor'],
+                'pais': evento['pais'],
+                'registrados': evento['registrados'],
+                'presentes': evento['presentes'],
+                'disponible': evento['slots_ocupados'] < evento['slots_disponibles']
+            })
+        
+        return jsonify({
+            "eventos": eventos_optimizados,
+            "total_eventos": len(eventos_optimizados)
+        })
         
     except Error as e:
+        print(f"Error obteniendo eventos para verificación: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.route('/api/verificar-sala/evento/<int:evento_id>', methods=['GET'])
+def get_evento_verificacion_individual(evento_id):
+    """Obtener UN evento específico para verificación por sala - SUPER RÁPIDO"""
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # UNA SOLA CONSULTA para obtener TODO de un evento específico
+        cursor.execute("""
+            SELECT 
+                e.id,
+                e.fecha,
+                e.hora,
+                e.sala,
+                e.titulo_charla,
+                e.expositor,
+                e.pais,
+                e.slots_disponibles,
+                e.slots_ocupados,
+                COUNT(DISTINCT re.registro_id) as registrados,
+                COUNT(DISTINCT aps.registro_id) as presentes
+            FROM expokossodo_eventos e
+            LEFT JOIN expokossodo_registro_eventos re ON e.id = re.evento_id
+            LEFT JOIN expokossodo_asistencias_por_sala aps ON e.id = aps.evento_id
+            WHERE e.id = %s
+            GROUP BY e.id, e.fecha, e.hora, e.sala, e.titulo_charla, e.expositor, e.pais, e.slots_disponibles, e.slots_ocupados
+        """, (evento_id,))
+        
+        evento = cursor.fetchone()
+        
+        if not evento:
+            return jsonify({"error": "Evento no encontrado"}), 404
+        
+        evento_optimizado = {
+            'id': evento['id'],
+            'fecha': evento['fecha'].strftime('%Y-%m-%d'),
+            'hora': evento['hora'],
+            'sala': evento['sala'],
+            'titulo_charla': evento['titulo_charla'],
+            'expositor': evento['expositor'],
+            'pais': evento['pais'],
+            'registrados': evento['registrados'],
+            'presentes': evento['presentes'],
+            'disponible': evento['slots_ocupados'] < evento['slots_disponibles']
+        }
+        
+        print(f"🎯 Evento específico {evento_id}: {evento['registrados']} registrados, {evento['presentes']} presentes")
+        
+        return jsonify({
+            "evento": evento_optimizado
+        })
+        
+    except Error as e:
+        print(f"Error obteniendo evento específico {evento_id}: {e}")
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
@@ -1208,7 +1432,7 @@ def verificar_acceso_sala():
 
 @app.route('/api/verificar-sala/asistentes/<int:evento_id>', methods=['GET'])
 def get_asistentes_evento(evento_id):
-    """Obtener asistentes de un evento específico"""
+    """Obtener asistentes de un evento específico - OPTIMIZADO"""
     connection = get_db_connection()
     if not connection:
         return jsonify({"error": "Error de conexión a la base de datos"}), 500
@@ -1216,52 +1440,375 @@ def get_asistentes_evento(evento_id):
     cursor = connection.cursor(dictionary=True)
     
     try:
-        # Información del evento
+        # UNA SOLA CONSULTA OPTIMIZADA para obtener todo
         cursor.execute("""
-            SELECT titulo_charla, hora, sala, fecha 
-            FROM expokossodo_eventos 
-            WHERE id = %s
+            SELECT 
+                e.titulo_charla, e.hora, e.sala, e.fecha,
+                r.id, r.nombres, r.empresa, r.cargo,
+                CASE WHEN aps.id IS NOT NULL THEN 'presente' ELSE 'registrado' END as estado,
+                aps.fecha_ingreso
+            FROM expokossodo_eventos e
+            LEFT JOIN expokossodo_registro_eventos re ON e.id = re.evento_id
+            LEFT JOIN expokossodo_registros r ON re.registro_id = r.id
+            LEFT JOIN expokossodo_asistencias_por_sala aps ON r.id = aps.registro_id AND aps.evento_id = e.id
+            WHERE e.id = %s
+            ORDER BY aps.fecha_ingreso DESC, r.nombres
         """, (evento_id,))
         
-        evento = cursor.fetchone()
-        if not evento:
+        resultados = cursor.fetchall()
+        
+        if not resultados:
             return jsonify({"error": "Evento no encontrado"}), 404
         
-        # Asistentes registrados
-        cursor.execute("""
-            SELECT r.id, r.nombres, r.empresa, r.cargo, r.correo,
-                   CASE WHEN aps.id IS NOT NULL THEN 'presente' ELSE 'registrado' END as estado,
-                   aps.fecha_ingreso
-            FROM expokossodo_registros r
-            INNER JOIN expokossodo_registro_eventos re ON r.id = re.registro_id
-            LEFT JOIN expokossodo_asistencias_por_sala aps ON r.id = aps.registro_id AND aps.evento_id = %s
-            WHERE re.evento_id = %s
-            ORDER BY aps.fecha_ingreso DESC, r.nombres
-        """, (evento_id, evento_id))
+        # Separar información del evento y asistentes
+        evento_info = {
+            'titulo_charla': resultados[0]['titulo_charla'],
+            'hora': resultados[0]['hora'],
+            'sala': resultados[0]['sala'],
+            'fecha': resultados[0]['fecha'].strftime('%Y-%m-%d') if resultados[0]['fecha'] else None
+        }
         
-        asistentes = cursor.fetchall()
+        # Procesar asistentes (filtrar si hay registros válidos)
+        asistentes = []
+        total_registrados = 0
+        presentes = 0
         
-        # Estadísticas
-        total_registrados = len(asistentes)
-        presentes = len([a for a in asistentes if a['estado'] == 'presente'])
+        for row in resultados:
+            if row['id']:  # Solo si hay un registro válido
+                asistente = {
+                    'id': row['id'],
+                    'nombres': row['nombres'],
+                    'empresa': row['empresa'],
+                    'cargo': row['cargo'],
+                    'estado': row['estado'],
+                    'fecha_ingreso': row['fecha_ingreso'].isoformat() if row['fecha_ingreso'] else None
+                }
+                asistentes.append(asistente)
+                total_registrados += 1
+                if row['estado'] == 'presente':
+                    presentes += 1
+        
         ausentes = total_registrados - presentes
+        porcentaje = round((presentes / total_registrados * 100) if total_registrados > 0 else 0, 1)
         
         return jsonify({
-            "evento": evento,
+            "evento": evento_info,
             "asistentes": asistentes,
             "estadisticas": {
                 "total_registrados": total_registrados,
                 "presentes": presentes,
                 "ausentes": ausentes,
-                "porcentaje_asistencia": round((presentes / total_registrados * 100) if total_registrados > 0 else 0, 1)
+                "porcentaje_asistencia": porcentaje
             }
         })
+        
+    except Error as e:
+        print(f"Error obteniendo asistentes del evento {evento_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+# ===== NUEVOS ENDPOINTS PARA GESTIÓN DE HORARIOS =====
+
+@app.route('/api/admin/horarios', methods=['GET'])
+def get_horarios():
+    """Obtener todos los horarios con su estado"""
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        cursor.execute("""
+            SELECT h.*, 
+                   COUNT(e.id) as total_eventos,
+                   COUNT(CASE WHEN e.slots_ocupados > 0 THEN 1 END) as eventos_con_registros
+            FROM expokossodo_horarios h
+            LEFT JOIN expokossodo_eventos e ON h.horario = e.hora
+            GROUP BY h.id, h.horario, h.activo
+            ORDER BY h.horario
+        """)
+        horarios = cursor.fetchall()
+        
+        return jsonify(horarios)
         
     except Error as e:
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
         connection.close()
+
+@app.route('/api/admin/horario/<string:horario>/toggle', methods=['PUT'])
+def toggle_horario(horario):
+    """Activar/Desactivar un horario específico"""
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor()
+    
+    try:
+        # Verificar si el horario existe
+        cursor.execute("SELECT activo FROM expokossodo_horarios WHERE horario = %s", (horario,))
+        result = cursor.fetchone()
+        
+        if not result:
+            return jsonify({"error": "Horario no encontrado"}), 404
+        
+        # Cambiar el estado
+        nuevo_estado = not result[0]
+        cursor.execute("""
+            UPDATE expokossodo_horarios 
+            SET activo = %s, updated_at = CURRENT_TIMESTAMP 
+            WHERE horario = %s
+        """, (nuevo_estado, horario))
+        
+        connection.commit()
+        
+        estado_texto = "activado" if nuevo_estado else "desactivado"
+        
+        return jsonify({
+            "success": True,
+            "message": f"Horario {horario} {estado_texto} exitosamente",
+            "horario": horario,
+            "activo": nuevo_estado
+        })
+        
+    except Error as e:
+        connection.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.route('/api/admin/horarios/activos', methods=['GET'])
+def get_horarios_activos():
+    """Obtener solo los horarios activos (para uso en frontend)"""
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT horario FROM expokossodo_horarios 
+            WHERE activo = TRUE 
+            ORDER BY horario
+        """)
+        horarios = [row[0] for row in cursor.fetchall()]
+        
+        return jsonify(horarios)
+        
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+# ===== GESTIÓN DE INFORMACIÓN POR FECHA =====
+
+@app.route('/api/admin/fechas-info', methods=['GET'])
+def get_fechas_info():
+    """Obtener información de todas las fechas (para admin)"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "Error de conexión a la base de datos"}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT 
+                id, fecha, rubro, titulo_dia, descripcion, 
+                ponentes_destacados, marcas_patrocinadoras, paises_participantes,
+                imagen_url, activo, created_at, updated_at
+            FROM expokossodo_fecha_info 
+            ORDER BY fecha ASC
+        """)
+        
+        fechas_info = []
+        for row in cursor.fetchall():
+            import json
+            fecha_info = {
+                "id": row[0],
+                "fecha": row[1].strftime('%Y-%m-%d'),
+                "rubro": row[2],
+                "titulo_dia": row[3],
+                "descripcion": row[4],
+                "ponentes_destacados": json.loads(row[5]) if row[5] else [],
+                "marcas_patrocinadoras": json.loads(row[6]) if row[6] else [],
+                "paises_participantes": json.loads(row[7]) if row[7] else [],
+                "imagen_url": row[8],
+                "activo": bool(row[9]),
+                "created_at": row[10].isoformat() if row[10] else None,
+                "updated_at": row[11].isoformat() if row[11] else None
+            }
+            fechas_info.append(fecha_info)
+        
+        return jsonify({"fechas_info": fechas_info})
+        
+    except Error as e:
+        print(f"Error obteniendo fechas info: {e}")
+        return jsonify({"error": "Error del servidor"}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals() and connection:
+            connection.close()
+
+@app.route('/api/fechas-info/activas', methods=['GET'])
+def get_fechas_info_activas():
+    """Obtener información de fechas activas (para público)"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "Error de conexión a la base de datos"}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT 
+                fecha, rubro, titulo_dia, descripcion, 
+                ponentes_destacados, marcas_patrocinadoras, paises_participantes,
+                imagen_url
+            FROM expokossodo_fecha_info 
+            WHERE activo = TRUE
+            ORDER BY fecha ASC
+        """)
+        
+        fechas_info = []
+        for row in cursor.fetchall():
+            import json
+            fecha_info = {
+                "fecha": row[0].strftime('%Y-%m-%d'),
+                "rubro": row[1],
+                "titulo_dia": row[2],
+                "descripcion": row[3],
+                "ponentes_destacados": json.loads(row[4]) if row[4] else [],
+                "marcas_patrocinadoras": json.loads(row[5]) if row[5] else [],
+                "paises_participantes": json.loads(row[6]) if row[6] else [],
+                "imagen_url": row[7]
+            }
+            fechas_info.append(fecha_info)
+        
+        return jsonify(fechas_info)
+        
+    except Error as e:
+        print(f"Error obteniendo fechas info activas: {e}")
+        return jsonify({"error": "Error del servidor"}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals() and connection:
+            connection.close()
+
+@app.route('/api/admin/fecha-info/<int:fecha_id>', methods=['PUT'])
+def update_fecha_info(fecha_id):
+    """Actualizar información de una fecha específica"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No se proporcionaron datos"}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "Error de conexión a la base de datos"}), 500
+        
+        cursor = connection.cursor()
+        
+        # Construir query dinámicamente según campos proporcionados
+        fields_to_update = []
+        values = []
+        
+        allowed_fields = [
+            'rubro', 'titulo_dia', 'descripcion', 'imagen_url', 'activo',
+            'ponentes_destacados', 'marcas_patrocinadoras', 'paises_participantes'
+        ]
+        
+        for field in allowed_fields:
+            if field in data:
+                fields_to_update.append(f"{field} = %s")
+                if field in ['ponentes_destacados', 'marcas_patrocinadoras', 'paises_participantes']:
+                    import json
+                    values.append(json.dumps(data[field]))
+                else:
+                    values.append(data[field])
+        
+        if not fields_to_update:
+            return jsonify({"error": "No hay campos válidos para actualizar"}), 400
+        
+        # Agregar ID al final
+        values.append(fecha_id)
+        
+        query = f"""
+            UPDATE expokossodo_fecha_info 
+            SET {', '.join(fields_to_update)}, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """
+        
+        cursor.execute(query, values)
+        
+        if cursor.rowcount == 0:
+            return jsonify({"error": "Fecha no encontrada"}), 404
+        
+        connection.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Información de fecha actualizada exitosamente"
+        })
+        
+    except Error as e:
+        print(f"Error actualizando fecha info: {e}")
+        return jsonify({"error": "Error del servidor"}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals() and connection:
+            connection.close()
+
+@app.route('/api/admin/fecha-info/<int:fecha_id>/toggle', methods=['PUT'])
+def toggle_fecha_info(fecha_id):
+    """Activar/desactivar información de una fecha"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "Error de conexión a la base de datos"}), 500
+        
+        cursor = connection.cursor()
+        
+        # Obtener estado actual
+        cursor.execute("SELECT activo FROM expokossodo_fecha_info WHERE id = %s", (fecha_id,))
+        result = cursor.fetchone()
+        
+        if not result:
+            return jsonify({"error": "Fecha no encontrada"}), 404
+        
+        nuevo_estado = not bool(result[0])
+        
+        cursor.execute("""
+            UPDATE expokossodo_fecha_info 
+            SET activo = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """, (nuevo_estado, fecha_id))
+        
+        connection.commit()
+        
+        return jsonify({
+            "success": True,
+            "nuevo_estado": nuevo_estado,
+            "message": f"Fecha {'activada' if nuevo_estado else 'desactivada'} exitosamente"
+        })
+        
+    except Error as e:
+        print(f"Error toggle fecha info: {e}")
+        return jsonify({"error": "Error del servidor"}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals() and connection:
+            connection.close()
 
 if __name__ == '__main__':
     print("🚀 Iniciando ExpoKossodo Backend...")

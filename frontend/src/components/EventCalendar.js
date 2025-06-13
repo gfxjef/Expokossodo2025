@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, MapPin, Users, Globe, Star, AlertCircle, CheckCircle } from 'lucide-react';
+import { eventService } from '../services/api';
 
-const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect, onShowEventInfo }) => {
+const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect, onShowEventInfo, timeSlots = [] }) => {
   const [expandedEvent, setExpandedEvent] = useState(null);
   const [hoveredEvent, setHoveredEvent] = useState(null);
   
-  // Horarios y salas fijos
-  const timeSlots = ['09:00-10:00', '10:30-11:30', '12:00-13:00', '14:00-15:00', '15:30-16:30'];
+  // Salas fijas (estas no cambiarán)
   const rooms = ['sala1', 'sala2', 'sala3', 'sala5'];
   const roomNames = {
     'sala1': 'Auditorio Principal',
@@ -15,7 +15,7 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
     'sala3': 'Sala Neuro',
     'sala5': 'Sala de Innovación'
   };
-  
+
   // Obtener eventos para la fecha actual
   const currentDateEvents = eventsData[currentDate] || {};
   
@@ -190,60 +190,47 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
     );
   };
   
+  // Si no hay timeSlots, mostrar fallback pero sin loading
+  const displayTimeSlots = timeSlots.length > 0 
+    ? timeSlots 
+    : ['09:00-10:00', '10:30-11:30', '12:00-13:00', '14:00-15:00', '15:30-16:30'];
+
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-      {/* Header del calendario */}
-      <div className="bg-gradient-primary text-white p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-xl font-bold mb-1">Calendario de Eventos</h3>
-            <p className="text-blue-100">Selecciona los eventos de tu interés</p>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold">{stats.totalEvents}</div>
-            <div className="text-sm text-blue-100">eventos totales</div>
-          </div>
-        </div>
-        
-        {/* Estadísticas en tiempo real */}
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-3 gap-4"
-        >
-          <div className="text-center p-3 bg-white/10 rounded-lg backdrop-blur">
-            <div className="text-lg font-bold text-white">{stats.availableEvents}</div>
-            <div className="text-xs text-blue-100">Disponibles</div>
-          </div>
-          <div className="text-center p-3 bg-white/10 rounded-lg backdrop-blur">
-            <div className="text-lg font-bold text-white">{stats.selectedCount}</div>
-            <div className="text-xs text-blue-100">Seleccionados</div>
-          </div>
-          <div className="text-center p-3 bg-white/10 rounded-lg backdrop-blur">
-            <div className="text-lg font-bold text-white">{Object.keys(currentDateEvents).length}</div>
-            <div className="text-xs text-blue-100">Horarios</div>
-          </div>
-        </motion.div>
-      </div>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
+    >
+
       
-      {/* Leyenda */}
+      {/* Leyenda con instrucciones */}
       <div className="p-4 bg-gray-50 border-b border-gray-200">
-        <div className="flex flex-wrap items-center gap-4 text-sm">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-white border-2 border-gray-200 rounded"></div>
-            <span className="text-gray-600">Disponible</span>
+        <div className="flex items-center justify-between">
+          {/* Leyenda de estados */}
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-white border-2 border-gray-200 rounded"></div>
+              <span className="text-gray-600">Disponible</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-blue-50 border-2 border-blue-500 rounded"></div>
+              <span className="text-gray-600">Seleccionado</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-gray-100 border-2 border-gray-400 rounded"></div>
+              <span className="text-gray-600">Disponible a elección</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-red-50 border-2 border-red-400 rounded"></div>
+              <span className="text-gray-600">Sin cupos</span>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-50 border-2 border-blue-500 rounded"></div>
-            <span className="text-gray-600">Seleccionado</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-gray-100 border-2 border-gray-400 rounded"></div>
-            <span className="text-gray-600">Disponible a elección</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-red-50 border-2 border-red-400 rounded"></div>
-            <span className="text-gray-600">Sin cupos</span>
+          
+          {/* Instrucciones compactas */}
+          <div className="text-right text-xs text-gray-500 max-w-xs">
+            <p className="font-medium">Clic en evento → Ver info → Seleccionar</p>
+            <p>Un evento por horario máximo</p>
           </div>
         </div>
       </div>
@@ -266,7 +253,7 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
             ))}
             
             {/* Filas de eventos por horario */}
-            {timeSlots.map((timeSlot, timeIndex) => (
+            {displayTimeSlots.map((timeSlot, timeIndex) => (
               <React.Fragment key={timeSlot}>
                 {/* Columna de horario */}
                 <div className="flex items-center justify-center p-3 bg-gray-50 rounded-lg border">
@@ -295,19 +282,8 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
         </div>
       </div>
       
-      {/* Footer con instrucciones */}
-      <div className="p-4 bg-gray-50 border-t border-gray-200">
-        <div className="text-center text-sm text-gray-600">
-          <p className="mb-1">
-            <strong>Instrucciones:</strong> Haz clic en una tarjeta para ver la información del evento.
-          </p>
-          <p>
-            Lee la información completa y luego haz clic en <strong>"Seleccionar evento"</strong> para confirmar tu elección.
-            Solo puedes seleccionar <strong>un evento por horario</strong>.
-          </p>
-        </div>
-      </div>
-    </div>
+
+    </motion.div>
   );
 };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import QRScanner from './QRScanner';
+import { eventService } from '../services/api';
 
 const VerificadorSala = () => {
   const { eventoId } = useParams();
@@ -24,40 +25,32 @@ const VerificadorSala = () => {
   const cargarDatosEvento = async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      // Cargar información del evento desde la lista de eventos
-      const eventosResponse = await fetch('http://localhost:5000/api/verificar-sala/eventos');
-      if (!eventosResponse.ok) throw new Error('Error cargando eventos');
+      // Usar el endpoint específico SUPER RÁPIDO para este evento
+      const eventoData = await eventService.getVerificationEvent(eventoId);
       
-      const eventosData = await eventosResponse.json();
-      const evento = eventosData.eventos.find(e => e.id === parseInt(eventoId));
-      
-      if (!evento) {
+      if (!eventoData.evento) {
         throw new Error('Evento no encontrado');
       }
       
-      setEventoInfo(evento);
+      setEventoInfo(eventoData.evento);
 
       // Cargar asistentes del evento
       await cargarAsistentes();
       
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error cargando datos del evento:', error);
       setError(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const cargarAsistentes = async () => {
+  const cargarAsistentes = async (forceRefresh = false) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/verificar-sala/asistentes/${eventoId}`);
-      
-      if (!response.ok) {
-        throw new Error('Error cargando asistentes');
-      }
-
-      const data = await response.json();
+      // Usar el servicio optimizado con caché
+      const data = await eventService.getEventAttendees(eventoId, forceRefresh);
       setAsistentes(data.asistentes || []);
       
     } catch (error) {
@@ -92,8 +85,10 @@ const VerificadorSala = () => {
 
       setSuccess(`✅ ¡${data.usuario.nombres} registrado exitosamente en la sala!`);
       
-      // Recargar asistentes para mostrar la nueva entrada
-      await cargarAsistentes();
+      // INVALIDAR TODOS LOS CACHÉS para reflejar cambios
+      eventService.invalidateAttendeeCache(parseInt(eventoId));
+      eventService.clearVerificationCache(); // ¡IMPORTANTE! Limpiar caché de lista principal
+      await cargarAsistentes(true);
 
     } catch (error) {
       console.error('Error:', error);

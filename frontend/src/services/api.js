@@ -8,7 +8,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 segundos
+  timeout: 30000, // 30 segundos para cargas grandes
 });
 
 // Interceptor para manejar errores globalmente
@@ -46,6 +46,17 @@ api.interceptors.response.use(
   }
 );
 
+// Cache simple para evitar llamadas duplicadas
+const cache = {
+  verificationEvents: null,
+  lastFetch: null,
+  pendingRequest: null, // Para evitar peticiones duplicadas simultáneas
+  eventAttendees: {}, // Cache por evento_id
+  attendeesLastFetch: {}, // Last fetch por evento_id
+  attendeesPendingRequests: {}, // Para evitar peticiones duplicadas por evento
+  CACHE_DURATION: 30000 // 30 segundos
+};
+
 // Servicios de la API
 export const eventService = {
   // Obtener todos los eventos organizados por fecha
@@ -58,6 +69,147 @@ export const eventService = {
     }
   },
   
+  // Obtener UN evento específico para verificación (SUPER RÁPIDO)
+  getVerificationEvent: async (eventoId) => {
+    try {
+      console.log(`🎯 Cargando evento específico ${eventoId}...`);
+      const response = await api.get(`/verificar-sala/evento/${eventoId}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Obtener eventos para verificación (CON CACHE MEJORADO)
+  getVerificationEvents: async (forceRefresh = false) => {
+    try {
+      const now = Date.now();
+      const hasValidCache = cache.verificationEvents && 
+                           cache.lastFetch && 
+                           (now - cache.lastFetch) < cache.CACHE_DURATION;
+      
+      if (!forceRefresh && hasValidCache) {
+        console.log('📦 Usando eventos desde caché (válido por ' + Math.round((cache.CACHE_DURATION - (now - cache.lastFetch))/1000) + 's más)');
+        return cache.verificationEvents;
+      }
+      
+      // Si ya hay una petición en curso, esperar a que termine
+      if (cache.pendingRequest) {
+        console.log('⏳ Esperando petición en curso...');
+        return await cache.pendingRequest;
+      }
+      
+      console.log('🔄 Cargando eventos desde servidor...', forceRefresh ? '(FORZADO)' : '');
+      
+      // Marcar que hay una petición en curso
+      cache.pendingRequest = api.get('/verificar-sala/eventos').then(response => {
+        // Guardar en caché
+        cache.verificationEvents = response.data;
+        cache.lastFetch = now;
+        cache.pendingRequest = null; // Limpiar petición pendiente
+        
+        console.log('✅ Eventos cargados desde servidor:', response.data.eventos?.length || 0);
+        return response.data;
+      }).catch(error => {
+        cache.pendingRequest = null; // Limpiar petición pendiente en caso de error
+        throw error;
+      });
+      
+      return await cache.pendingRequest;
+    } catch (error) {
+      throw error;
+    }
+  },
+  
+  // Obtener asistentes de un evento (CON CACHE MEJORADO)
+  getEventAttendees: async (eventoId, forceRefresh = false) => {
+    try {
+      const now = Date.now();
+      const hasValidCache = cache.eventAttendees[eventoId] && 
+                           cache.attendeesLastFetch[eventoId] && 
+                           (now - cache.attendeesLastFetch[eventoId]) < cache.CACHE_DURATION;
+      
+      if (!forceRefresh && hasValidCache) {
+        console.log(`📦 Usando asistentes del evento ${eventoId} desde caché`);
+        return cache.eventAttendees[eventoId];
+      }
+      
+      // Si ya hay una petición en curso para este evento, esperar a que termine
+      if (cache.attendeesPendingRequests[eventoId]) {
+        console.log(`⏳ Esperando petición en curso para evento ${eventoId}...`);
+        return await cache.attendeesPendingRequests[eventoId];
+      }
+      
+      console.log(`🔄 Cargando asistentes del evento ${eventoId} desde servidor...`);
+      
+      // Marcar que hay una petición en curso para este evento
+      cache.attendeesPendingRequests[eventoId] = api.get(`/verificar-sala/asistentes/${eventoId}`).then(response => {
+        // Guardar en caché
+        cache.eventAttendees[eventoId] = response.data;
+        cache.attendeesLastFetch[eventoId] = now;
+        delete cache.attendeesPendingRequests[eventoId]; // Limpiar petición pendiente
+        
+        return response.data;
+      }).catch(error => {
+        delete cache.attendeesPendingRequests[eventoId]; // Limpiar petición pendiente en caso de error
+        throw error;
+      });
+      
+      return await cache.attendeesPendingRequests[eventoId];
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Limpiar caché cuando sea necesario
+  clearVerificationCache: () => {
+    cache.verificationEvents = null;
+    cache.lastFetch = null;
+    cache.pendingRequest = null;
+  },
+
+  // Limpiar caché de asistentes
+  clearAttendeesCache: (eventoId = null) => {
+    if (eventoId) {
+      delete cache.eventAttendees[eventoId];
+      delete cache.attendeesLastFetch[eventoId];
+      delete cache.attendeesPendingRequests[eventoId];
+    } else {
+      cache.eventAttendees = {};
+      cache.attendeesLastFetch = {};
+      cache.attendeesPendingRequests = {};
+    }
+  },
+
+  // Invalidar caché cuando se registra nueva asistencia
+  invalidateAttendeeCache: (eventoId) => {
+    if (eventoId) {
+      delete cache.eventAttendees[eventoId];
+      delete cache.attendeesLastFetch[eventoId];
+      console.log(`🗑️ Cache invalidado para evento ${eventoId}`);
+    }
+  },
+  
+  // Obtener horarios activos
+  getActiveTimeSlots: async () => {
+    try {
+      const response = await api.get('/admin/horarios/activos');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Obtener información de fechas activas (público)
+  getFechasInfoActivas: async () => {
+    try {
+      const response = await api.get('/fechas-info/activas');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   // Crear un nuevo registro
   createRegistration: async (registrationData) => {
     try {
