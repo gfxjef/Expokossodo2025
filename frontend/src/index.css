@@ -106,4 +106,114 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a1a1a1;
+}
+
+/* Estilos para fullPage.js */
+.fp-section {
+  position: relative;
+}
+
+.fp-section.fp-table {
+  display: table;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.fp-tableCell {
+  display: table-cell;
+  vertical-align: middle;
+  width: 100%;
+  height: 100%;
+}
+
+/* Configuración para scrollOverflow */
+.fp-section .h-screen {
+  height: 100vh;
+}
+
+/* Asegurar que la sección con scroll interno funcione correctamente */
+.fp-section.fp-auto-height-responsive {
+  overflow: visible;
+}
+
+/* El contenido interno debe tener altura automática para scrollOverflow */
+.fp-section.fp-auto-height-responsive .h-screen {
+  min-height: 100vh;
+  height: auto;
+}
+
+/* Corregir z-index para modales en fullPage.js */
+.fp-section {
+  z-index: 1;
+  position: relative;
+}
+
+/* Los elementos absolutos dentro de las secciones deben funcionar correctamente */
+.fp-section .absolute {
+  z-index: inherit;
+}
+
+/* Permitir que los z-index de Tailwind funcionen correctamente */
+.fp-section [class*="z-"] {
+  z-index: var(--tw-z-index) !important;
+}
+
+/* Específicamente para elementos con z-index alto */
+.fp-section .z-10 { z-index: 10 !important; }
+.fp-section .z-20 { z-index: 20 !important; }
+.fp-section .z-30 { z-index: 30 !important; }
+.fp-section .z-40 { z-index: 40 !important; }
+.fp-section .z-50 { z-index: 50 !important; }
+
+/* Jerarquía específica para el modal de eventos */
+.fp-section [class*="z-[100]"] { z-index: 100 !important; }
+.fp-section [class*="z-[110]"] { z-index: 110 !important; }
+
+/* Asegurar que los elementos de contenido estén por debajo del modal */
+/* Específicamente para la segunda sección (EventRegistration) */
+.fp-section:nth-child(2) .relative:not([class*="z-"]) {
+  z-index: 1 !important;
+}
+
+/* Excluir la primera sección (LandingPage) de las reglas de z-index forzadas */
+.fp-section:first-child .relative {
+  z-index: initial !important;
+}
+
+/* Eliminar transiciones de opacidad que causan cambios de tonalidad */
+.fp-section.fp-completely {
+  opacity: 1;
+}
+
+.fp-section:not(.fp-completely) {
+  opacity: 1; /* Cambiar de 0.9 a 1 para evitar cambios de tonalidad */
+}
+
+/* Estilo específico para el contenedor de la segunda sección */
+.fp-section:nth-child(2) {
+  background-color: #f8fafc;
+}
+
+/* Ocultar watermark de fullPage.js */
+a[href*="fullPage"]:not([class]) {
+  display: none !important;
+}
+
+/* Ocultar cualquier enlace que contenga "Made with fullPage.js" */
+a[target="_blank"][href*="alvarotrigo.com"] {
+  display: none !important;
+}
+
+/* Ocultar watermark por posición (suele estar en la esquina) */
+body > a[style*="position: fixed"] {
+  display: none !important;
+}
+
+/* Color personalizado para scrollbar de fullPage.js */
+.fp-scroll-mac .fp-overflow::-webkit-scrollbar-thumb {
+  background-color: rgb(109 183 154) !important;
+}
+
+.fp-overflow::-webkit-scrollbar-thumb {
+  background-color: rgb(109 183 154) !important;
 } 

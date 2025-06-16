@@ -4,7 +4,7 @@ import { ArrowLeft, User, Mail, Building, Briefcase, Phone, MessageSquare, Send,
 import { toast } from 'react-hot-toast';
 import { validators, utils } from '../services/api';
 
-const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false }) => {
+const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false, externalError = null, onClearError = null }) => {
   const [formData, setFormData] = useState({
     nombres: '',
     correo: '',
@@ -47,6 +47,11 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
       ...prev,
       [field]: true
     }));
+    
+    // Limpiar error externo si se modifica el correo
+    if (field === 'correo' && externalError && onClearError) {
+      onClearError();
+    }
   };
   
   // Validar un campo específico
@@ -348,6 +353,33 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
               </p>
             </div>
           </div>
+          
+          {/* Error externo (como correo duplicado) */}
+          {externalError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg"
+            >
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-red-800 mb-1">Error en el registro</h4>
+                  <p className="text-sm text-red-700 whitespace-pre-line">
+                    {externalError}
+                  </p>
+                  <div className="mt-3 text-xs text-red-600">
+                    <p>💡 <strong>Opciones disponibles:</strong></p>
+                    <ul className="list-disc list-inside mt-1 space-y-1">
+                      <li>Usar un correo electrónico diferente</li>
+                      <li>Contactar administración: <span className="font-mono">jcamacho@kossodo.com</span></li>
+                      <li>Verificar si ya completaste el registro anteriormente</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
           
           {/* Botones */}
           <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">

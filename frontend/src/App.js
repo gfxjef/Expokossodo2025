@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import EventRegistration from './components/EventRegistration';
+import EventRegistrationWithLanding from './components/EventRegistrationWithLanding';
 import AdminDashboard from './components/admin/AdminDashboard';
 import VerificadorGeneral from './components/VerificadorGeneral';
 import SelectorCharlas from './components/SelectorCharlas';
@@ -30,8 +30,8 @@ function App() {
         />
         
         <Routes>
-          {/* Ruta principal - Registro de eventos */}
-          <Route path="/" element={<EventRegistration />} />
+          {/* Ruta principal - Registro de eventos con landing */}
+          <Route path="/" element={<EventRegistrationWithLanding />} />
           
           {/* Ruta de administración */}
           <Route path="/admin" element={<AdminDashboard />} />
@@ -42,7 +42,7 @@ function App() {
           <Route path="/verificarSala/:eventoId" element={<VerificadorSala />} />
           
           {/* Redirección por defecto */}
-          <Route path="*" element={<EventRegistration />} />
+          <Route path="*" element={<EventRegistrationWithLanding />} />
         </Routes>
       </div>
     </Router>

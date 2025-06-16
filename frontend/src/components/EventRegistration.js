@@ -235,6 +235,7 @@ const EventRegistration = () => {
   // Volver al calendario
   const backToCalendar = () => {
     setCurrentStep('calendar');
+    setError(null); // Limpiar errores al volver
   };
   
   // Completar registro
@@ -267,8 +268,39 @@ const EventRegistration = () => {
       
     } catch (error) {
       console.error('Registration error:', error);
-      setError(error.message || 'Error en el registro');
-      toast.error('Error en el registro: ' + error.message);
+      
+      // Manejar específicamente el error de correo electrónico duplicado
+      let errorMessage = error.message || 'Error en el registro';
+      
+      // Verificar si es un error de correo duplicado
+      if (error.message && (
+        error.message.toLowerCase().includes('email') || 
+        error.message.toLowerCase().includes('correo') ||
+        error.message.toLowerCase().includes('duplicate') ||
+        error.message.toLowerCase().includes('duplicado') ||
+        error.message.toLowerCase().includes('already exists') ||
+        error.message.toLowerCase().includes('ya existe') ||
+        error.message.toLowerCase().includes('unique constraint') ||
+        error.message.toLowerCase().includes('already registered')
+      )) {
+        errorMessage = `Este correo electrónico ya se ha registrado anteriormente. 
+        Por favor, utilice un correo electrónico diferente o contáctese con la administración 
+        para cambiar su registro existente.`;
+        
+        toast.error(errorMessage, {
+          duration: 6000,
+          style: {
+            background: '#fee2e2',
+            border: '1px solid #fecaca',
+            color: '#991b1b',
+            maxWidth: '500px',
+          }
+        });
+      } else {
+        toast.error('Error en el registro: ' + errorMessage);
+      }
+      
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -281,6 +313,11 @@ const EventRegistration = () => {
     setError(null);
     setShowEventInfo(false);
     setSelectedEventInfo(null);
+  };
+
+  // Función para limpiar errores
+  const clearError = () => {
+    setError(null);
   };
 
   // Mostrar información del evento
@@ -353,22 +390,22 @@ const EventRegistration = () => {
       <AnimatePresence>
         {showEventInfo && selectedEventInfo && (
           <>
-            {/* Overlay */}
+            {/* Overlay - ABSOLUTO dentro de esta sección */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={handleCloseEventInfo}
-              className="fixed inset-0 bg-black/50 z-40"
+              className="absolute inset-0 bg-black/50 z-[100]"
             />
             
-            {/* Panel deslizante */}
+            {/* Panel deslizante - ABSOLUTO dentro de esta sección */}
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-              className="fixed left-0 top-0 h-full w-96 bg-gradient-to-b from-[#01295c] to-[#1d2236] shadow-2xl z-50 overflow-y-auto"
+              className="absolute left-0 top-0 h-full w-96 bg-gradient-to-b from-[#01295c] to-[#1d2236] shadow-2xl z-[110] overflow-y-auto"
             >
               <div className="p-6">
                 {/* Header del panel */}
@@ -513,56 +550,26 @@ const EventRegistration = () => {
       </AnimatePresence>
 
       {/* Header */}
-      <header className="relative bg-gradient-to-r from-[#1d2236] to-[#01295c] shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-          <div className="flex items-center justify-center">
-            {/* Logo SVG */}
-            <svg 
-              className="w-48 h-16" 
-              xmlns="http://www.w3.org/2000/svg" 
-              viewBox="0 0 174.68 68.94"
-            >
-              <defs>
-                <style>
-                  {`.cls-1 { fill: #fff; } .cls-2 { fill: none; } .cls-3 { fill: #6cb79a; }`}
-                </style>
-              </defs>
-              <g>
-                <path className="cls-1" d="M84.7,10.93h8.87v1.31h-7.38v4.93h6.78v1.21h-6.78v5.33h7.58v1.31h-9.07v-14.08Z"/>
-                <path className="cls-1" d="M100.87,18.91l-4.3,6.09h-1.67l5.15-7.28-4.81-6.8h1.65l3.98,5.63,3.98-5.63h1.67l-4.81,6.82,5.13,7.26h-1.67l-4.3-6.09Z"/>
-                <path className="cls-1" d="M108.49,10.93h5.07c3.24,0,4.91,1.63,4.91,4.3s-1.67,4.26-4.91,4.26h-3.58v5.51h-1.49v-14.08ZM116.96,15.23c0-1.95-1.17-3-3.46-3h-3.52v5.93h3.52c2.29,0,3.46-1.05,3.46-2.94Z"/>
-                <path className="cls-1" d="M120,17.97c0-4.71,2.74-7.22,6.35-7.22s6.33,2.51,6.33,7.22-2.74,7.24-6.33,7.24-6.35-2.53-6.35-7.24ZM131.18,17.97c0-3.94-2.05-5.93-4.83-5.93s-4.85,1.99-4.85,5.93,2.05,5.95,4.85,5.95,4.83-1.99,4.83-5.95Z"/>
-                <path className="cls-1" d="M84.7,30.91h1.49v7.98l7.2-7.98h1.77l-5.87,6.52,6.38,7.56h-1.75l-5.55-6.54-2.17,2.39v4.14h-1.49v-14.08Z"/>
-                <path className="cls-1" d="M95.91,37.95c0-4.71,2.74-7.22,6.35-7.22s6.33,2.51,6.33,7.22-2.74,7.24-6.33,7.24-6.35-2.53-6.35-7.24ZM107.09,37.95c0-3.94-2.05-5.93-4.83-5.93s-4.85,1.99-4.85,5.93,2.05,5.95,4.85,5.95,4.83-1.99,4.83-5.95Z"/>
-                <path className="cls-1" d="M110.32,40.96h1.49c.1,1.65,1.25,2.96,3.86,2.96,2.41,0,3.6-1.13,3.6-2.78s-1.21-2.31-2.9-2.65l-1.85-.38c-2.49-.5-3.78-1.71-3.78-3.66,0-2.23,1.65-3.72,4.81-3.72s4.83,1.49,4.83,3.68h-1.47c-.08-1.37-1.11-2.41-3.38-2.41s-3.26,1.07-3.26,2.45c0,1.21.74,2.07,2.67,2.47l1.81.36c2.47.48,4.04,1.53,4.04,3.84,0,2.55-1.91,4.06-5.15,4.06-3.52,0-5.33-1.79-5.33-4.22Z"/>
-                <path className="cls-1" d="M122.53,40.96h1.49c.1,1.65,1.25,2.96,3.86,2.96,2.41,0,3.6-1.13,3.6-2.78s-1.21-2.31-2.9-2.65l-1.85-.38c-2.49-.5-3.78-1.71-3.78-3.66,0-2.23,1.65-3.72,4.81-3.72s4.83,1.49,4.83,3.68h-1.47c-.08-1.37-1.11-2.41-3.38-2.41s-3.26,1.07-3.26,2.45c0,1.21.74,2.07,2.67,2.47l1.81.36c2.47.48,4.04,1.53,4.04,3.84,0,2.55-1.91,4.06-5.15,4.06-3.52,0-5.33-1.79-5.33-4.22Z"/>
-                <path className="cls-1" d="M134.74,37.95c0-4.71,2.74-7.22,6.35-7.22s6.33,2.51,6.33,7.22-2.74,7.24-6.33,7.24-6.35-2.53-6.35-7.24ZM145.92,37.95c0-3.94-2.05-5.93-4.83-5.93s-4.85,1.99-4.85,5.93,2.05,5.95,4.85,5.95,4.83-1.99,4.83-5.95Z"/>
-                <path className="cls-1" d="M149.14,30.91h4.46c4.44,0,6.66,2.55,6.66,7.04s-2.21,7.04-6.66,7.04h-4.46v-14.08ZM158.75,37.95c0-3.86-1.63-5.73-5.29-5.73h-2.84v11.46h2.84c3.66,0,5.29-1.89,5.29-5.73Z"/>
-                <path className="cls-1" d="M161.99,37.95c0-4.71,2.74-7.22,6.35-7.22s6.33,2.51,6.33,7.22-2.74,7.24-6.33,7.24-6.35-2.53-6.35-7.24ZM173.17,37.95c0-3.94-2.05-5.93-4.83-5.93s-4.85,1.99-4.85,5.93,2.05,5.95,4.85,5.95,4.83-1.99,4.83-5.95Z"/>
-                <path className="cls-1" d="M88.22,58.53c2.01-1.23,3.5-1.97,3.5-3.72.02-1.59-1.13-2.37-2.57-2.37s-2.65.87-2.65,2.76v.28h-1.97v-.38c0-2.51,1.55-4.38,4.65-4.38,2.94,0,4.59,1.67,4.59,4,0,2.53-1.91,3.66-3.86,4.79-2.13,1.29-3.24,2.27-3.24,3.66v.1h7.14v1.71h-9.45v-.58c0-2.51.95-4.1,3.88-5.85Z"/>
-                <path className="cls-1" d="M95.52,57.93c0-4.99,2.55-7.22,5.49-7.22s5.51,2.23,5.51,7.22-2.55,7.24-5.51,7.24-5.49-2.21-5.49-7.24ZM104.57,57.93c0-3.22-1.21-5.49-3.56-5.49s-3.56,2.27-3.56,5.49,1.21,5.51,3.56,5.51,3.56-2.27,3.56-5.51Z"/>
-                <path className="cls-1" d="M112.03,58.53c2.01-1.23,3.5-1.97,3.5-3.72.02-1.59-1.13-2.37-2.57-2.37s-2.65.87-2.65,2.76v.28h-1.97v-.38c0-2.51,1.55-4.38,4.65-4.38,2.94,0,4.59,1.67,4.59,4,0,2.53-1.91,3.66-3.86,4.79-2.13,1.29-3.24,2.27-3.24,3.66v.1h7.14v1.71h-9.45v-.58c0-2.51.95-4.1,3.88-5.85Z"/>
-                <path className="cls-1" d="M119.43,60.64h1.85c.06,1.83,1.43,2.86,3.1,2.86s3.14-.97,3.14-3.28-1.51-3.28-3.1-3.28c-1.17,0-2.21.5-2.78,1.47h-1.93l1.15-7.52h7.42v1.71h-5.99l-.66,4.12c.4-.54,1.49-1.37,3.28-1.37,2.63,0,4.63,1.81,4.63,4.87s-2.03,4.95-5.11,4.95-4.99-1.93-4.99-4.53Z"/>
-              </g>
-              <g>
-                <g>
-                  <path className="cls-3" d="M51.06,40.78c-3.73,7.79-3.73,16.01-3.72,23.26v2.41c-.46.19-.92.36-1.39.53v-2.94c0-7.4,0-15.78,3.86-23.86,2.99-6.26,7.59-11.64,13.27-15.56,1.19-.83,2.42-1.58,3.68-2.25.16.44.32.87.46,1.32-1.15.62-2.26,1.31-3.35,2.06-5.49,3.79-9.92,8.98-12.81,15.03Z"/>
-                  <path className="cls-3" d="M63.73,46.7c1.21-2.51,2.82-4.8,4.77-6.75-.14.9-.32,1.78-.53,2.65-1.17,1.43-2.18,3.01-2.98,4.69-.91,1.89-1.44,3.97-1.76,6.18-.52.79-1.07,1.56-1.66,2.29.26-3.26.85-6.32,2.16-9.07Z"/>
-                  <path className="cls-3" d="M58.03,44.04c-2.71,5.66-2.96,11.93-2.98,18.09-.46.34-.93.67-1.4.99,0-6.63.14-13.43,3.12-19.67,2.43-5.06,6.13-9.42,10.71-12.58.39-.27.78-.52,1.18-.77.07.51.12,1.02.16,1.54-.18.12-.37.24-.54.37-4.39,3.03-7.93,7.19-10.25,12.04Z"/>
-                  <path className="cls-3" d="M64.04,16.75c-1.57.82-3.1,1.74-4.58,2.77-6.58,4.55-11.89,10.77-15.36,18.02-2.36,4.94-3.7,10.3-4.21,16.86v.28s-.02,0-.02,0c-.24,3.32-.24,6.52-.24,9.38v4.51c-.46.07-.92.13-1.39.18v-4.69c0-2.91,0-6.21.25-9.68-.46-6.59-1.7-12.31-3.81-17.49-.03-.08-.06-.15-.1-.23-.33-.8-.68-1.6-1.05-2.38-4.04-8.44-10.23-15.7-17.91-21-1.76-1.22-3.56-2.3-5.43-3.28.35-.34.7-.68,1.06-1.01,1.76.95,3.48,2,5.16,3.15,7.88,5.44,14.24,12.89,18.38,21.54.19.4.37.8.55,1.2l.53-1.2c4.14-8.65,10.49-16.1,18.37-21.54,1.33-.92,2.68-1.76,4.07-2.55.34.33.68.67,1.02,1.02-1.46.81-2.9,1.7-4.3,2.67-7.68,5.3-13.87,12.56-17.91,21l-1.04,2.38c1.45,3.64,2.49,7.53,3.15,11.8.16-.91.33-1.8.53-2.67.74-3.17,1.74-6.06,3.07-8.84,3.57-7.46,9.04-13.87,15.82-18.55,1.51-1.04,3.05-1.97,4.63-2.81.26.39.5.78.74,1.18Z"/>
-                  <path className="cls-3" d="M32.43,64.05v4.84c-.47-.03-.93-.06-1.39-.11v-4.73c0-7.65,0-17.18-4.46-26.52-3.46-7.24-8.78-13.47-15.36-18.02-1.9-1.31-3.85-2.45-5.9-3.44.25-.39.5-.78.77-1.16,2.05,1,4.02,2.15,5.93,3.46,6.78,4.68,12.25,11.09,15.82,18.55,4.61,9.62,4.6,19.32,4.6,27.11Z"/>
-                  <path className="cls-3" d="M6.94,46.7c1.61,3.36,2.13,7.17,2.3,11.25-.51-.55-1.01-1.12-1.49-1.71-.24-3.25-.79-6.28-2.06-8.94-1.28-2.67-3.05-5.06-5.2-7.05-.12-.68-.21-1.37-.28-2.07,2.84,2.28,5.15,5.2,6.74,8.53Z"/>
-                  <path className="cls-3" d="M13.9,43.45c3.12,6.52,3.12,13.68,3.12,20.59v.16c-.47-.27-.94-.56-1.39-.86,0-6.54-.1-13.27-2.98-19.3-2.32-4.85-5.87-9.01-10.26-12.04-.71-.49-1.43-.94-2.18-1.36.05-.5.12-.99.19-1.48.95.51,1.88,1.08,2.78,1.7,4.59,3.16,8.29,7.52,10.72,12.58Z"/>
-                  <path className="cls-3" d="M24.73,64.05v3.5c-.47-.14-.94-.28-1.39-.44v-3.06c0-7.25,0-15.47-3.72-23.26-2.89-6.05-7.32-11.24-12.81-15.03-1.55-1.07-3.15-2.01-4.83-2.82.15-.44.32-.87.49-1.3,1.78.85,3.48,1.84,5.13,2.98,5.68,3.93,10.27,9.31,13.27,15.56,3.86,8.07,3.86,16.46,3.86,23.86Z"/>
-                </g>
-                <path className="cls-2" d="M68.94,34.47c0,1.87-.15,3.7-.44,5.48-.14.9-.32,1.78-.53,2.65-.95,3.93-2.58,7.6-4.74,10.87-.52.79-1.07,1.56-1.66,2.29-1.89,2.39-4.08,4.54-6.52,6.36-.46.34-.93.67-1.4.99-1.97,1.32-4.08,2.45-6.31,3.34-.46.19-.92.36-1.39.53-2.02.72-4.13,1.25-6.32,1.57-.46.07-.92.13-1.39.18-1.24.13-2.5.2-3.77.2-.69,0-1.36-.02-2.04-.06-.47-.03-.93-.06-1.39-.11-2.17-.21-4.28-.63-6.31-1.23-.47-.14-.94-.28-1.39-.44-2.22-.75-4.33-1.73-6.32-2.9-.47-.27-.94-.56-1.39-.86-2.34-1.53-4.49-3.34-6.4-5.38-.51-.55-1.01-1.12-1.49-1.71-3.69-4.52-6.25-9.99-7.26-15.99-.12-.68-.21-1.37-.28-2.07-.13-1.22-.2-2.45-.2-3.7s.07-2.57.21-3.83c.05-.5.12-.99.19-1.48.33-2.15.86-4.23,1.57-6.22.15-.44.32-.87.49-1.3.78-1.95,1.74-3.81,2.85-5.57.25-.39.5-.78.77-1.16,1.22-1.77,2.6-3.42,4.12-4.93.35-.34.7-.68,1.06-1.01C17.38,3.4,25.53,0,34.47,0s17.66,3.65,23.85,9.58c.34.33.68.67,1.02,1.02,1.46,1.53,2.79,3.19,3.95,4.97.26.39.5.78.74,1.18,1.07,1.77,1.98,3.66,2.72,5.63.16.44.32.87.46,1.32.68,2.05,1.16,4.19,1.44,6.4.07.51.12,1.02.16,1.54.08.94.12,1.88.12,2.84Z"/>
-              </g>
-            </svg>
+      {currentStep !== 'success' && (
+        <header className="relative bg-gradient-to-r from-[#1d2236] to-[#01295c] shadow-lg z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+            <div className="flex items-center justify-center">
+              {/* Logo de EXPO KOSSODO 2025 */}
+              <img 
+                src="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
+                alt="EXPO KOSSODO 2025"
+                className="w-48 h-16 object-contain"
+                onError={(e) => {
+                  console.log('Error loading header logo image');
+                  e.target.style.display = 'none';
+                }}
+              />
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className={currentStep !== 'success' ? "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" : ""}>
         <AnimatePresence mode="wait">
           {currentStep === 'calendar' ? (
             <motion.div
@@ -573,7 +580,7 @@ const EventRegistration = () => {
               transition={{ duration: 0.3 }}
             >
               {/* Información dinámica de la fecha actual con transiciones fluidas */}
-              <div className="mb-8">
+              <div className="mb-8 relative z-20">
                 <div 
                   className="relative bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100"
                   style={{
@@ -749,18 +756,20 @@ const EventRegistration = () => {
               </div>
               
               {/* Calendario de eventos */}
-              <EventCalendar
-                eventsData={eventsData}
-                currentDate={eventDates[currentDateIndex]}
-                selectedEvents={selectedEvents}
-                onEventSelect={handleEventSelect}
-                onShowEventInfo={handleShowEventInfo}
-                timeSlots={timeSlots}
-                key={`calendar-${currentDateIndex}`} // Forzar re-render al cambiar fecha
-              />
+              <div className="relative z-20">
+                <EventCalendar
+                  eventsData={eventsData}
+                  currentDate={eventDates[currentDateIndex]}
+                  selectedEvents={selectedEvents}
+                  onEventSelect={handleEventSelect}
+                  onShowEventInfo={handleShowEventInfo}
+                  timeSlots={timeSlots}
+                  key={`calendar-${currentDateIndex}`} // Forzar re-render al cambiar fecha
+                />
+              </div>
               
               {/* Botones de navegación mejorados */}
-              <div className="mt-8 flex justify-between items-center">
+              <div className="mt-8 flex justify-between items-center relative z-20">
                 <div className="flex space-x-3">
                   {currentDateIndex > 0 && (
                     <motion.button
@@ -896,26 +905,111 @@ const EventRegistration = () => {
                 onSubmit={handleRegistrationComplete}
                 onBack={backToCalendar}
                 submitting={submitting}
+                externalError={error}
+                onClearError={clearError}
               />
             </motion.div>
           ) : (
             <motion.div
               key="success"
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="min-h-screen bg-gradient-to-b from-[#01295c] to-[#1d2236] flex items-center justify-center text-center px-4"
             >
-              <div className="text-center">
-                <CheckCircle className="text-green-500 text-6xl mb-4 mx-auto" />
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">¡Registro Completado!</h2>
-                <p className="text-gray-600 mb-6">Gracias por registrarte. Te hemos enviado un correo electrónico con la confirmación del registro.</p>
-                <button 
+              {/* SVG Animado */}
+              <div className="flex flex-col items-center">
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ 
+                    duration: 0.8, 
+                    delay: 0.2,
+                    type: "spring",
+                    stiffness: 200,
+                    damping: 15
+                  }}
+                  className="mb-8"
+                >
+                  <svg 
+                    width="300"
+                    height="300"
+                    className="mx-auto"
+                    xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 262.15 262.15"
+                  >
+                    <defs>
+                      <style>
+                        {`.cls-1 { fill: #6cb69a; }`}
+                      </style>
+                    </defs>
+                    <motion.polygon 
+                      className="cls-1" 
+                      points="106.79 187.14 64.44 144.79 78.59 130.65 106.79 158.86 183.57 82.08 197.71 96.23 106.79 187.14"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{ pathLength: 1, opacity: 1 }}
+                      transition={{ duration: 0.5, delay: 0.8 }}
+                    />
+                    <motion.path 
+                      className="cls-1" 
+                      d="M131.08,262.15C58.8,262.15,0,203.35,0,131.08S58.8,0,131.08,0s131.08,58.8,131.08,131.08-58.8,131.08-131.08,131.08ZM131.08,20c-61.25,0-111.08,49.83-111.08,111.08s49.83,111.08,111.08,111.08,111.08-49.83,111.08-111.08S192.32,20,131.08,20Z"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{ pathLength: 1, opacity: 1 }}
+                      transition={{ duration: 0.6, delay: 0.4 }}
+                    />
+                  </svg>
+                </motion.div>
+
+                {/* Título Principal */}
+                <motion.h2 
+                  initial={{ y: 30, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.6 }}
+                  className="font-bold text-white mb-4"
+                  style={{ fontSize: '3.25rem' }}
+                >
+                  ¡Te esperamos!
+                </motion.h2>
+
+                {/* Subtítulo */}
+                <motion.p 
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.8 }}
+                  className="text-lg text-white/90 mb-8 leading-relaxed max-w-lg"
+                >
+                  Gracias por registrarte. Te hemos enviado un correo 
+                  electrónico con la confirmación del registro.
+                </motion.p>
+
+                {/* Botón */}
+                <motion.button
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 1.0 }}
                   onClick={resetRegistration}
-                  className="btn-primary w-full"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-[#6cb79a] hover:bg-[#5ca085] text-white font-semibold py-4 px-16 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl"
                 >
                   Volver al inicio
-                </button>
+                </motion.button>
+
+                {/* Información adicional */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 1.2 }}
+                  className="mt-8 pt-6 border-t border-white/20"
+                >
+                  <p className="text-sm text-white/70">
+                    📧 Revisa tu bandeja de entrada y spam
+                  </p>
+                  <p className="text-xs text-white/60 mt-2">
+                    ¿Dudas? Contacta: <span className="text-[#6cb79a]">jcamacho@kossodo.com</span>
+                  </p>
+                </motion.div>
               </div>
             </motion.div>
           )}
