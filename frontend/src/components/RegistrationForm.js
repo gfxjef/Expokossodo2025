@@ -185,13 +185,13 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
         </div>
         
         {/* Resumen de eventos seleccionados */}
-        <div className="bg-primary-50 rounded-lg p-4 border border-primary-200">
-          <h3 className="font-semibold text-gray-800 mb-3">
+        <div className="bg-gradient-to-r from-[#01295c] to-[#1d2236] rounded-lg p-4 border-2 border-[#6cb79a]">
+          <h3 className="font-semibold text-white mb-3">
             Eventos Seleccionados ({selectedEvents.length})
           </h3>
           <div className="grid gap-3 md:grid-cols-2">
             {selectedEvents.map((event, index) => (
-              <div key={event.id} className="bg-white rounded-lg p-3 border border-primary-200">
+              <div key={event.id} className="bg-white rounded-lg p-3 border border-[#6cb79a] shadow-md">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-800 text-sm mb-1">
@@ -229,9 +229,9 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
         transition={{ delay: 0.2 }}
         className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
       >
-        <div className="bg-gradient-primary text-white p-6">
-          <h3 className="text-xl font-bold mb-2">Información Personal</h3>
-          <p className="text-blue-100">Todos los campos son obligatorios</p>
+        <div className="bg-gradient-to-r from-[#01295c] to-[#1d2236] text-white p-6">
+          <h3 className="text-xl font-bold mb-2 text-white">Información Personal</h3>
+          <p className="text-blue-200 font-medium">Todos los campos son obligatorios</p>
         </div>
         
         <form onSubmit={handleSubmit} className="p-6">
@@ -247,7 +247,7 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
                 value={formData.nombres}
                 onChange={(e) => handleInputChange('nombres', e.target.value)}
                 onBlur={() => handleBlur('nombres')}
-                className={`input-field ${errors.nombres ? 'border-red-500 focus:ring-red-500' : ''}`}
+                className={`input-field ${touchedFields.nombres && errors.nombres ? 'border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="Ej: Juan Carlos Pérez"
                 disabled={submitting}
               />
@@ -266,7 +266,7 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
                 value={formData.correo}
                 onChange={(e) => handleInputChange('correo', e.target.value)}
                 onBlur={() => handleBlur('correo')}
-                className={`input-field ${errors.correo ? 'border-red-500 focus:ring-red-500' : ''}`}
+                className={`input-field ${touchedFields.correo && errors.correo ? 'border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="Ej: juan.perez@empresa.com"
                 disabled={submitting}
               />
@@ -285,7 +285,7 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
                 value={formData.empresa}
                 onChange={(e) => handleInputChange('empresa', e.target.value)}
                 onBlur={() => handleBlur('empresa')}
-                className={`input-field ${errors.empresa ? 'border-red-500 focus:ring-red-500' : ''}`}
+                className={`input-field ${touchedFields.empresa && errors.empresa ? 'border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="Ej: Hospital Central"
                 disabled={submitting}
               />
@@ -304,7 +304,7 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
                 value={formData.cargo}
                 onChange={(e) => handleInputChange('cargo', e.target.value)}
                 onBlur={() => handleBlur('cargo')}
-                className={`input-field ${errors.cargo ? 'border-red-500 focus:ring-red-500' : ''}`}
+                className={`input-field ${touchedFields.cargo && errors.cargo ? 'border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="Ej: Médico Especialista"
                 disabled={submitting}
               />
@@ -323,7 +323,7 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
                 value={formData.numero}
                 onChange={(e) => handleInputChange('numero', e.target.value)}
                 onBlur={() => handleBlur('numero')}
-                className={`input-field ${errors.numero ? 'border-red-500 focus:ring-red-500' : ''}`}
+                className={`input-field ${touchedFields.numero && errors.numero ? 'border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="Ej: +593 99 123 4567"
                 disabled={submitting}
               />
@@ -342,7 +342,7 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
                 onChange={(e) => handleInputChange('expectativas', e.target.value)}
                 onBlur={() => handleBlur('expectativas')}
                 rows={4}
-                className={`input-field resize-none ${errors.expectativas ? 'border-red-500 focus:ring-red-500' : ''}`}
+                className={`input-field resize-none ${touchedFields.expectativas && errors.expectativas ? 'border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="Describe qué conocimientos, contactos o experiencias esperas obtener del evento..."
                 disabled={submitting}
               />
@@ -415,9 +415,9 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
           </div>
           
           {/* Información adicional */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h4 className="font-medium text-blue-900 mb-2">ℹ️ Información Importante</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
+          <div className="mt-6 p-4 bg-gradient-to-r from-[#6cb79a]/10 to-[#6cb79a]/5 rounded-lg border border-[#6cb79a]">
+            <h4 className="font-medium text-[#01295c] mb-2">ℹ️ Información Importante</h4>
+            <ul className="text-sm text-[#01295c] space-y-1">
               <li>• Recibirás un email de confirmación inmediatamente</li>
               <li>• Tu registro incluye acceso a {selectedEvents.length} evento(s) seleccionado(s)</li>
               <li>• El evento se realizará del 22 al 25 de Julio de 2024</li>

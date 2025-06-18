@@ -558,64 +558,229 @@ def send_confirmation_email(user_data, selected_events, qr_text=None):
         msg['To'] = user_data['correo']
         msg['Subject'] = "Confirmación de Registro - ExpoKossodo 2024"
         
-        # Crear contenido del email
+        # Crear contenido del email con diseño moderno
         eventos_html = ""
-        for evento in selected_events:
+        for i, evento in enumerate(selected_events):
             eventos_html += f"""
-            <div style="margin: 10px 0; padding: 10px; background-color: #f5f5f5; border-radius: 5px;">
-                <strong>📅 {evento['fecha']}</strong> - <strong>🕐 {evento['hora']}</strong><br>
-                <strong>🏛️ Sala:</strong> {evento['sala']}<br>
-                <strong>🎤 Charla:</strong> {evento['titulo_charla']}<br>
-                <strong>👨‍💼 Expositor:</strong> {evento['expositor']} ({evento['pais']})
+            <tr>
+                <td style="padding: 20px; border-radius: 12px; background: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 15px; display: block;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td style="padding-bottom: 12px;">
+                                <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1f2937; line-height: 1.4;">
+                                    {evento['titulo_charla']}
+                                </h3>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-bottom: 8px;">
+                                <p style="margin: 0; font-size: 14px; color: #6b7280; font-weight: 500;">
+                                    {evento['expositor']} • {evento['pais']}
+                                </p>
+                            </td>
+                        </tr>
+                                                                 <tr>
+                                             <td>
+                                                 <div style="display: inline-flex; align-items: center; background: #6cb79a; color: white; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+                                                     📅 {evento['fecha']} &nbsp;•&nbsp; 🕐 {evento['hora']} &nbsp;•&nbsp; 🏛️ {evento['sala']}
             </div>
+                                             </td>
+                                         </tr>pe
+                    </table>
+                </td>
+            </tr>
             """
         
         html_body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background-color: #4F46E5; color: white; padding: 20px; text-align: center;">
-                <h1>🎉 ¡Registro Confirmado!</h1>
-                <h2>ExpoKossodo 2024</h2>
-            </div>
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Confirmación ExpoKossodo 2025</title>
+            <!--[if mso]>
+            <noscript>
+                <xml>
+                    <o:OfficeDocumentSettings>
+                        <o:PixelsPerInch>96</o:PixelsPerInch>
+                    </o:OfficeDocumentSettings>
+                </xml>
+            </noscript>
+            <![endif]-->
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); line-height: 1.6;">
             
-            <div style="padding: 20px;">
-                <h3>Hola {user_data['nombres']},</h3>
-                <p>Tu registro ha sido confirmado exitosamente. A continuación los detalles:</p>
-                
-                <div style="background-color: #E5E7EB; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <h4>📋 Datos del Participante:</h4>
-                    <p><strong>Nombre:</strong> {user_data['nombres']}</p>
-                    <p><strong>Email:</strong> {user_data['correo']}</p>
-                    <p><strong>Empresa:</strong> {user_data['empresa']}</p>
-                    <p><strong>Cargo:</strong> {user_data['cargo']}</p>
-                    <p><strong>Teléfono:</strong> {user_data['numero']}</p>
-                </div>
-                
-                <h4>📅 Eventos Seleccionados:</h4>
+            <!-- Main Container -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); min-height: 100vh;">
+                <tr>
+                    <td align="center" style="padding: 40px 20px;">
+                        
+                        <!-- Email Content Container -->
+                        <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background: white; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden;">
+                            
+                            <!-- Header with Gradient -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #01295c 0%, #1d2236 100%); padding: 40px 30px; text-align: center;">
+                                                                                                              <!-- Logo -->
+                                     <img src="https://i.ibb.co/3mjHgkvb/EXPOKOSSODO-PNG.png" alt="ExpoKossodo 2025" style="width: 200px; height: auto; margin-bottom: 30px;">
+                                     
+                                     <!-- Title -->
+                                     <h1 style="margin: 0; font-size: 32px; font-weight: 700; color: white; margin-bottom: 8px;">
+                                         ¡Registro Confirmado!
+                                     </h1>
+                                     <p style="margin: 0; font-size: 18px; color: rgba(255, 255, 255, 0.8); font-weight: 400;">
+                                         Te esperamos en ExpoKossodo 2025
+                                     </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Main Content -->
+                            <tr>
+                                <td style="padding: 40px 30px;">
+                                    
+                                    <!-- Greeting -->
+                                    <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1f2937;">
+                                        Hola {user_data['nombres']},
+                                    </h2>
+                                    <p style="margin: 0 0 30px 0; font-size: 16px; color: #6b7280; line-height: 1.6;">
+                                        Tu registro ha sido confirmado exitosamente. Aquí tienes todos los detalles de tu participación:
+                                    </p>
+                                    
+                                    <!-- Participant Data Card -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                                        <tr>
+                                            <td style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 25px; border-radius: 12px; border-left: 4px solid #6cb79a;">
+                                                <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600; color: #1f2937;">
+                                                    📋 Datos del Participante
+                                                </h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <td style="padding: 5px 0; font-size: 14px; color: #374151;"><strong>Nombre:</strong> {user_data['nombres']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="padding: 5px 0; font-size: 14px; color: #374151;"><strong>Email:</strong> {user_data['correo']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="padding: 5px 0; font-size: 14px; color: #374151;"><strong>Empresa:</strong> {user_data['empresa']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="padding: 5px 0; font-size: 14px; color: #374151;"><strong>Cargo:</strong> {user_data['cargo']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="padding: 5px 0; font-size: 14px; color: #374151;"><strong>Teléfono:</strong> {user_data['numero']}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                                                         <!-- Selected Events Section - Estilo del frontend -->
+                                     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                                         <tr>
+                                             <td style="background: linear-gradient(135deg, #01295c 0%, #1d2236 100%); padding: 25px; border-radius: 16px;">
+                                                 <h3 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700; color: white;">
+                                                     Eventos Seleccionados ({len(selected_events)})
+                                                 </h3>
+                                                 <table width="100%" cellpadding="0" cellspacing="0">
                 {eventos_html}
-                
-                <div style="background-color: #FEF3C7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <h4>📍 Información Importante:</h4>
-                    <p>• <strong>Fechas:</strong> 22, 23, 24 y 25 de Julio 2024</p>
-                    <p>• <strong>Ubicación:</strong> [Agregar ubicación del evento]</p>
-                    <p>• <strong>Llegada:</strong> Te recomendamos llegar 15 minutos antes</p>
+                                                 </table>
+                                             </td>
+                                         </tr>
+                                     </table>
+                                    
+                                                                         <!-- Important Information - Diseño minimalista -->
+                                     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                                         <tr>
+                                             <td style="background: white; padding: 25px; border-radius: 16px; border: 2px solid #6cb79a; box-shadow: 0 4px 6px rgba(108, 183, 154, 0.1);">
+                                                 <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                                                     <div style="width: 40px; height: 40px; background: #6cb79a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                                                         <svg width="20" height="20" fill="#ffffff" viewBox="0 0 24 24">
+                                                             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                                         </svg>
                 </div>
-                
-                <div style="background-color: #DBEAFE; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <h4>📱 Tu Código QR Personal:</h4>
-                    <p>• Hemos adjuntado tu <strong>código QR único</strong> a este email</p>
-                    <p>• <strong>Guárdalo en tu teléfono</strong> - lo necesitarás para ingresar al evento</p>
-                    <p>• Presenta el QR en recepción y en cada charla para registrar tu asistencia</p>
-                    <p>• <strong>¡No lo compartas!</strong> Es único e intransferible</p>
+                                                     <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1f2937;">
+                                                         Información Importante
+                                                     </h3>
                 </div>
-                
-                <p>¡Esperamos verte pronto en ExpoKossodo 2024!</p>
-                
-                <div style="text-align: center; margin-top: 30px;">
-                    <p style="color: #6B7280;">Si tienes alguna pregunta, no dudes en contactarnos.</p>
-                    <p><strong>Equipo ExpoKossodo</strong></p>
+                                                 <table width="100%" cellpadding="0" cellspacing="0">
+                                                     <tr><td style="padding: 8px 0; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6;"><strong>Fechas de tus eventos:</strong> {', '.join(sorted(set([evento['fecha'].strftime('%d/%m/%Y') if hasattr(evento['fecha'], 'strftime') else str(evento['fecha']) for evento in selected_events])))}</td></tr>
+                                                     <tr><td style="padding: 8px 0; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+                                                         <strong>Ubicación:</strong> Oficinas de Kossodo Jr. Chota 1161, Cercado de Lima<br>
+                                                         <a href="https://maps.app.goo.gl/nbKHT74Tk3gfquhA6" target="_blank" style="display: inline-block; margin-top: 8px; background: #6cb79a; color: white; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">
+                                                             📍 Ver en Google Maps
+                                                         </a>
+                                                     </td></tr>
+                                                     <tr><td style="padding: 8px 0; font-size: 14px; color: #374151;"><strong>Llegada:</strong> Te recomendamos llegar 30 minutos antes</td></tr>
+                                                 </table>
+                                             </td>
+                                         </tr>
+                                     </table>
+                                     
+                                     <!-- QR Code Information - Diseño minimalista -->
+                                     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                                         <tr>
+                                             <td style="background: white; padding: 25px; border-radius: 16px; border: 2px solid #6cb79a; box-shadow: 0 4px 6px rgba(108, 183, 154, 0.1);">
+                                                 <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                                                     <div style="width: 40px; height: 40px; background: #6cb79a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                                                         <svg width="20" height="20" fill="#ffffff" viewBox="0 0 24 24">
+                                                             <path d="M3 3h18v18H3V3zm16 16V5H5v14h14zM7 7h2v2H7V7zm0 4h2v2H7v-2zm4-4h2v2h-2V7zm0 4h2v2h-2v-2zm4-4h2v2h-2V7zm0 4h2v2h-2v-2zM7 15h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/>
+                                                         </svg>
                 </div>
+                                                     <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1f2937;">
+                                                         Tu Código QR Personal
+                                                     </h3>
             </div>
+                                                 <table width="100%" cellpadding="0" cellspacing="0">
+                                                     <tr><td style="padding: 8px 0; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6;">Hemos adjuntado tu <strong>código QR único</strong> a este email</td></tr>
+                                                     <tr><td style="padding: 8px 0; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6;"><strong>Guárdalo en tu teléfono</strong> - lo necesitarás para ingresar al evento</td></tr>
+                                                     <tr><td style="padding: 8px 0; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6;">Presenta el QR en recepción y en cada charla para registrar tu asistencia</td></tr>
+                                                     <tr><td style="padding: 8px 0; font-size: 14px; color: #374151;"><strong>¡No lo compartas!</strong> Es único e intransferible</td></tr>
+                                                 </table>
+                                             </td>
+                                         </tr>
+                                     </table>
+                                    
+                                    <!-- CTA Button -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="#" style="display: inline-block; background: linear-gradient(135deg, #6cb79a 0%, #5ca085 100%); color: white; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(108, 183, 154, 0.25);">
+                                                    🌟 Preparándote para la Expo
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <!-- Final Message -->
+                                    <p style="margin: 0; font-size: 16px; color: #6b7280; text-align: center; line-height: 1.6;">
+                                        ¡Esperamos verte pronto en <strong style="color: #6cb79a;">ExpoKossodo 2025</strong>!<br>
+                                        Un evento que marcará el futuro de la sostenibilidad.
+                                    </p>
+                                    
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #6b7280;">
+                                        Si tienes alguna pregunta, no dudes en contactarnos:
+                                    </p>
+                                    <p style="margin: 0 0 15px 0; font-size: 14px;">
+                                        <a href="mailto:jcamacho@kossodo.com" style="color: #6cb79a; text-decoration: none; font-weight: 600;">jcamacho@kossodo.com</a>
+                                    </p>
+                                    <p style="margin: 0; font-size: 16px; font-weight: 600; color: #1f2937;">
+                                        Equipo ExpoKossodo 2025
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                        </table>
+                        
+                    </td>
+                </tr>
+            </table>
+            
         </body>
         </html>
         """

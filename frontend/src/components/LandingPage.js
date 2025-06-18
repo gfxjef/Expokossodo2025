@@ -5,14 +5,18 @@ import { ChevronDown } from 'lucide-react';
 const LandingPage = ({ onScrollToNext }) => {
   return (
     <div className="relative h-screen w-full overflow-hidden" style={{ zIndex: 1 }}>
-      {/* Capa de fondo: Imagen */}
+      {/* Capa de fondo: Video */}
       <div className="absolute inset-0" style={{ zIndex: 1 }}>
-        <img 
-          src="https://www.comexperu.org.pe/upload/images/comercio-exterior-300922-111503.jpg"
-          alt="Background"
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
           className="w-full h-full object-cover"
+          src="https://github.com/gfxjef/Expokossodo2025/raw/refs/heads/main/frontend/public/video/expo_kssd_2.mp4"
           onError={(e) => {
-            // Fallback en caso de error con la imagen
+            // Fallback en caso de error con el video
+            console.error('Error loading video:', e);
             e.target.style.display = 'none';
             e.target.parentElement.style.background = 'linear-gradient(135deg, #1e3a8a, #1e40af, #1e3a8a)';
           }}
@@ -30,7 +34,7 @@ const LandingPage = ({ onScrollToNext }) => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="absolute top-6 left-6 md:top-8 md:left-8 drop-shadow-lg"
+          className="absolute top-6 left-6 md:top-8 md:left-16 lg:left-24 drop-shadow-lg"
           style={{ zIndex: 30, position: 'absolute' }}
         >
           <div className="rounded-lg p-3">

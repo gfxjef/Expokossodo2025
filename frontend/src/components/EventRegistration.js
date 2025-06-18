@@ -8,12 +8,11 @@ import EventCalendar from './EventCalendar';
 import RegistrationForm from './RegistrationForm';
 import LoadingSpinner from './LoadingSpinner';
 
-const EventRegistration = () => {
+const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventSelect, onClearSelectedEvents }) => {
   // Estados principales
   const [currentStep, setCurrentStep] = useState('calendar'); // 'calendar' | 'registration' | 'success'
   const [currentDateIndex, setCurrentDateIndex] = useState(0);
   const [eventsData, setEventsData] = useState({});
-  const [selectedEvents, setSelectedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -170,58 +169,6 @@ const EventRegistration = () => {
     }
   };
   
-  // Manejo de selección de eventos
-  const handleEventSelect = (eventData) => {
-    // Validar que el evento tenga los datos necesarios
-    if (!eventData || !eventData.hora || !eventData.id) {
-      console.error('Evento inválido:', eventData);
-      toast.error('Error: Datos del evento incompletos');
-      return;
-    }
-
-    // Asegurarse de que el evento tenga la fecha actual
-    const eventWithDate = {
-      ...eventData,
-      fecha: eventDates[currentDateIndex]
-    };
-
-    console.log('Procesando evento:', eventWithDate); // Debug
-
-    const eventId = eventWithDate.id;
-    const isSelected = selectedEvents.some(event => event.id === eventId);
-
-    if (isSelected) {
-      // Deseleccionar evento
-      setSelectedEvents(selectedEvents.filter(event => event.id !== eventId));
-      toast.success('Evento deseleccionado');
-      return;
-    }
-
-    // Verificar conflicto de horario EN LA MISMA FECHA
-    const conflictingEvent = selectedEvents.find(event => 
-      event.hora === eventWithDate.hora && event.fecha === eventWithDate.fecha
-    );
-    
-    if (conflictingEvent) {
-      // INTERCAMBIO DIRECTO: Reemplazar evento conflictivo del mismo horario y fecha
-      const updatedEvents = selectedEvents.filter(event => 
-        !(event.hora === eventWithDate.hora && event.fecha === eventWithDate.fecha)
-      );
-      setSelectedEvents([...updatedEvents, eventWithDate]);
-      toast.success(`Evento intercambiado en horario ${eventWithDate.hora}`);
-    } else {
-      // Verificar disponibilidad antes de agregar
-      if (!eventWithDate.disponible) {
-        toast.error('Este evento ya no tiene cupos disponibles');
-        return;
-      }
-      
-      // Agregar nuevo evento
-      setSelectedEvents([...selectedEvents, eventWithDate]);
-      toast.success('Evento seleccionado');
-    }
-  };
-  
   // Proceder al formulario de registro
   const proceedToRegistration = () => {
     if (selectedEvents.length === 0) {
@@ -258,8 +205,8 @@ const EventRegistration = () => {
       
       toast.success('¡Registro completado exitosamente! Revisa tu email para la confirmación.');
       
-      // Resetear el formulario
-      setSelectedEvents([]);
+      // Resetear el formulario - Llamada a la función del padre
+      onClearSelectedEvents();
       setCurrentStep('success');
       setCurrentDateIndex(0);
       
@@ -307,12 +254,10 @@ const EventRegistration = () => {
   };
   
   const resetRegistration = () => {
-    setSelectedEvents([]);
+    onClearSelectedEvents(); // Limpiar eventos en el padre
     setCurrentStep('calendar');
     setCurrentDateIndex(0);
     setError(null);
-    setShowEventInfo(false);
-    setSelectedEventInfo(null);
   };
 
   // Función para limpiar errores
@@ -327,32 +272,11 @@ const EventRegistration = () => {
       fecha: eventDates[currentDateIndex],
       hora: eventData.hora || 'No definido'
     };
-    setSelectedEventInfo(eventWithDate);
-    setShowEventInfo(true);
+    onShowEventInfo(eventWithDate);
   };
 
-  // Cerrar panel de información
-  const handleCloseEventInfo = () => {
-    setShowEventInfo(false);
-    setSelectedEventInfo(null);
-  };
-
-  // Deseleccionar un evento específico
-  const handleDeselectEvent = (eventData) => {
-    setSelectedEvents(selectedEvents.filter(event => event.id !== eventData.id));
-    toast.success('Evento deseleccionado');
-    handleCloseEventInfo();
-  };
-  
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <LoadingSpinner />
-          <p className="mt-4 text-gray-600">Cargando eventos...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
   
   if (error && currentStep !== 'registration') {
@@ -386,169 +310,6 @@ const EventRegistration = () => {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative">
-      {/* Panel de información del evento */}
-      <AnimatePresence>
-        {showEventInfo && selectedEventInfo && (
-          <>
-            {/* Overlay - ABSOLUTO dentro de esta sección */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={handleCloseEventInfo}
-              className="absolute inset-0 bg-black/50 z-[100]"
-            />
-            
-            {/* Panel deslizante - ABSOLUTO dentro de esta sección */}
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-              className="absolute left-0 top-0 h-full w-96 bg-gradient-to-b from-[#01295c] to-[#1d2236] shadow-2xl z-[110] overflow-y-auto"
-            >
-              <div className="p-6">
-                {/* Header del panel */}
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-semibold text-white">Información del Evento</h3>
-                  <button
-                    onClick={handleCloseEventInfo}
-                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                  >
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Imagen del evento */}
-                <div className="mb-6">
-                  {selectedEventInfo.imagen_url ? (
-                    <div className="w-full h-48 rounded-lg overflow-hidden">
-                      <img 
-                        src={selectedEventInfo.imagen_url}
-                        alt={selectedEventInfo.titulo_charla}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Fallback si la imagen no carga
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
-                        }}
-                      />
-                      <div className="w-full h-48 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg hidden items-center justify-center">
-                        <div className="text-center text-gray-600">
-                          <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                          </svg>
-                          <span className="text-sm">Imagen del Evento</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="w-full h-48 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
-                      <div className="text-center text-gray-600">
-                        <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
-                        <span className="text-sm">Imagen del Evento</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Título */}
-                <h4 className="text-xl text-white mb-4" style={{ lineHeight: '2.5' }}>
-                  {selectedEventInfo.titulo_charla}
-                </h4>
-
-                {/* Descripción en Markdown */}
-                <div className="mb-6">
-                  <h5 className="font-semibold text-white mb-3">Descripción del Evento</h5>
-                  <div className="prose prose-sm max-w-none text-white/80 markdown-content">
-                    <ReactMarkdown
-                      components={{
-                        h2: ({node, ...props}) => <h2 className="text-lg font-bold text-white mb-2 mt-4" {...props} />,
-                        h3: ({node, ...props}) => <h3 className="text-md font-semibold text-white/90 mb-2 mt-3" {...props} />,
-                        p: ({node, ...props}) => <p className="mb-2 text-sm leading-relaxed text-white/80" {...props} />,
-                        ul: ({node, ...props}) => <ul className="list-disc list-inside mb-3 text-sm space-y-1" {...props} />,
-                        li: ({node, ...props}) => <li className="text-white/80" {...props} />,
-                        strong: ({node, ...props}) => <strong className="font-semibold text-white" {...props} />
-                      }}
-                    >
-                      {selectedEventInfo.descripcion || 'Descripción no disponible para este evento.'}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-
-                {/* Expositor */}
-                <p className="text-[#6cb79a] font-medium mb-6 text-lg">
-                  {selectedEventInfo.expositor}
-                </p>
-
-                {/* Detalles del evento - Layout 2x2 */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="flex items-center space-x-2 text-white">
-                    <Calendar className="h-4 w-4 text-[#6cb79a]" />
-                    <span className="text-sm font-medium">{utils.formatDateNice(selectedEventInfo.fecha)}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-white">
-                    <Clock className="h-4 w-4 text-[#6cb79a]" />
-                    <span className="text-sm font-medium">{selectedEventInfo.hora}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-white">
-                    <Globe className="h-4 w-4 text-[#6cb79a]" />
-                    <span className="text-sm font-medium">{selectedEventInfo.pais}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-white">
-                    <Users className="h-4 w-4 text-[#6cb79a]" />
-                    <span className="text-sm font-medium">
-                      {selectedEventInfo.slots_disponibles - selectedEventInfo.slots_ocupados} cupos
-                    </span>
-                  </div>
-                </div>
-
-                {/* Botón de acción */}
-                <div className="space-y-3">
-                  {selectedEvents.some(event => event.id === selectedEventInfo.id) ? (
-                    // Botón dividido: 80% "Ya seleccionado" + 20% "Cancelar selección"
-                    <div className="flex w-full rounded-lg overflow-hidden border border-[#6cb79a]">
-                      {/* 80% - Estado seleccionado */}
-                      <div className="flex-1 bg-[#6cb79a]/20 text-[#6cb79a] py-3 px-4 flex items-center justify-center">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        <span className="font-medium">Ya seleccionado</span>
-                      </div>
-                      
-                      {/* 20% - Botón cancelar */}
-                      <button
-                        onClick={() => handleDeselectEvent(selectedEventInfo)}
-                        className="w-16 bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-colors group"
-                        title="Cancelar selección"
-                      >
-                        <X className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                      </button>
-                    </div>
-                  ) : selectedEventInfo.disponible ? (
-                    <button 
-                      onClick={() => {
-                        handleEventSelect(selectedEventInfo);
-                        handleCloseEventInfo();
-                      }}
-                      className="w-full bg-[#6cb79a] hover:bg-[#248660] text-white py-3 px-4 rounded-lg border border-[#6cb79a] font-medium transition-colors"
-                    >
-                      Seleccionar Evento
-                    </button>
-                  ) : (
-                    <button className="w-full bg-gray-600 text-white py-3 px-4 rounded-lg border border-gray-600 font-medium cursor-not-allowed">
-                      Sin cupos disponibles
-                    </button>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
       {/* Header */}
       {currentStep !== 'success' && (
         <header className="relative bg-gradient-to-r from-[#1d2236] to-[#01295c] shadow-lg z-10">
@@ -761,7 +522,7 @@ const EventRegistration = () => {
                   eventsData={eventsData}
                   currentDate={eventDates[currentDateIndex]}
                   selectedEvents={selectedEvents}
-                  onEventSelect={handleEventSelect}
+                  onEventSelect={onEventSelect}
                   onShowEventInfo={handleShowEventInfo}
                   timeSlots={timeSlots}
                   key={`calendar-${currentDateIndex}`} // Forzar re-render al cambiar fecha
@@ -814,18 +575,18 @@ const EventRegistration = () => {
                   </div>
 
                   {/* Botón culminar registro */}
-                <motion.button
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  onClick={proceedToRegistration}
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={proceedToRegistration}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                  className="btn-primary flex items-center space-x-2 bg-green-600 hover:bg-green-700"
-                  disabled={selectedEvents.length === 0}
-                >
-                  <Users className="h-5 w-5" />
-                  <span>Culminar Registro</span>
-                </motion.button>
+                    className="btn-primary flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                    disabled={selectedEvents.length === 0}
+                  >
+                    <Users className="h-5 w-5" />
+                    <span>Culminar Registro</span>
+                  </motion.button>
                 </div>
                 
                 <div className="flex space-x-3">
@@ -855,36 +616,34 @@ const EventRegistration = () => {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-8 bg-white rounded-xl shadow-lg p-6 border border-gray-100"
+                  className="mt-8 bg-[#01295c] rounded-xl shadow-lg p-6"
                 >
-                  <h3 className="text-xl font-bold text-gray-800 mb-4">
+                  <h3 className="text-xl font-bold text-white mb-4">
                     Eventos Seleccionados ({selectedEvents.length})
                   </h3>
-                  <div className="grid gap-3">
-                    {selectedEvents.map((event, index) => (
-                      <div 
+                  <div className="grid gap-4">
+                    {selectedEvents.map((event) => (
+                      <div
                         key={event.id}
-                        className="flex items-center justify-between p-3 bg-primary-50 rounded-lg border border-primary-200"
+                        className="flex items-center justify-between p-4 bg-white rounded-xl"
                       >
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 text-sm text-gray-600 mb-1">
-                            <span>{utils.formatDateShort(event.fecha)}</span>
+                        <div className="flex-1 pr-4">
+                          <h4 className="font-bold text-gray-900">{event.titulo_charla}</h4>
+                          <p className="text-sm text-gray-600 mt-1">{event.expositor}</p>
+                          <div className="text-sm text-[#6cb79a] font-medium mt-2 flex items-center space-x-1.5">
+                            <span>{utils.formatDate(event.fecha)}</span>
                             <span>•</span>
                             <span>{event.hora}</span>
                             <span>•</span>
                             <span>{event.sala}</span>
                           </div>
-                          <h4 className="font-semibold text-gray-800">{event.titulo_charla}</h4>
-                          <p className="text-sm text-gray-600">
-                            {event.expositor} • {event.pais}
-                          </p>
                         </div>
                         <button
-                          onClick={() => handleEventSelect(event)}
-                          className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                          onClick={() => onEventSelect(event)}
+                          className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 transition-colors"
                           title="Remover selección"
                         >
-                          ✕
+                          <X className="w-5 h-5" />
                         </button>
                       </div>
                     ))}

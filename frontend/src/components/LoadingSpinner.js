@@ -1,109 +1,52 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const LoadingSpinner = ({ size = 'large', message = 'Cargando...', className = '' }) => {
-  const sizeClasses = {
-    small: 'h-6 w-6',
-    medium: 'h-8 w-8',
-    large: 'h-12 w-12',
-    xlarge: 'h-16 w-16'
-  };
-  
-  const containerClasses = {
-    small: 'p-4',
-    medium: 'p-6',
-    large: 'p-8',
-    xlarge: 'p-12'
-  };
-  
+const LoadingSpinner = ({ className = '' }) => {
   return (
-    <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 ${className}`}>
+    <div className={`min-h-screen flex items-center justify-center bg-gradient-to-b from-[#01295c] to-[#1d2236] text-white ${className}`}>
       <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
+        initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
-        className={`text-center ${containerClasses[size]}`}
+        transition={{ duration: 0.5 }}
+        className="text-center p-8 flex flex-col items-center w-full px-4 sm:px-6 lg:px-8"
       >
-        {/* Logo animado */}
+        {/* Logo */}
         <motion.div
-          className="mb-6"
-          initial={{ y: -20 }}
-          animate={{ y: 0 }}
-          transition={{ delay: 0.1 }}
+          className="mb-8"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
         >
-          <div className="text-6xl font-bold text-gradient mb-2">
-            ExpoKossodo
-          </div>
-          <div className="text-primary-600 font-medium">2024</div>
+          <img
+            src="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
+            alt="ExpoKossodo"
+            className="w-48 h-16 md:w-64 md:h-20 object-contain"
+          />
         </motion.div>
-        
-        {/* Spinner principal */}
-        <div className="relative mb-6">
-          {/* Círculo exterior */}
-          <motion.div
-            className={`${sizeClasses[size]} border-4 border-primary-200 rounded-full mx-auto`}
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          >
-            <div className={`${sizeClasses[size]} border-4 border-transparent border-t-primary-600 rounded-full`}></div>
-          </motion.div>
-          
-          {/* Círculo interior */}
-          <motion.div
-            className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${
-              size === 'large' || size === 'xlarge' ? 'h-6 w-6' : 'h-4 w-4'
-            } border-2 border-transparent border-b-primary-400 rounded-full`}
-            animate={{ rotate: -360 }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-          ></motion.div>
-        </div>
         
         {/* Mensaje de carga */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="space-y-2"
+        <motion.p
+            className="text-lg md:text-xl text-white/80 mb-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
         >
-          <h3 className="text-lg font-semibold text-gray-800">{message}</h3>
-          
-          {/* Puntos animados */}
-          <div className="flex justify-center space-x-1">
-            {[0, 1, 2].map((i) => (
-              <motion.div
-                key={i}
-                className="w-2 h-2 bg-primary-500 rounded-full"
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.5, 1, 0.5],
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  delay: i * 0.2,
-                }}
-              />
-            ))}
-          </div>
-          
-          <p className="text-sm text-gray-600 mt-2">
-            Preparando el mejor evento médico del año...
-          </p>
-        </motion.div>
+            Preparando el mejor evento sostenible...
+        </motion.p>
         
         {/* Indicador de progreso */}
         <motion.div
-          className="mt-8 w-64 mx-auto"
+          className="w-full max-w-md"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
         >
-          <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div className="bg-white/20 rounded-full h-1.5 overflow-hidden">
             <motion.div
-              className="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full"
+              className="h-full bg-[#6cb79a] rounded-full"
               initial={{ width: "0%" }}
               animate={{ width: "100%" }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
             />
           </div>
         </motion.div>
