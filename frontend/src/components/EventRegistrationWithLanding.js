@@ -3,10 +3,11 @@ import ReactFullpage from '@fullpage/react-fullpage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import LandingPage from './LandingPage';
+import InfoEvent1 from './InfoEvent1';
 import EventRegistration from './EventRegistration';
 import { Calendar, Clock, Globe, Users, CheckCircle, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { utils } from '../services/api';
+import { utils, eventService } from '../services/api';
 
 const EventRegistrationWithLanding = () => {
   const fullpageRef = useRef(null);
@@ -20,6 +21,32 @@ const EventRegistrationWithLanding = () => {
   
   // -- Lógica de selección de eventos (subida desde EventRegistration)
   const [selectedEvents, setSelectedEvents] = useState([]);
+  
+  // -- Estado compartido de eventos (CENTRALIZADO)
+  const [eventsData, setEventsData] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  // Cargar eventos una sola vez para todos los componentes
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const data = await eventService.getEvents();
+      setEventsData(data);
+      console.log('✅ Eventos cargados centralizadamente:', data);
+      console.log('🔢 Total keys en eventsData:', Object.keys(data).length);
+      console.log('📋 Estructura completa:', data);
+    } catch (error) {
+      console.error('❌ Error loading events:', error);
+      setEventsData({});
+      toast.error('Error al cargar los eventos');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Efecto para bloquear el scroll de fullpage.js cuando el panel está abierto
   useEffect(() => {
@@ -100,13 +127,13 @@ const EventRegistrationWithLanding = () => {
         easing="easeInOutCubic"
         scrollOverflow={true}
         onLeave={(origin, destination, direction) => {
-          if (origin.index === 1) {
+          if (origin.index === 2) {
             setIsRegistrationActive(false);
             handleCloseEventInfo(); // Forzar cierre del panel al salir
           }
         }}
         afterLoad={(origin, destination, direction) => {
-          setIsRegistrationActive(destination.index === 1);
+          setIsRegistrationActive(destination.index === 2);
         }}
         
         render={({ state, fullpageApi }) => {
@@ -119,6 +146,13 @@ const EventRegistrationWithLanding = () => {
               <div className="section">
                 <LandingPage onScrollToNext={scrollToNext} />
               </div>
+              <div className="section">
+                <InfoEvent1 
+                  onScrollToNext={scrollToNext} 
+                  eventsData={eventsData}
+                  loading={loading}
+                />
+              </div>
               <div className="section fp-auto-height-responsive">
                 <div className="h-screen bg-gray-50 relative">
                   <EventRegistration 
@@ -127,6 +161,8 @@ const EventRegistrationWithLanding = () => {
                     selectedEvents={selectedEvents}
                     onEventSelect={handleEventSelect}
                     onClearSelectedEvents={handleClearSelectedEvents}
+                    eventsData={eventsData}
+                    loading={loading}
                   />
                 </div>
               </div>

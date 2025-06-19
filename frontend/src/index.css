@@ -191,7 +191,22 @@ body {
 
 /* Estilo específico para el contenedor de la segunda sección */
 .fp-section:nth-child(2) {
-  background-color: #f8fafc;
+  background-color: #ffffff !important;
+}
+
+/* Utilidad para limitar texto a líneas específicas */
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 /* Ocultar watermark de fullPage.js */

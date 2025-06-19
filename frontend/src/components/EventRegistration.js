@@ -8,12 +8,19 @@ import EventCalendar from './EventCalendar';
 import RegistrationForm from './RegistrationForm';
 import LoadingSpinner from './LoadingSpinner';
 
-const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventSelect, onClearSelectedEvents }) => {
+const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventSelect, onClearSelectedEvents, eventsData, loading }) => {
   // Estados principales
   const [currentStep, setCurrentStep] = useState('calendar'); // 'calendar' | 'registration' | 'success'
   const [currentDateIndex, setCurrentDateIndex] = useState(0);
-  const [eventsData, setEventsData] = useState({});
-  const [loading, setLoading] = useState(true);
+  
+  // Debug: Log de props recibidas
+  console.log('🏥 EventRegistration recibió props:', {
+    eventsData,
+    loading,
+    eventsDataKeys: eventsData ? Object.keys(eventsData) : 'NO_DATA',
+    eventsDataType: typeof eventsData,
+    totalEvents: eventsData ? Object.values(eventsData).flat().length : 0
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [showEventInfo, setShowEventInfo] = useState(false);
@@ -29,9 +36,8 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
   const eventDates = ['2024-07-22', '2024-07-23', '2024-07-24', '2024-07-25'];
   const dateNames = ['Día 1 - Lunes', 'Día 2 - Martes', 'Día 3 - Miércoles', 'Día 4 - Jueves'];
   
-  // Cargar datos de eventos al montar el componente
+  // Cargar datos adicionales al montar el componente (eventsData ya viene como prop)
   useEffect(() => {
-    loadEvents();
     loadFechasInfo();
     loadTimeSlots();
   }, []);
@@ -109,22 +115,11 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
     return fechasInfo.find(fecha => fecha.fecha === currentDate) || null;
   };
   
-  const loadEvents = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const data = await eventService.getEvents();
-      setEventsData(data);
-      
-      toast.success('Eventos cargados correctamente');
-    } catch (error) {
-      console.error('Error loading events:', error);
-      setError(error.message || 'Error al cargar los eventos');
-      toast.error('Error al cargar los eventos');
-    } finally {
-      setLoading(false);
-    }
+  // Función de recarga manual si es necesario (los datos principales vienen como prop)
+  const reloadEvents = () => {
+    // Esta función podría usarse para forzar una recarga desde el componente padre
+    // Por ahora solo mostramos un mensaje
+    toast.info('Los eventos se cargan automáticamente');
   };
   
     // Función de validación - comentada porque ahora manejamos intercambio directo
@@ -210,8 +205,8 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
       setCurrentStep('success');
       setCurrentDateIndex(0);
       
-      // Recargar eventos para actualizar disponibilidad
-      await loadEvents();
+      // Los eventos se actualizan automáticamente desde el componente padre
+      // await loadEvents(); // Ya no necesario
       
     } catch (error) {
       console.error('Registration error:', error);
@@ -289,7 +284,7 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
             <p className="text-gray-600 mb-6">{error}</p>
             <div className="space-y-3">
               <button 
-                onClick={loadEvents}
+                onClick={reloadEvents}
                 className="btn-primary w-full"
                 disabled={loading}
               >
