@@ -170,7 +170,23 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100"
       >
-        <div className="flex items-center justify-between mb-4">
+        {/* Versión móvil */}
+        <div className="md:hidden">
+          <button
+            onClick={onBack}
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors mb-4"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="text-sm">Volver al Calendario</span>
+          </button>
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">Formulario de Registro</h2>
+            <p className="text-sm text-gray-600">Completa tus datos para finalizar</p>
+          </div>
+        </div>
+        
+        {/* Versión desktop */}
+        <div className="hidden md:flex items-center justify-between mb-4">
           <button
             onClick={onBack}
             className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
@@ -335,7 +351,7 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
             <div className="md:col-span-2">
               <label className="label-field">
                 <MessageSquare className="h-4 w-4 inline mr-2" />
-                ¿Qué esperas encontrar en ExpoKossodo 2024?
+                ¿Qué esperas encontrar en ExpoKossodo 2025?
               </label>
               <textarea
                 value={formData.expectativas}
@@ -386,29 +402,31 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
             <button
               type="button"
               onClick={onBack}
-              className="btn-secondary"
+              className="btn-secondary px-3 py-2 md:px-4 md:py-2 text-sm md:text-base"
               disabled={submitting}
             >
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              Volver
+              <ArrowLeft className="h-4 w-4 md:h-5 md:w-5 mr-1 md:mr-2" />
+              <span className="hidden md:inline">Volver</span>
+              <span className="md:hidden">Atrás</span>
             </button>
             
             <motion.button
               type="submit"
               disabled={!isValid || submitting}
-              className="btn-primary bg-green-600 hover:bg-green-700 flex items-center space-x-2"
+              className="btn-primary bg-green-600 hover:bg-green-700 flex items-center space-x-1 md:space-x-2 px-3 py-2 md:px-4 md:py-2 text-sm md:text-base"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               {submitting ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 md:h-5 md:w-5 border-b-2 border-white"></div>
                   <span>Enviando...</span>
                 </>
               ) : (
                 <>
-                  <Send className="h-5 w-5" />
-                  <span>Completar Registro</span>
+                  <Send className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="hidden md:inline">Completar Registro</span>
+                  <span className="md:hidden">Registrar</span>
                 </>
               )}
             </motion.button>
@@ -420,7 +438,7 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
             <ul className="text-sm text-[#01295c] space-y-1">
               <li>• Recibirás un email de confirmación inmediatamente</li>
               <li>• Tu registro incluye acceso a {selectedEvents.length} evento(s) seleccionado(s)</li>
-              <li>• El evento se realizará del 22 al 25 de Julio de 2024</li>
+              <li>• El evento se realizará del 22 al 25 de Julio de 2025</li>
               <li>• En caso de dudas, contacta a: jcamacho@kossodo.com</li>
             </ul>
           </div>

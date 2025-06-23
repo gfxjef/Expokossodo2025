@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, X, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import { eventService } from '../services/api';
 
 const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
@@ -9,6 +9,12 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
   const [activeCard, setActiveCard] = useState(null);
   const [hoveredCard, setHoveredCard] = useState(null);
   const debounceTimerRef = useRef(null);
+  
+  // Estado para tarjeta expandida en móvil
+  const [expandedCardMobile, setExpandedCardMobile] = useState(null);
+  
+  // Estado para visualizador móvil de imágenes de laboratorio
+  const [mobileLabImageIndex, setMobileLabImageIndex] = useState(null);
   
   // Estados para el modal de laboratorio
   const [showLabModal, setShowLabModal] = useState(false);
@@ -584,6 +590,113 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
     );
   };
 
+  // Función para obtener contenido móvil optimizado
+  const getMobileContent = (cardType) => {
+    switch (cardType) {
+      case 'conferencias':
+        const conferences = getEventsByType('conferencias').slice(0, 6); // Mostrar solo 6 en móvil
+        return (
+          <div className="px-4 py-4 bg-white/90 backdrop-blur-sm rounded-b-xl">
+            <h4 className="font-semibold text-gray-800 mb-3 text-center">
+              +{getEventsByType('conferencias').length} Conferencias Disponibles
+            </h4>
+            <div className="space-y-2">
+              {conferences.map((conf, idx) => (
+                <div key={idx} className="p-3 bg-gray-50 rounded-lg">
+                  <h5 className="font-medium text-sm text-gray-800 mb-1">{conf.titulo_charla}</h5>
+                  <p className="text-xs text-gray-600">{conf.expositor} • {conf.hora}</p>
+                </div>
+              ))}
+            </div>
+            <button 
+              onClick={onScrollToNext}
+              className="mt-4 w-full py-2 bg-[#6cb79a] text-white rounded-lg text-sm font-medium"
+            >
+              Ver Todas las Conferencias
+            </button>
+          </div>
+        );
+        
+      case 'marcas':
+        return (
+          <div className="px-4 py-4 bg-white/90 backdrop-blur-sm rounded-b-xl">
+            <h4 className="font-semibold text-gray-800 mb-3 text-center">Marcas Destacadas</h4>
+            <div className="grid grid-cols-3 gap-2">
+              {['CAMAG', 'CHEM', 'AMS', 'EVIDENT', 'ESCO', 'VACUUBRAND'].map((brand) => (
+                <div key={brand} className="bg-gray-50 rounded-lg p-2 text-center">
+                  <span className="text-xs font-medium text-gray-700">{brand}</span>
+                </div>
+              ))}
+            </div>
+            <button 
+              onClick={onScrollToNext}
+              className="mt-4 w-full py-2 bg-[#6cb79a] text-white rounded-lg text-sm font-medium"
+            >
+              Ver Todas las Marcas
+            </button>
+          </div>
+        );
+        
+      case 'laboratorio':
+        return (
+          <div className="px-4 py-4 bg-white/90 backdrop-blur-sm rounded-b-xl">
+            <h4 className="font-semibold text-gray-800 mb-3 text-center">Equipos en Exhibición</h4>
+            <div className="grid grid-cols-2 gap-2">
+              {labImages.slice(0, 4).map((img, idx) => (
+                <div 
+                  key={idx} 
+                  className="relative cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Evitar que el clic cierre el acordeón
+                    setMobileLabImageIndex(idx);
+                  }}
+                >
+                  <img 
+                    src={img.url} 
+                    alt={img.title}
+                    className="w-full h-20 object-cover rounded-lg hover:opacity-90 transition-opacity"
+                  />
+                  <p className="text-xs text-center mt-1 text-gray-700">{img.title}</p>
+                </div>
+              ))}
+            </div>
+            <button 
+              onClick={onScrollToNext}
+              className="mt-4 w-full py-2 bg-[#6cb79a] text-white rounded-lg text-sm font-medium"
+            >
+              Explorar Laboratorio Completo
+            </button>
+          </div>
+        );
+        
+      case 'expositores':
+        return (
+          <div className="px-4 py-4 bg-white/90 backdrop-blur-sm rounded-b-xl">
+            <h4 className="font-semibold text-gray-800 mb-3 text-center">Expositores Internacionales</h4>
+            <p className="text-sm text-gray-600 text-center mb-4">
+              Conecta con empresas líderes de diferentes países y descubre las últimas innovaciones del sector.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {['🇵🇦 Panamá', '🇺🇸 USA', '🇩🇪 Alemania', '🇯🇵 Japón'].map((country) => (
+                <span key={country} className="px-3 py-1 bg-gray-50 rounded-full text-xs">
+                  {country}
+                </span>
+              ))}
+            </div>
+            <button 
+              onClick={onScrollToNext}
+              className="mt-4 w-full py-2 bg-[#6cb79a] text-white rounded-lg text-sm font-medium"
+            >
+              Ver Todos los Expositores
+            </button>
+          </div>
+        );
+        
+      default:
+        return null;
+    }
+  };
+
   // Función optimizada para obtener el contenido de la sección inferior según la tarjeta activa
   const getInteractiveContent = React.useCallback(() => {
     if (!activeCard) {
@@ -766,6 +879,84 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
     );
   }
 
+  // Visualizador móvil simple de imágenes del laboratorio
+  const MobileLabImageViewer = () => {
+    if (mobileLabImageIndex === null) return null;
+    
+    const currentImage = labImages[mobileLabImageIndex];
+    
+    const goToNext = () => {
+      setMobileLabImageIndex((prev) => (prev + 1) % labImages.length);
+    };
+    
+    const goToPrev = () => {
+      setMobileLabImageIndex((prev) => (prev - 1 + labImages.length) % labImages.length);
+    };
+    
+    const closeViewer = () => {
+      setMobileLabImageIndex(null);
+    };
+    
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center md:hidden pointer-events-none">
+        {/* Botón cerrar */}
+        <button
+          onClick={closeViewer}
+          className="absolute top-4 right-4 p-2 bg-white/20 rounded-full pointer-events-auto z-10"
+        >
+          <X className="h-6 w-6 text-white" />
+        </button>
+        
+        {/* Contenedor de imagen con AnimatePresence para transiciones suaves */}
+        <div className="relative w-full px-8 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={mobileLabImageIndex}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col items-center"
+            >
+              <img
+                src={currentImage.url}
+                alt={currentImage.title}
+                className="w-full max-h-[60vh] object-contain rounded-lg"
+              />
+              
+              {/* Título de la imagen */}
+              <p className="text-white text-center mt-4 text-sm font-medium">
+                {currentImage.title}
+              </p>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+        
+        {/* Botón anterior */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            goToPrev();
+          }}
+          className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full pointer-events-auto"
+        >
+          <ChevronLeft className="h-6 w-6 text-white" />
+        </button>
+        
+        {/* Botón siguiente */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            goToNext();
+          }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full pointer-events-auto"
+        >
+          <ChevronRight className="h-6 w-6 text-white" />
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
       {/* Modal de galería del laboratorio usando Portal */}
@@ -903,7 +1094,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
       
       {/* Imagen de fondo - Sección superior */}
       <div 
-        className="relative h-[500px] w-full bg-cover bg-center bg-no-repeat"
+        className="relative h-[320px] md:h-[500px] w-full bg-cover bg-center bg-no-repeat"
         style={{
           backgroundImage: "url('https://i.ibb.co/zV3q1zcb/fondotop1-view.webp')"
         }}
@@ -912,15 +1103,15 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
         <div className="absolute inset-0 bg-gradient-to-r from-[#1f2f56]/50 to-[#121f3a]/50"></div>
         
         {/* Contenido sobre la imagen */}
-        <div className="relative z-10 h-full flex flex-col justify-center items-center text-center px-6">
+        <div className="relative z-10 h-full flex flex-col justify-end md:justify-center items-center text-center px-6 pb-12 md:pb-0">
           {/* Título principal */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="mb-8"
+            className="mb-4 md:mb-8"
           >
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-light text-white mb-4 leading-tight">
+            <h1 className="text-2xl md:text-4xl lg:text-5xl font-light text-white mb-3 md:mb-4 leading-tight">
               <span className="block text-white">
                 Descubre todo lo que
               </span>
@@ -928,18 +1119,18 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                 tenemos preparado para ti.
               </span>
             </h1>
-            <p className="text-base md:text-lg text-white/90 max-w-[58rem] mx-auto leading-relaxed">
-              Desde charlas informativas y talleres prácticos, hasta un laboratorio modelo, la ExpoKossodo 2024 te brinda la oportunidad de conectarte con expertos y adquirir herramientas esenciales para destacar en tu industria.
+            <p className="text-sm md:text-lg text-white/90 max-w-[58rem] mx-auto leading-relaxed px-4 md:px-0">
+              Desde charlas informativas y talleres prácticos, hasta un laboratorio modelo, la ExpoKossodo 2025 te brinda la oportunidad de conectarte con expertos y adquirir herramientas esenciales para destacar en tu industria.
             </p>
           </motion.div>
         </div>
       </div>
 
       {/* Tarjetas flotantes - Posicionadas sobre la imagen de fondo */}
-      <div className="relative -mt-[150px] z-20 px-4 sm:px-6 lg:px-8">
+      <div className="relative -mt-[51px] md:-mt-[150px] z-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Grid de tarjetas estilo glassmorphism */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 justify-items-center">
             {eventCards.map((card, index) => (
               <motion.div
                 key={card.id}
@@ -966,12 +1157,20 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                     clearTimeout(debounceTimerRef.current);
                   }
                 }}
+                onClick={() => {
+                  // En móvil, toggle del acordeón
+                  if (window.innerWidth < 768) {
+                    setExpandedCardMobile(expandedCardMobile === card.id ? null : card.id);
+                  }
+                }}
                 className="w-full h-full group cursor-pointer"
               >
                 {/* Card estilo glassmorphism con borde blanco y hover verde */}
-                <div className="bg-white/15 backdrop-blur-md rounded-[24px] border-2 border-white shadow-2xl hover:border-[#6cb79a] transition-all duration-300 overflow-hidden h-[420px] flex flex-col">
+                <div className={`bg-white/15 backdrop-blur-md rounded-[24px] border-2 border-white shadow-2xl hover:border-[#6cb79a] transition-all duration-300 overflow-hidden h-auto md:h-[420px] flex flex-col ${
+                  expandedCardMobile === card.id ? 'border-[#6cb79a]' : ''
+                }`}>
                   {/* Card Header - Imagen */}
-                  <div className="h-[200px] p-4">
+                  <div className="h-[160px] md:h-[200px] p-3 md:p-4">
                     <div className="h-full w-full rounded-[16px] overflow-hidden relative">
                       <img
                         src={card.image}
@@ -987,20 +1186,45 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                   </div>
                   
                   {/* Card Body - Contenido */}
-                  <div className="px-6 pb-6 flex-grow flex flex-col">
+                  <div className="px-4 md:px-6 pb-4 md:pb-6 flex flex-col">
                     {/* Título */}
-                    <div className="mb-4 pt-2">
-                      <h3 className="font-medium text-gray-800 text-base">
+                    <div className="mb-2 md:mb-4">
+                      <h3 className="font-medium text-gray-800 text-sm md:text-base">
                         {card.title}
                       </h3>
                     </div>
                     
                     {/* Descripción */}
-                    <p className="text-gray-600 text-sm leading-relaxed flex-grow">
+                    <p className="text-gray-600 text-xs md:text-sm leading-relaxed">
                       {card.description}
                     </p>
+                    
+                    {/* Indicador de expandible solo en móvil */}
+                    <div className="md:hidden mt-4 flex items-center justify-center text-gray-500">
+                      <motion.div
+                        animate={{ rotate: expandedCardMobile === card.id ? 180 : 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <ChevronDown className="h-5 w-5" />
+                      </motion.div>
+                    </div>
                   </div>
                 </div>
+                
+                {/* Contenido expandible en móvil */}
+                <AnimatePresence>
+                  {expandedCardMobile === card.id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="md:hidden overflow-hidden"
+                    >
+                      {getMobileContent(card.type)}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ))}
           </div>
@@ -1008,10 +1232,10 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
       </div>
 
       {/* Sección inferior con fondo blanco */}
-      <div className="bg-white pt-8 pb-4 px-4 sm:px-6 lg:px-8">
+      <div className="bg-white pt-4 md:pt-8 pb-4 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Sección interactiva que cambia según el hover - SIN TÍTULO */}
-          <div className="mb-16">
+          <div className="hidden md:block mb-16">
             <AnimatePresence mode="wait">
               {getInteractiveContent()}
             </AnimatePresence>
@@ -1038,6 +1262,29 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
           </motion.div>
         </div>
       </div>
+
+      {/* Visualizador móvil simple de imágenes del laboratorio */}
+      {mobileLabImageIndex !== null && portalReady && ReactDOM.createPortal(
+        <>
+          {/* Fondo oscuro - Solo se anima al abrir/cerrar */}
+          <AnimatePresence>
+            {mobileLabImageIndex !== null && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="fixed inset-0 z-50 bg-black/90 md:hidden"
+                onClick={() => setMobileLabImageIndex(null)}
+              />
+            )}
+          </AnimatePresence>
+          
+          {/* Contenido del visualizador - Se re-renderiza pero sin afectar el fondo */}
+          {mobileLabImageIndex !== null && <MobileLabImageViewer />}
+        </>,
+        document.body
+      )}
     </div>
   );
 };

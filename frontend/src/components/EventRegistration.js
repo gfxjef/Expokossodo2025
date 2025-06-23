@@ -336,7 +336,7 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
               transition={{ duration: 0.3 }}
             >
               {/* Información dinámica de la fecha actual con transiciones fluidas */}
-              <div className="mb-8 relative z-20">
+              <div className="mb-0 md:mb-8 relative z-20">
                 <div 
                   className="relative bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 min-h-[250px] md:min-h-[350px]"
                 >
@@ -532,9 +532,9 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                       onClick={goToPreviousDate}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="btn-secondary flex items-center space-x-1 md:space-x-2 group px-3 py-2 md:px-4 md:py-2"
+                      className="btn-secondary flex items-center space-x-1 md:space-x-2 group px-[0.55rem] py-[0.55rem] md:px-4 md:py-2 text-xs md:text-base"
                     >
-                      <ChevronLeft className="h-4 w-4 md:h-5 md:w-5 group-hover:-translate-x-1 transition-transform" />
+                      <ChevronLeft className="h-3.5 w-3.5 md:h-5 md:w-5 group-hover:-translate-x-1 transition-transform" />
                       <div className="text-left">
                         <span className="hidden md:block text-sm">Fecha Anterior</span>
                         <span className="text-xs md:hidden">Día {currentDateIndex}</span>
@@ -575,11 +575,11 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                     onClick={proceedToRegistration}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="btn-primary flex items-center space-x-1 md:space-x-2 bg-green-600 hover:bg-green-700 px-3 py-2 md:px-4 md:py-2"
+                    className="btn-primary flex items-center space-x-1 md:space-x-2 bg-green-600 hover:bg-green-700 px-[0.55rem] py-[0.55rem] md:px-4 md:py-2 text-xs md:text-base"
                     disabled={selectedEvents.length === 0}
                   >
-                    <Users className="h-4 w-4 md:h-5 md:w-5" />
-                    <span className="text-xs md:text-base">
+                    <Users className="h-3.5 w-3.5 md:h-5 md:w-5" />
+                    <span>
                       <span className="hidden md:inline">Culminar Registro</span>
                       <span className="md:hidden">Cerrar registro</span>
                     </span>
@@ -594,7 +594,7 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                       onClick={goToNextDate}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="btn-primary flex items-center space-x-1 md:space-x-2 group px-3 py-2 md:px-4 md:py-2"
+                      className="btn-primary flex items-center space-x-1 md:space-x-2 group px-[0.55rem] py-[0.55rem] md:px-4 md:py-2 text-xs md:text-base"
                     >
                       <div className="text-right">
                         <span className="hidden md:block text-sm">Siguiente Fecha</span>
@@ -603,7 +603,7 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                           {dateNames[currentDateIndex + 1]}
                         </span>
                       </div>
-                      <ChevronRight className="h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform" />
+                      <ChevronRight className="h-3.5 w-3.5 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform" />
                     </motion.button>
                   )}
                 </div>

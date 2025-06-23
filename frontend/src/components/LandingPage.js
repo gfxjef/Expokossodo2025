@@ -41,7 +41,7 @@ const LandingPage = ({ onScrollToNext }) => {
 
   // Logos de partners con estados active y hover
   const partners = [
-    { name: 'CAMAG', active: 'https://i.ibb.co/LjKTY8n/camag-blanco.webp', hover: 'https://i.ibb.co/YFYknC9N/camag-color.webp' },
+    { name: 'CAMAG', active: 'https://i.ibb.co/67rBmW1c/camag-blanco.webp', hover: 'https://i.ibb.co/YFYknC9N/camag-color.webp' },
     { name: 'CHEM', active: 'https://i.ibb.co/My7PfY0f/chem-blanco.webp', hover: 'https://i.ibb.co/LXZ02Zb3/chem-color.webp' },
     { name: 'AMS', active: 'https://i.ibb.co/LD44PGkG/ams-blanco.webp', hover: 'https://i.ibb.co/Z16k8Xcy/ams-color.webp' },
     { name: 'EVIDENT', active: 'https://i.ibb.co/9MgkP7L/evident-blanco.webp', hover: 'https://i.ibb.co/RpHJ7W0C/evident-color.webp' },

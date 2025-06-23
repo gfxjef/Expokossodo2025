@@ -206,7 +206,16 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
       
       {/* Leyenda con instrucciones */}
       <div className="p-4 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center justify-between">
+        {/* En móvil: Solo mostrar instrucciones */}
+        <div className="md:hidden">
+          <div className="text-center text-sm text-gray-700">
+            <p className="font-medium">Clic en evento → Ver info → Seleccionar</p>
+            <p className="text-xs mt-1">Un evento por horario máximo</p>
+          </div>
+        </div>
+        
+        {/* En desktop: Mostrar todo */}
+        <div className="hidden md:flex items-center justify-between">
           {/* Leyenda de estados */}
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <div className="flex items-center space-x-2">
@@ -230,7 +239,7 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
           {/* Instrucciones compactas */}
           <div className="text-right text-xs text-gray-500 max-w-xs">
             <p className="font-medium">Clic en evento → Ver info → Seleccionar</p>
-            <p className="hidden md:block">Un evento por horario máximo</p>
+            <p>Un evento por horario máximo</p>
           </div>
         </div>
       </div>
@@ -282,6 +291,27 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
         </div>
       </div>
       
+      {/* Leyenda móvil después de la tabla */}
+      <div className="md:hidden p-4 bg-gray-50 border-t border-gray-200">
+        <div className="grid grid-cols-2 gap-2.5 text-xs">
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-white border-2 border-gray-200 rounded"></div>
+            <span className="text-gray-600">Disponible</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-blue-50 border-2 border-blue-500 rounded"></div>
+            <span className="text-gray-600">Seleccionado</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-gray-100 border-2 border-gray-400 rounded"></div>
+            <span className="text-gray-600">Disponible a elección</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-red-50 border-2 border-red-400 rounded"></div>
+            <span className="text-gray-600">Sin cupos</span>
+          </div>
+        </div>
+      </div>
 
     </motion.div>
   );
