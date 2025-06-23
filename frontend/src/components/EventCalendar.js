@@ -230,7 +230,7 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
           {/* Instrucciones compactas */}
           <div className="text-right text-xs text-gray-500 max-w-xs">
             <p className="font-medium">Clic en evento → Ver info → Seleccionar</p>
-            <p>Un evento por horario máximo</p>
+            <p className="hidden md:block">Un evento por horario máximo</p>
           </div>
         </div>
       </div>
@@ -238,11 +238,11 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
       {/* Grid principal del calendario */}
       <div className="p-6">
         <div className="overflow-x-auto">
-          <div className="grid grid-cols-5 gap-4 min-w-[800px]">
+          <div className="grid grid-cols-[60px_repeat(4,1fr)] md:grid-cols-5 gap-2 md:gap-4 min-w-[600px] md:min-w-[800px]">
             {/* Header con horarios */}
-            <div className="font-medium text-gray-600 text-center py-2">
-              <Clock className="h-5 w-5 mx-auto mb-1" />
-              <span className="text-sm">Horarios</span>
+            <div className="font-medium text-gray-600 text-center py-1 md:py-2">
+              <Clock className="h-4 w-4 md:h-5 md:w-5 mx-auto mb-1" />
+              <span className="text-xs md:text-sm">Horarios</span>
             </div>
             {rooms.map(room => (
               <div key={room} className="font-medium text-gray-600 text-center py-2">
@@ -256,10 +256,10 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
             {displayTimeSlots.map((timeSlot, timeIndex) => (
               <React.Fragment key={timeSlot}>
                 {/* Columna de horario */}
-                <div className="flex items-center justify-center p-3 bg-gray-50 rounded-lg border">
+                <div className="flex items-center justify-center p-1 md:p-3 bg-gray-50 rounded-lg border">
                   <div className="text-center">
-                    <div className="font-semibold text-gray-800 text-sm">{timeSlot}</div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="font-semibold text-gray-800 text-[10px] md:text-sm leading-tight">{timeSlot}</div>
+                    <div className="hidden md:block text-xs text-gray-500 mt-1">
                       {isTimeSlotTaken(timeSlot) ? "Ocupado" : "Disponible"}
                     </div>
                   </div>

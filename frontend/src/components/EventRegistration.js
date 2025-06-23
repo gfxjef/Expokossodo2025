@@ -338,10 +338,7 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
               {/* Información dinámica de la fecha actual con transiciones fluidas */}
               <div className="mb-8 relative z-20">
                 <div 
-                  className="relative bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100"
-                  style={{
-                    minHeight: '350px' // Altura fija para evitar saltos
-                  }}
+                  className="relative bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 min-h-[250px] md:min-h-[350px]"
                 >
                   <AnimatePresence mode="wait">
                     <motion.div
@@ -405,42 +402,43 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                             <div className="absolute inset-0 bg-black bg-opacity-50"></div>
                             
                             {/* Contenido con animaciones */}
-                            <div className="relative z-10 p-8 text-white h-full flex flex-col justify-center">
+                            <div className="relative z-10 p-4 md:p-8 text-white h-full flex flex-col justify-center">
                               {/* Rubro del Día */}
                               <motion.div 
-                                className="mb-6"
+                                className="mb-4 md:mb-6"
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1, duration: 0.3 }}
                               >
-                                <h1 className="text-4xl font-bold mb-2">
-                                  {fechaInfo.rubro || 'Rubro del Día'}
+                                <h1 className="text-2xl md:text-4xl font-bold mb-2">
+                                  <span className="md:hidden">{fechaInfo.rubro || 'Rubro del Día'} - {new Date(eventDates[currentDateIndex]).getDate()} {new Date(eventDates[currentDateIndex]).toLocaleDateString('es', { month: 'long' }).charAt(0).toUpperCase() + new Date(eventDates[currentDateIndex]).toLocaleDateString('es', { month: 'long' }).slice(1)}</span>
+                                  <span className="hidden md:inline">{fechaInfo.rubro || 'Rubro del Día'}</span>
                                 </h1>
-                                <p className="text-xl text-gray-200">
+                                <p className="hidden md:block text-xl text-gray-200">
                                   {dateNames[currentDateIndex]} • {utils.formatDate(eventDates[currentDateIndex])}
                                 </p>
                               </motion.div>
 
                               {/* Descripción */}
                               <motion.div 
-                                className="mb-6"
+                                className="mb-4 md:mb-6"
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.2, duration: 0.3 }}
                               >
-                                <p className="text-lg leading-relaxed text-gray-100 max-w-4xl">
+                                <p className="text-sm md:text-lg leading-relaxed text-gray-100 max-w-4xl">
                                   {fechaInfo.descripcion 
-                                    ? (fechaInfo.descripcion.length > 400 
-                                        ? fechaInfo.descripcion.substring(0, 400) + '...' 
+                                    ? (fechaInfo.descripcion.length > 200 
+                                        ? fechaInfo.descripcion.substring(0, 200) + '...' 
                                         : fechaInfo.descripcion)
                                     : 'Descripción del día no disponible.'
                                   }
                                 </p>
                               </motion.div>
 
-                              {/* Ponentes Destacados */}
+                              {/* Ponentes Destacados - Solo en desktop */}
                               <motion.div 
-                                className="mb-6"
+                                className="hidden md:block mb-6"
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3, duration: 0.3 }}
@@ -465,9 +463,9 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                                 </div>
                               </motion.div>
 
-                              {/* Info adicional (Marcas y Países) */}
+                              {/* Info adicional (Marcas y Países) - Oculto en móvil */}
                               <motion.div 
-                                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                                className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6"
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.5, duration: 0.3 }}
@@ -525,8 +523,8 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
               </div>
               
               {/* Botones de navegación mejorados */}
-              <div className="mt-8 flex justify-between items-center relative z-20">
-                <div className="flex space-x-3">
+              <div className="mt-4 md:mt-8 flex justify-between items-center relative z-20">
+                <div className="flex space-x-2 md:space-x-3">
                   {currentDateIndex > 0 && (
                     <motion.button
                       initial={{ opacity: 0, x: -20 }}
@@ -534,12 +532,13 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                       onClick={goToPreviousDate}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="btn-secondary flex items-center space-x-2 group"
+                      className="btn-secondary flex items-center space-x-1 md:space-x-2 group px-3 py-2 md:px-4 md:py-2"
                     >
-                      <ChevronLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
+                      <ChevronLeft className="h-4 w-4 md:h-5 md:w-5 group-hover:-translate-x-1 transition-transform" />
                       <div className="text-left">
-                        <span className="block text-sm">Fecha Anterior</span>
-                        <span className="block text-xs text-gray-500">
+                        <span className="hidden md:block text-sm">Fecha Anterior</span>
+                        <span className="text-xs md:hidden">Día {currentDateIndex}</span>
+                        <span className="hidden md:block text-xs text-gray-500">
                           {dateNames[currentDateIndex - 1]}
                         </span>
                       </div>
@@ -548,9 +547,9 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                 </div>
                 
                 {/* Indicadores de navegación */}
-                <div className="flex items-center space-x-4">
-                  {/* Indicadores de progreso */}
-                  <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 md:space-x-4">
+                  {/* Indicadores de progreso - Ocultos en móvil */}
+                  <div className="hidden md:flex items-center space-x-2">
                     {eventDates.map((_, index) => (
                       <motion.button
                         key={index}
@@ -576,15 +575,18 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                     onClick={proceedToRegistration}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="btn-primary flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                    className="btn-primary flex items-center space-x-1 md:space-x-2 bg-green-600 hover:bg-green-700 px-3 py-2 md:px-4 md:py-2"
                     disabled={selectedEvents.length === 0}
                   >
-                    <Users className="h-5 w-5" />
-                    <span>Culminar Registro</span>
+                    <Users className="h-4 w-4 md:h-5 md:w-5" />
+                    <span className="text-xs md:text-base">
+                      <span className="hidden md:inline">Culminar Registro</span>
+                      <span className="md:hidden">Cerrar registro</span>
+                    </span>
                   </motion.button>
                 </div>
                 
-                <div className="flex space-x-3">
+                <div className="flex space-x-2 md:space-x-3">
                   {currentDateIndex < eventDates.length - 1 && (
                     <motion.button
                       initial={{ opacity: 0, x: 20 }}
@@ -592,15 +594,16 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                       onClick={goToNextDate}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="btn-primary flex items-center space-x-2 group"
+                      className="btn-primary flex items-center space-x-1 md:space-x-2 group px-3 py-2 md:px-4 md:py-2"
                     >
                       <div className="text-right">
-                        <span className="block text-sm">Siguiente Fecha</span>
-                        <span className="block text-xs text-blue-200">
+                        <span className="hidden md:block text-sm">Siguiente Fecha</span>
+                        <span className="text-xs md:hidden">Día {currentDateIndex + 2}</span>
+                        <span className="hidden md:block text-xs text-blue-200">
                           {dateNames[currentDateIndex + 1]}
                         </span>
                       </div>
-                      <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                      <ChevronRight className="h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform" />
                     </motion.button>
                   )}
                 </div>
