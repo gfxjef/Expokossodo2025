@@ -4,6 +4,81 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, X, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import { eventService } from '../services/api';
 
+// --- Componente ConferenceSlider Extraído ---
+const ConferenceSlider = React.memo(({ conferences, loading, onScrollToNext, totalEvents }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (conferences.length === 0) return;
+    
+    const interval = setInterval(() => {
+      // Avanzar de 3 en 3
+      setCurrentIndex(prev => (prev + 3) % conferences.length);
+    }, 5000); // Cambiar cada 5 segundos
+
+    return () => clearInterval(interval);
+  }, [conferences.length]);
+
+  if (conferences.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center h-full">
+        <div className="text-center">
+          <p className="text-blue-600 mb-2">
+            {loading ? 'Cargando conferencias...' : 'No se encontraron conferencias'}
+          </p>
+          {!loading && (
+            <p className="text-blue-500 text-xs">
+              Total eventos generales: {totalEvents}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Función para obtener las 9 conferencias visibles, asegurando un ciclo correcto
+  const getVisibleConferences = () => {
+    const visible = [];
+    if (conferences.length > 0) {
+      for (let i = 0; i < 9; i++) {
+        const index = (currentIndex + i) % conferences.length;
+        visible.push(conferences[index]);
+      }
+    }
+    return visible;
+  };
+
+  return (
+    <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-3">
+      <AnimatePresence mode="wait">
+        {getVisibleConferences().slice(0, 9).map((conference, index) => (
+          <motion.div
+            key={`${conference.id}-${currentIndex}-${index}`} // Key única para forzar re-animación
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.8, delay: index * 0.15 }}
+            className="h-24 p-3 rounded-lg border-2 cursor-pointer transition-all duration-300 relative overflow-hidden border-gray-200 bg-white hover:border-[#6cb79a] hover:shadow-lg hover:scale-[1.02]"
+            onClick={onScrollToNext}
+          >
+            <div className="flex flex-col h-full">
+              <h4 className="font-semibold text-sm text-gray-800 mb-1.5 line-clamp-2 leading-tight">
+                {conference.titulo_charla}
+              </h4>
+              <p className="text-xs text-gray-600 mb-2 font-medium">
+                {conference.expositor}
+              </p>
+              <div className="mt-auto text-xs text-gray-500">
+                <span className="font-medium">{conference.hora}</span>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+});
+
 const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
   // Estado para la tarjeta activa (mantiene el estado hasta cambiar a otra)
   const [activeCard, setActiveCard] = useState(null);
@@ -22,13 +97,21 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
   const [hoveredLab, setHoveredLab] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
   
-  // Debug: Log de props recibidas
-  console.log('🎭 InfoEvent1 recibió props:', {
-    eventsData,
-    loading,
-    eventsDataKeys: eventsData ? Object.keys(eventsData) : 'NO_DATA',
-    eventsDataType: typeof eventsData
-  });
+  // Estado para el carrusel del laboratorio
+  const [currentLabSlide, setCurrentLabSlide] = useState(0);
+  
+  // Estado para el scroll infinito de expositores
+  const [isPaused, setIsPaused] = useState(false);
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const [hoveredExpositor, setHoveredExpositor] = useState(null);
+  
+  // Debug: Log de props recibidas (solo en desarrollo)
+  // console.log('🎭 InfoEvent1 recibió props:', {
+  //   eventsData,
+  //   loading,
+  //   eventsDataKeys: eventsData ? Object.keys(eventsData) : 'NO_DATA',
+  //   eventsDataType: typeof eventsData
+  // });
 
   // Datos de las tarjetas para ExpoKossodo 2024
   const eventCards = [
@@ -124,9 +207,8 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
   }, []);
 
   // Obtener todos los eventos de todas las fechas
-  const getAllEvents = () => {
+  const getAllEvents = React.useCallback(() => {
     if (!eventsData || Object.keys(eventsData).length === 0) {
-      console.log('⚠️ getAllEvents: eventsData vacío o no definido');
       return [];
     }
     
@@ -143,27 +225,17 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
         });
       }
     });
-    console.log('📊 getAllEvents resultado:', allEvents.length, 'eventos');
     return allEvents;
-  };
+  }, [eventsData]);
 
   // Filtrar eventos por tipo
-  const getEventsByType = (type) => {
+  const getEventsByType = React.useCallback((type) => {
     const allEvents = getAllEvents();
-    
-    // Debug: Ver qué datos tenemos
-    console.log('🔍 Debug getAllEvents:', allEvents.length, 'eventos');
-    if (allEvents.length > 0) {
-      console.log('📋 Primer evento ejemplo:', allEvents[0]);
-      console.log('📋 Títulos de ejemplo:', allEvents.slice(0, 3).map(e => e.titulo_charla));
-    }
     
     switch (type) {
       case 'conferencias':
         // Mostrar TODOS los eventos como conferencias (todos son presentaciones/charlas)
-        console.log('🎯 Filtrando conferencias, total eventos:', allEvents.length);
         const filteredEvents = allEvents.filter(event => event.titulo_charla && event.titulo_charla.trim() !== '');
-        console.log('✅ Eventos filtrados:', filteredEvents.length);
         return filteredEvents;
       case 'talleres':
         // Para talleres, buscar por palabras relacionadas
@@ -186,312 +258,9 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
       default:
         return allEvents;
     }
-  };
+  }, [getAllEvents]);
 
-  // Componente para un video individual con chroma key - OPTIMIZADO
-  const ChromaKeyVideo = ({ expositorId, empresa, isHovered, onHover, onLeave }) => {
-    const videoRef = useRef(null);
-    const canvasRef = useRef(null);
-    const animationRef = useRef(null);
-    const [isInitialized, setIsInitialized] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [isVideoLoaded, setIsVideoLoaded] = useState(false);
-
-    // Función optimizada para procesar chroma key
-    const processChromaKey = React.useCallback((forceGrayscale = false) => {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      
-      if (!video || !canvas || video.videoWidth === 0 || video.videoHeight === 0) {
-        return;
-      }
-
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      // Dibujar el frame del video
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      // Solo procesar chroma key si está en hover para mejorar rendimiento
-      if (isHovered && !forceGrayscale) {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-
-        // Color chroma key mejorado: #09b230 (9, 178, 48)
-        const chromaR = 9;
-        const chromaG = 178;
-        const chromaB = 48;
-        const threshold = 120;
-        const edgeThreshold = 90;
-
-        // Procesar cada pixel
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-
-          const euclideanDistance = Math.sqrt(
-            Math.pow(r - chromaR, 2) + 
-            Math.pow(g - chromaG, 2) + 
-            Math.pow(b - chromaB, 2)
-          );
-
-          const greenDominance = g - Math.max(r, b);
-          const isGreenish = g > 120 && greenDominance > 30;
-          
-          const isChromaColor = euclideanDistance < threshold || 
-                               (isGreenish && euclideanDistance < threshold + 40);
-
-          if (isChromaColor) {
-            data[i + 3] = 0;
-          } else if (euclideanDistance < threshold + 30) {
-            const alpha = Math.max(0, (euclideanDistance - edgeThreshold) / 30) * 255;
-            data[i + 3] = Math.min(255, alpha);
-          }
-        }
-
-        ctx.putImageData(imageData, 0, 0);
-      } else {
-        // Aplicar filtro de escala de grises si no está en hover
-        ctx.filter = 'grayscale(100%) brightness(0.7)';
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      }
-
-      // Continuar la animación solo si está en hover y reproduciendo
-      if (isHovered && video && !video.paused && !video.ended) {
-        animationRef.current = requestAnimationFrame(() => processChromaKey());
-      }
-    }, [isHovered]);
-
-    // Función para pausar y resetear al primer frame
-    const pauseAndReset = React.useCallback(() => {
-      const video = videoRef.current;
-      if (video && isVideoLoaded) {
-        video.pause();
-        video.currentTime = 0;
-        setIsPlaying(false);
-        
-        // Procesar el primer frame en escala de grises
-        setTimeout(() => {
-          processChromaKey(true);
-        }, 50);
-      }
-    }, [processChromaKey, isVideoLoaded]);
-
-    // Lazy loading del video
-    useEffect(() => {
-      if (!isVideoLoaded && isHovered) {
-        const video = videoRef.current;
-        if (video) {
-          video.load();
-          setIsVideoLoaded(true);
-        }
-      }
-    }, [isHovered, isVideoLoaded]);
-
-    // Manejar hover con debounce
-    useEffect(() => {
-      const video = videoRef.current;
-      if (!video || !isVideoLoaded) return;
-
-      let timeoutId;
-
-      if (isHovered) {
-        // Pequeño delay antes de iniciar para evitar hover accidentales
-        timeoutId = setTimeout(() => {
-          video.currentTime = 0;
-          video.play().then(() => {
-            setIsPlaying(true);
-            processChromaKey();
-          }).catch(console.error);
-        }, 100);
-      } else {
-        pauseAndReset();
-        
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
-        }
-      }
-
-      return () => {
-        clearTimeout(timeoutId);
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
-        }
-      };
-    }, [isHovered, isVideoLoaded, processChromaKey, pauseAndReset]);
-
-    // Limpiar recursos al desmontar
-    useEffect(() => {
-      return () => {
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
-        }
-        const video = videoRef.current;
-        if (video) {
-          video.pause();
-          video.src = '';
-        }
-      };
-    }, []);
-
-    return (
-      <div
-        className="relative group cursor-pointer"
-        onMouseEnter={onHover}
-        onMouseLeave={onLeave}
-      >
-        <div className="w-60 h-60 rounded-lg overflow-hidden bg-gray-100/20 backdrop-blur-sm border border-gray-300/30 relative">
-          <video
-            ref={videoRef}
-            className="hidden"
-            muted
-            playsInline
-            preload="none"
-            crossOrigin="anonymous"
-          >
-            <source src="/video/locuto_1.mp4" type="video/mp4" />
-          </video>
-          
-          {/* Placeholder mientras carga */}
-          {!isVideoLoaded && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-200/50">
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-gray-300 mb-2 mx-auto"></div>
-                <div className="text-sm text-gray-600">{empresa}</div>
-              </div>
-            </div>
-          )}
-          
-          <canvas
-            ref={canvasRef}
-            className={`w-full h-full object-cover transition-all duration-300 ${
-              isVideoLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-            style={{
-              transform: isHovered ? 'scale(1.05)' : 'scale(1)'
-            }}
-          />
-        </div>
-        
-        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-          <span className={`text-sm font-medium px-3 py-2 rounded-lg backdrop-blur-sm transition-all duration-300 ${
-            isHovered 
-              ? 'text-gray-800 bg-white/95 shadow-lg scale-105' 
-              : 'text-gray-600 bg-gray-100/80'
-          }`}>
-            {empresa}
-          </span>
-        </div>
-      </div>
-    );
-  };
-
-  // Componente para los videos de expositores con chroma key
-  const ExpositorVideos = React.memo(() => {
-    const [hoveredVideo, setHoveredVideo] = useState(null);
-    
-    // Array de 5 expositores
-    const expositores = [
-      { id: 1, empresa: "TechLab Corp" },
-      { id: 2, empresa: "BioInnovation" },
-      { id: 3, empresa: "LabSolutions" },
-      { id: 4, empresa: "MedEquip Pro" },
-      { id: 5, empresa: "ScienceHub" }
-    ];
-
-    return (
-      <div className="flex justify-center items-center space-x-6 pb-4">
-        {expositores.map((expositor) => (
-          <ChromaKeyVideo
-            key={expositor.id}
-            expositorId={expositor.id}
-            empresa={expositor.empresa}
-            isHovered={hoveredVideo === expositor.id}
-            onHover={() => setHoveredVideo(expositor.id)}
-            onLeave={() => setHoveredVideo(null)}
-          />
-        ))}
-      </div>
-    );
-  });
-
-  // Componente para el slider automático de conferencias
-  const ConferenceSlider = () => {
-    const conferences = getEventsByType('conferencias');
-    const [currentIndex, setCurrentIndex] = useState(0);
-    
-    console.log('🎪 ConferenceSlider - conferences:', conferences.length, 'loading:', loading);
-
-    useEffect(() => {
-      if (conferences.length === 0) return;
-      
-      const interval = setInterval(() => {
-        setCurrentIndex(prev => (prev + 3) % conferences.length);
-      }, 5000); // Cambiar cada 5 segundos
-
-      return () => clearInterval(interval);
-    }, [conferences.length]);
-
-    if (conferences.length === 0) {
-      return (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-blue-600 mb-2">
-              {loading ? 'Cargando conferencias...' : 'No se encontraron conferencias'}
-            </p>
-            {!loading && (
-              <p className="text-blue-500 text-xs">
-                Total eventos: {getAllEvents().length}
-              </p>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    const getVisibleConferences = () => {
-      const visible = [];
-      for (let i = 0; i < 9; i++) {
-        const index = (currentIndex + i) % conferences.length;
-        visible.push(conferences[index]);
-      }
-      return visible;
-    };
-
-    return (
-      <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-3">
-        <AnimatePresence mode="wait">
-          {getVisibleConferences().slice(0, 9).map((conference, index) => (
-            <motion.div
-              key={`${conference.id}-${currentIndex}-${index}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.8, delay: index * 0.15 }}
-              className="h-24 p-3 rounded-lg border-2 cursor-pointer transition-all duration-300 relative overflow-hidden border-gray-200 bg-white hover:border-[#6cb79a] hover:shadow-lg hover:scale-[1.02]"
-              onClick={onScrollToNext}
-            >
-              <div className="flex flex-col h-full">
-                <h4 className="font-semibold text-sm text-gray-800 mb-1.5 line-clamp-2 leading-tight">
-                  {conference.titulo_charla}
-                </h4>
-                <p className="text-xs text-gray-600 mb-2 font-medium">
-                  {conference.expositor}
-                </p>
-                <div className="mt-auto text-xs text-gray-500">
-                  <span className="font-medium">{conference.hora}</span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-    );
-  };
-
-  // Modal de galería del laboratorio
+  // Componente para el slider automático de conferencias - memoizado
   const LabGalleryModal = () => {
     const goToNext = () => {
       setCurrentLabImage((prev) => (prev + 1) % labImages.length);
@@ -697,6 +466,38 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
     }
   };
 
+  // Funciones para el carrusel del laboratorio - memoizadas
+  const imagesPerSlide = 5;
+  const totalSlides = Math.ceil(labImages.length / imagesPerSlide);
+  
+  const nextSlide = React.useCallback(() => {
+    setCurrentLabSlide((prev) => (prev + 1) % totalSlides);
+  }, [totalSlides]);
+  
+  const prevSlide = React.useCallback(() => {
+    setCurrentLabSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
+  }, [totalSlides]);
+  
+  const getCurrentImages = React.useCallback(() => {
+    const start = currentLabSlide * imagesPerSlide;
+    return labImages.slice(start, start + imagesPerSlide);
+  }, [currentLabSlide, imagesPerSlide, labImages]);
+
+  // useEffect para el scroll continuo de expositores
+  useEffect(() => {
+    if (!isPaused) {
+      const interval = setInterval(() => {
+        setScrollPosition(prev => {
+          const newPosition = prev - 1;
+          // Reiniciar cuando llegue al final (ancho de 8 expositores: 8 * 280px = 2240px)
+          return newPosition <= -1920 ? 0 : newPosition;
+        });
+      }, 20); // Reducido de 50ms a 20ms para mayor velocidad
+
+      return () => clearInterval(interval);
+    }
+  }, [isPaused]);
+
   // Función optimizada para obtener el contenido de la sección inferior según la tarjeta activa
   const getInteractiveContent = React.useCallback(() => {
     if (!activeCard) {
@@ -742,8 +543,13 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                 <div className="text-xl font-semibold text-blue-700">CONFERENCIAS Y TALLERES</div>
               </div>
               
-              {/* Slider de conferencias a la derecha */}
-              <ConferenceSlider />
+              {/* Slider de conferencias a la derecha - AHORA COMO COMPONENTE EXTERNO */}
+              <ConferenceSlider 
+                conferences={getEventsByType('conferencias')}
+                loading={loading}
+                onScrollToNext={onScrollToNext}
+                totalEvents={getAllEvents().length}
+              />
             </div>
           </motion.div>
         );
@@ -752,15 +558,11 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
         // Partners con logos coloridos
         const partners = [
           { name: 'CAMAG', logo: 'https://i.ibb.co/YFYknC9N/camag-color.webp' },
-          { name: 'CHEM', logo: 'https://i.ibb.co/LXZ02Zb3/chem-color.webp' },
-          { name: 'AMS', logo: 'https://i.ibb.co/Z16k8Xcy/ams-color.webp' },
           { name: 'EVIDENT', logo: 'https://i.ibb.co/RpHJ7W0C/evident-color.webp' },
           { name: 'ESCO', logo: 'https://i.ibb.co/wFCJ2RK3/esco-color.webp' },
           { name: 'VACUUBRAND', logo: 'https://i.ibb.co/8nCL3Ksb/vacubrand-color.webp' },
-          { name: 'BINDER', logo: 'https://i.ibb.co/JR51wysn/binder-color.webp' },
-          { name: 'LAUDA', logo: 'https://i.ibb.co/GfrzYHYS/lauda-color.webp' },
           { name: 'SARTORIUS', logo: 'https://i.ibb.co/pYPPZ6m/sartorius-color.webp' },
-          { name: 'VELP', logo: 'https://i.ibb.co/tVn3sdB/velp-color.webp' }
+          { name: 'LAUDA', logo: 'https://i.ibb.co/GfrzYHYS/lauda-color.webp' }
         ];
 
         return (
@@ -769,35 +571,59 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="bg-gradient-to-r from-[#6cb79a] to-[#5ca085] rounded-xl p-6 text-white"
+            className="bg-white rounded-xl p-8"
           >
-            <div className="text-center mb-6">
-              <div className="text-xl font-semibold mb-4">MARCAS PARTICIPANTES</div>
-              <p className="text-lg opacity-90 mb-6">
-                Las mejores marcas del sector con sus últimas innovaciones
-              </p>
-            </div>
-            <div className="grid grid-cols-5 gap-4">
-              {partners.map((partner, index) => (
-                <motion.div
-                  key={partner.name}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  className="bg-white/20 backdrop-blur-sm rounded-lg p-3 hover:bg-white/30 transition-all hover:scale-105"
-                >
-                  <img
-                    src={partner.logo}
-                    alt={partner.name}
-                    className="w-full h-12 object-contain"
-                  />
-                </motion.div>
-              ))}
+            {/* Container centrado con ancho máximo 1200px */}
+            <div className="container mx-auto max-w-[1200px]">
+              {/* Header con título */}
+              <div className="header text-center mb-10">
+                <h2 className="text-3xl md:text-4xl font-bold text-[#0B3157] mb-4">
+                  Marcas Participantes
+                </h2>
+              </div>
+              
+              {/* Content - Dos columnas */}
+              <div className="content flex flex-col lg:flex-row gap-8 lg:gap-12">
+                {/* Columna izquierda - Texto descriptivo */}
+                <div className="column-left flex-1 space-y-6">
+                  <p className="text-gray-700 leading-relaxed text-base md:text-lg">
+                    Exploraremos las prácticas sostenibles en el rubro 
+                    minero, analizando cómo las empresas del sector están 
+                    incorporando tecnologías limpias.
+                  </p>
+                  <p className="text-gray-700 leading-relaxed text-base md:text-lg">
+                    Esta conferencia busca generar un espacio de diálogo y 
+                    aprendizaje en torno a una minería más consciente.
+                  </p>
+                </div>
+                
+                {/* Columna derecha - Logos en grid de 2x3 */}
+                <div className="column-right flex-1">
+                  <div className="grid grid-cols-3 gap-4 md:gap-6">
+                    {partners.map((partner, index) => (
+                      <motion.div
+                        key={partner.name}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        className="logo flex items-center justify-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all hover:scale-105 border border-gray-200"
+                      >
+                        <img
+                          src={partner.logo}
+                          alt={partner.name}
+                          className="w-full h-16 object-contain"
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </motion.div>
         );
         
       case 'laboratorio':
+        
         return (
           <motion.div
             key="laboratorio"
@@ -808,33 +634,70 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
             onMouseEnter={() => setHoveredLab(true)}
             onMouseLeave={() => setHoveredLab(false)}
           >
-            {/* Lista de imágenes horizontal estilo minimalista */}
-            <div className="flex justify-center items-center space-x-3 overflow-x-auto">
-              {labImages.map((img, index) => (
-                <motion.div
-                  key={img.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                  whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
-                  className="cursor-pointer flex-shrink-0"
-                  onClick={() => {
-                    console.log('🔬 Click en imagen de laboratorio:', index);
-                    setCurrentLabImage(index);
-                    setShowLabModal(true);
-                    console.log('🔬 Modal should be visible now:', true);
-                  }}
-                >
-                  <div className="w-48 h-48 rounded-lg overflow-hidden bg-gray-100/20 backdrop-blur-sm border-2 border-gray-200/50 hover:border-[#6cb79a] transition-all duration-300 shadow-sm hover:shadow-lg">
-                    <img
-                      src={img.url}
-                      alt={img.title}
-                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                    />
-                  </div>
-                </motion.div>
-              ))}
+            {/* Contenedor con altura fija para evitar scroll vertical */}
+            <div className="h-64 relative">
+              {/* Grid de imágenes sin scroll horizontal */}
+              <div className="flex justify-center items-center gap-3 h-full">
+                {getCurrentImages().map((img, index) => (
+                  <motion.div
+                    key={img.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: index * 0.05 }}
+                    className="cursor-pointer flex-1 max-w-[200px] h-48"
+                    onClick={() => {
+                      const originalIndex = labImages.findIndex(labImg => labImg.id === img.id);
+                      setCurrentLabImage(originalIndex);
+                      setShowLabModal(true);
+                    }}
+                  >
+                    <div className="w-full h-full rounded-lg overflow-hidden bg-gray-100/20 backdrop-blur-sm border-2 border-gray-200/50 hover:border-[#6cb79a] transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105">
+                      <img
+                        src={img.url}
+                        alt={img.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              
+              {/* Flechas de navegación */}
+              {totalSlides > 1 && (
+                <>
+                  <button
+                    onClick={prevSlide}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors z-10"
+                  >
+                    <ChevronLeft className="w-6 h-6 text-gray-700" />
+                  </button>
+                  <button
+                    onClick={nextSlide}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors z-10"
+                  >
+                    <ChevronRight className="w-6 h-6 text-gray-700" />
+                  </button>
+                </>
+              )}
             </div>
+            
+            {/* Puntos de navegación */}
+            {totalSlides > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-4">
+                {Array.from({ length: totalSlides }).map((_, index) => (
+                  <motion.button
+                    key={index}
+                    onClick={() => setCurrentLabSlide(index)}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      index === currentLabSlide 
+                        ? 'w-8 bg-[#6cb79a]' 
+                        : 'w-2 bg-gray-300 hover:bg-gray-400'
+                    }`}
+                    whileHover={{ scale: 1.2 }}
+                  />
+                ))}
+              </div>
+            )}
             
             {/* Texto inferior */}
             <motion.p
@@ -849,23 +712,115 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
         );
         
       case 'expositores':
+        // Array de 8 expositores con alternancia de imágenes y banderas
+        const expositores = [
+          { id: 1, nombre: "Cristina Blanco", empresa: "VELP", imagen: "https://i.ibb.co/HLQyKyWq/sarpin-copia.webp", bandera: "🇵🇦" },
+          { id: 2, nombre: "Lion Lambert", empresa: "SARTORIUS", imagen: "https://i.ibb.co/gbgRbBQx/minia-sart.webp", bandera: "🇩🇪" },
+          { id: 3, nombre: "María Rodríguez", empresa: "EVIDENT", imagen: "https://i.ibb.co/HLQyKyWq/sarpin-copia.webp", bandera: "🇯🇵" },
+          { id: 4, nombre: "John Smith", empresa: "LAUDA", imagen: "https://i.ibb.co/gbgRbBQx/minia-sart.webp", bandera: "🇺🇸" },
+          { id: 5, nombre: "Ana García", empresa: "ESCO", imagen: "https://i.ibb.co/HLQyKyWq/sarpin-copia.webp", bandera: "🇪🇸" },
+          { id: 6, nombre: "Carlos Mendez", empresa: "CAMAG", imagen: "https://i.ibb.co/gbgRbBQx/minia-sart.webp", bandera: "🇨🇭" },
+          { id: 7, nombre: "Laura Torres", empresa: "VACUUBRAND", imagen: "https://i.ibb.co/HLQyKyWq/sarpin-copia.webp", bandera: "🇫🇷" },
+          { id: 8, nombre: "Pedro Sánchez", empresa: "BINDER", imagen: "https://i.ibb.co/gbgRbBQx/minia-sart.webp", bandera: "🇮🇹" }
+        ];
+        
         return (
           <motion.div
             key="expositores"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="bg-transparent rounded-xl p-6"
+            className="bg-transparent rounded-xl overflow-hidden"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
           >
-            {/* Grid de videos con chroma key */}
-            <ExpositorVideos />
+            {/* Contenedor con scroll infinito y fades en los bordes */}
+            <div className="relative overflow-hidden py-4">
+              {/* Fade overlay izquierdo */}
+              <div className="absolute top-0 bottom-0 left-0 w-24 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+              
+              <motion.div
+                className="flex gap-8"
+                style={{
+                  x: scrollPosition
+                }}
+              >
+                {/* Duplicamos el array para el efecto infinito */}
+                {[...expositores, ...expositores].map((expositor, index) => {
+                  const isHovered = hoveredExpositor === `${expositor.id}-${index}`;
+                  const shouldFade = hoveredExpositor !== null && !isHovered;
+                  
+                  return (
+                    <div
+                      key={`${expositor.id}-${index}`}
+                      className="flex flex-col items-center flex-shrink-0 transition-all duration-500"
+                      style={{
+                        filter: shouldFade ? 'grayscale(100%) brightness(0.4)' : 'none',
+                        transform: shouldFade ? 'scale(0.95)' : 'scale(1)'
+                      }}
+                      onMouseEnter={() => setHoveredExpositor(`${expositor.id}-${index}`)}
+                      onMouseLeave={() => setHoveredExpositor(null)}
+                    >
+                      {/* Contenedor con SVG de fondo */}
+                      <div className="relative w-56 h-56 mb-4">
+                        {/* SVG de fondo con colores alternados */}
+                        <svg
+                          className="absolute inset-0 w-full h-full"
+                          viewBox="0 0 181.62 181.22"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M181.62,0v82.44c0,58.05-44.75,98.77-93.53,98.77H0v-78.21C0,29.63,53.62,0,98.37,0h83.25Z"
+                            fill={index % 2 === 0 ? '#6cb799' : '#1f2f55'}
+                          />
+                        </svg>
+                        
+                        {/* Imagen del expositor sin padding y completa */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <img
+                            src={expositor.imagen}
+                            alt={expositor.nombre}
+                            className="w-full h-auto max-w-full max-h-full object-contain"
+                          />
+                        </div>
+                        
+                        {/* Círculo con bandera en la parte central inferior */}
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ duration: 0.3, delay: index * 0.05 }}
+                            className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-gray-200"
+                          >
+                            <span className="text-xl">{expositor.bandera}</span>
+                          </motion.div>
+                        </div>
+                      </div>
+                      
+                      {/* Información del expositor */}
+                      <div className="text-center">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-1">
+                          {expositor.nombre}
+                        </h4>
+                        <p className="text-base text-[#6cb799] font-medium">
+                          {expositor.empresa}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </motion.div>
+              
+              {/* Fade overlay derecho */}
+              <div className="absolute top-0 bottom-0 right-0 w-24 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+            </div>
           </motion.div>
         );
         
       default:
         return null;
     }
-  }, [activeCard, eventsData, loading, hoveredLab, setHoveredLab, showLabModal, setShowLabModal, currentLabImage, setCurrentLabImage]);
+  }, [activeCard, eventsData, loading, hoveredLab, currentLabSlide, isPaused, scrollPosition, hoveredExpositor, eventCards, getCurrentImages, getEventsByType, labImages, nextSlide, prevSlide, totalSlides]);
 
   // Si está cargando, mostrar estado de carga
   if (loading) {
@@ -959,7 +914,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Modal de galería del laboratorio usando Portal */}
+      {/* Modal de galería del laboratorio simplificado */}
       {showLabModal && portalReady && ReactDOM.createPortal(
         <AnimatePresence>
           {showLabModal && (
@@ -967,125 +922,94 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-              style={{ zIndex: 9999 }}
+              className="fixed inset-0 flex flex-col items-center justify-center backdrop-blur-sm"
+              style={{ 
+                zIndex: 9999,
+                backgroundColor: 'rgb(0 0 0 / 0.97)'
+              }}
               onClick={() => setShowLabModal(false)}
             >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ type: "spring", duration: 0.5 }}
-                className="relative max-w-5xl w-full bg-white/15 backdrop-blur-md rounded-[24px] border-2 border-white shadow-2xl overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
+              {/* Botón cerrar */}
+              <button
+                onClick={() => setShowLabModal(false)}
+                className="absolute top-6 right-6 p-3 rounded-full bg-white/20 hover:bg-white/30 transition-colors z-20"
               >
-                {/* Botón cerrar */}
-                <button
-                  onClick={() => setShowLabModal(false)}
-                  className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-                >
-                  <X className="w-6 h-6 text-white" />
-                </button>
+                <X className="w-6 h-6 text-white" />
+              </button>
 
-                {/* Contenido del modal - Diseño vertical */}
-                <div className="flex flex-col h-[85vh] p-6">
-                  {/* Sección de imagen principal con navegación */}
-                  <div className="flex-1 flex items-center justify-center relative mb-6">
-                    {/* Botón anterior */}
-                    <button
-                      onClick={() => setCurrentLabImage((prev) => (prev - 1 + labImages.length) % labImages.length)}
-                      className="absolute left-0 p-3 rounded-full bg-white/20 hover:bg-white/30 transition-all hover:scale-110 z-10"
-                    >
-                      <ChevronLeft className="w-8 h-8 text-white" />
-                    </button>
+              {/* Contenedor principal centrado */}
+              <div className="flex flex-col items-center justify-center max-w-5xl w-full px-8 relative" onClick={(e) => e.stopPropagation()}>
+                
+                {/* Contenedor de imagen con flechas posicionadas dentro del ancho del contenido */}
+                <div className="relative w-full max-w-4xl mb-8">
+                  {/* Flechas verdes dentro del ancho del contenido */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentLabImage((prev) => (prev - 1 + labImages.length) % labImages.length);
+                    }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-[#6cb79a] hover:bg-[#5ca085] transition-all hover:scale-110 z-20"
+                    style={{ padding: '0.6rem' }}
+                  >
+                    <ChevronLeft className="w-8 h-8 text-white" />
+                  </button>
 
-                    {/* Contenedor de imágenes con transición */}
-                    <div className="relative w-full max-w-4xl h-full overflow-hidden rounded-xl">
-                      <AnimatePresence mode="wait">
-                        <motion.div
-                          key={currentLabImage}
-                          initial={{ x: 300, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          exit={{ x: -300, opacity: 0 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                          className="absolute inset-0"
-                        >
-                          <img
-                            src={labImages[currentLabImage].url}
-                            alt={labImages[currentLabImage].title}
-                            className="w-full h-full object-contain"
-                          />
-                        </motion.div>
-                      </AnimatePresence>
-                    </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentLabImage((prev) => (prev + 1) % labImages.length);
+                    }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-[#6cb79a] hover:bg-[#5ca085] transition-all hover:scale-110 z-20"
+                    style={{ padding: '0.6rem' }}
+                  >
+                    <ChevronRight className="w-8 h-8 text-white" />
+                  </button>
 
-                    {/* Botón siguiente */}
-                    <button
-                      onClick={() => setCurrentLabImage((prev) => (prev + 1) % labImages.length)}
-                      className="absolute right-0 p-3 rounded-full bg-white/20 hover:bg-white/30 transition-all hover:scale-110 z-10"
-                    >
-                      <ChevronRight className="w-8 h-8 text-white" />
-                    </button>
-                  </div>
-
-                  {/* Información de la imagen */}
-                  <div className="text-center mb-4">
-                    <h3 className="text-2xl font-bold text-white mb-2">
-                      {labImages[currentLabImage].title}
-                    </h3>
-                    <p className="text-white/80 text-sm max-w-2xl mx-auto mb-3">
-                      {labImages[currentLabImage].description}
-                    </p>
-                    {/* Indicador de posición */}
-                    <div className="flex justify-center items-center gap-2 mt-2">
-                      {labImages.map((_, index) => (
-                        <motion.div
-                          key={index}
-                          className={`h-1.5 rounded-full transition-all duration-300 ${
-                            index === currentLabImage 
-                              ? 'w-8 bg-[#6cb79a]' 
-                              : 'w-1.5 bg-white/40 hover:bg-white/60'
-                          }`}
-                          whileHover={{ scale: 1.2 }}
-                          onClick={() => setCurrentLabImage(index)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Thumbnails horizontales */}
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent">
-                      {labImages.map((img, index) => (
-                        <motion.button
-                          key={img.id}
-                          onClick={() => setCurrentLabImage(index)}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className={`relative flex-shrink-0 w-36 h-24 overflow-hidden rounded-lg transition-all cursor-pointer ${
-                            index === currentLabImage
-                              ? 'ring-2 ring-[#6cb79a] shadow-lg'
-                              : 'opacity-70 hover:opacity-100 hover:ring-1 hover:ring-white/50'
-                          }`}
-                        >
-                          <img
-                            src={img.url}
-                            alt={img.title}
-                            className="w-full h-full object-cover"
-                          />
-                          {index === currentLabImage && (
-                            <motion.div 
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              className="absolute inset-0 bg-gradient-to-t from-[#6cb79a]/40 to-transparent"
-                            />
-                          )}
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
+                  {/* Imagen principal */}
+                  <AnimatePresence mode="wait">
+                    <motion.img
+                      key={currentLabImage}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.3 }}
+                      src={labImages[currentLabImage].url}
+                      alt={labImages[currentLabImage].title}
+                      className="w-full h-auto max-h-[60vh] object-contain rounded-lg"
+                    />
+                  </AnimatePresence>
                 </div>
-              </motion.div>
+
+                {/* Texto - título y subtítulo */}
+                <div className="text-center mb-6 max-w-2xl">
+                  <h3 className="text-2xl font-bold text-white mb-3">
+                    {labImages[currentLabImage].title}
+                  </h3>
+                  <p className="text-white/80 text-base leading-relaxed">
+                    {labImages[currentLabImage].description}
+                  </p>
+                </div>
+
+                {/* Puntos de navegación */}
+                <div className="flex justify-center items-center gap-3">
+                  {labImages.map((_, index) => (
+                    <motion.button
+                      key={index}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentLabImage(index);
+                      }}
+                      className={`h-3 rounded-full transition-all duration-300 ${
+                        index === currentLabImage 
+                          ? 'w-10 bg-[#6cb79a]' 
+                          : 'w-3 bg-white/40 hover:bg-white/60'
+                      }`}
+                      whileHover={{ scale: 1.2 }}
+                      whileTap={{ scale: 0.9 }}
+                    />
+                  ))}
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>,
