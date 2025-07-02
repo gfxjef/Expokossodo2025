@@ -231,4 +231,80 @@ body > a[style*="position: fixed"] {
 
 .fp-overflow::-webkit-scrollbar-thumb {
   background-color: rgb(109 183 154) !important;
+}
+
+/* Animaciones para el Chat Widget */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Estilos adicionales para el Chat Widget */
+.chat-container {
+  transition: all 0.3s ease-out;
+}
+
+.message-bubble {
+  transition: all 0.2s ease-out;
+  word-wrap: break-word;
+}
+
+.message-bubble.incoming {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.message-bubble.outgoing {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes pulse-fast {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.animate-pulse-fast {
+  animation: pulse-fast 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+}
+
+/* Scrollbar personalizado para el Chat Widget */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Para Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
 } 

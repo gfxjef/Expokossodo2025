@@ -1,25 +1,23 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import mysql.connector
 from mysql.connector import Error
 import os
 from dotenv import load_dotenv
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.image import MIMEImage
-from datetime import datetime, timedelta
-import json
 import qrcode
 from PIL import Image
 import io
+import bcrypt
 import time
 import re
+from openai import OpenAI
 
+# Cargar variables de entorno desde .env
 load_dotenv()
 
-app = Flask(__name__)
-CORS(app)
+# --- CONFIGURACIÓN ---
+app = Flask(__name__, static_folder='../frontend/build', static_url_path='/')
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Configuración de la base de datos
 DB_CONFIG = {
@@ -30,6 +28,23 @@ DB_CONFIG = {
     'port': int(os.getenv('DB_PORT', 3306))
 }
 
+# Configuración de OpenAI
+# Asegúrate de tener estas variables en tu archivo .env
+openai_api_key = os.getenv('OPENAI_API_KEY')
+assistant_id = os.getenv('OPENAI_ASSISTANT_ID')
+vector_store_id = os.getenv('OPENAI_VECTOR_STORE_ID', 'vs_67d2546ee78881918ebeb8ff16697cc1')  # Valor por defecto
+
+# Inicializar cliente con header beta para v2
+client = OpenAI(
+    api_key=openai_api_key,
+    default_headers={"OpenAI-Beta": "assistants=v2"}
+)
+
+# Almacenamiento en memoria para hilos de conversación (para producción, usar una base de datos)
+threads_in_memory = {}
+
+
+# --- CONEXIÓN A LA BASE DE DATOS ---
 def get_db_connection():
     """Crear conexión a la base de datos"""
     try:
@@ -1974,6 +1989,82 @@ def toggle_fecha_info(fecha_id):
             cursor.close()
         if 'connection' in locals() and connection:
             connection.close()
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    data = request.json
+    user_message = data.get('message')
+    thread_id = data.get('thread_id')
+
+    if not user_message:
+        return jsonify({'error': 'No message provided'}), 400
+    
+    # Validar que las configuraciones de OpenAI estén presentes
+    if not all([openai_api_key, assistant_id]):
+        return jsonify({'error': 'OpenAI API keys not configured on the server'}), 500
+
+    try:
+        # Si no hay thread_id, crear uno nuevo
+        if not thread_id:
+            thread_obj = client.beta.threads.create()
+            thread_id = thread_obj.id
+            threads_in_memory[thread_id] = thread_obj # Guardar el nuevo hilo
+        
+        # 1. Añadir el mensaje del usuario al hilo
+        client.beta.threads.messages.create(
+            thread_id=thread_id,
+            role="user",
+            content=user_message
+        )
+
+        # 2. Crear un Run para que el asistente procese el mensaje
+        # En v2, el vector store se especifica en el assistant, no en el run
+        run = client.beta.threads.runs.create(
+            thread_id=thread_id,
+            assistant_id=assistant_id
+        )
+
+        # 3. Esperar a que el Run se complete
+        while run.status in ['queued', 'in_progress', 'cancelling']:
+            time.sleep(1) # Evitar "busy-waiting" excesivo
+            run = client.beta.threads.runs.retrieve(
+                thread_id=thread_id,
+                run_id=run.id
+            )
+
+        if run.status == 'completed':
+            # 4. Recuperar los mensajes del hilo
+            messages = client.beta.threads.messages.list(
+                thread_id=thread_id,
+                order="asc"
+            )
+            
+            # 5. Encontrar la última respuesta del asistente
+            assistant_response = ""
+            for msg in reversed(messages.data):
+                if msg.role == 'assistant':
+                    # El contenido puede venir en partes
+                    for content_part in msg.content:
+                        if content_part.type == 'text':
+                            assistant_response = content_part.text.value
+                            break
+                    if assistant_response:
+                        break
+            
+            return jsonify({
+                'reply': assistant_response, 
+                'thread_id': thread_id
+            })
+
+        else:
+            print(f"Run failed. Status: {run.status}")
+            if hasattr(run, 'last_error') and run.last_error:
+                print(f"Error details: {run.last_error}")
+            return jsonify({'error': f'Run failed with status: {run.status}'}), 500
+
+    except Exception as e:
+        print(f"Error in OpenAI chat endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("🚀 Iniciando ExpoKossodo Backend...")

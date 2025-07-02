@@ -6,6 +6,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import VerificadorGeneral from './components/VerificadorGeneral';
 import SelectorCharlas from './components/SelectorCharlas';
 import VerificadorSala from './components/VerificadorSala';
+import ChatWidget from './components/ChatWidget';
 import './index.css';
 
 function App() {
@@ -44,6 +45,9 @@ function App() {
           {/* Redirección por defecto */}
           <Route path="*" element={<EventRegistrationWithLanding />} />
         </Routes>
+        
+        {/* Chat Widget - Se muestra en todas las páginas */}
+        <ChatWidget />
       </div>
     </Router>
   );
