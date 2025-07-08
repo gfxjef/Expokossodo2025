@@ -28,6 +28,7 @@ El backend ya está configurado correctamente con CORS para aceptar solicitudes 
 - `https://expokossodo2025.vercel.app`
 - Cualquier subdominio de `*.vercel.app`
 - `localhost:3000` y `localhost:3001` para desarrollo
+- Cualquier subdominio de `*.ngrok-free.app` y `*.ngrok.io` para pruebas con ngrok
 
 ### Variables de Entorno en Render:
 
@@ -68,6 +69,25 @@ Para verificar que todo funciona:
 3. Verifica que no haya errores CORS
 4. Prueba navegar al panel de admin
 
+## Uso con ngrok
+
+Si estás usando ngrok para compartir tu aplicación local:
+
+1. El frontend detectará automáticamente que está ejecutándose en ngrok
+2. Se agregarán los headers necesarios (`ngrok-skip-browser-warning`)
+3. El backend aceptará peticiones desde dominios de ngrok
+
+### Para iniciar con ngrok:
+
+```bash
+# En una terminal, inicia el frontend
+cd frontend
+npm start
+
+# En otra terminal, expón el puerto con ngrok
+ngrok http 3000
+```
+
 ## Comandos Útiles
 
 ### Verificar las variables de entorno en el frontend:
@@ -82,6 +102,17 @@ console.log('API URL:', process.env.REACT_APP_API_URL);
 curl -H "Origin: https://expokossodo2025.vercel.app" \
      -H "Access-Control-Request-Method: GET" \
      -H "Access-Control-Request-Headers: X-Requested-With" \
+     -X OPTIONS \
+     https://expokossodo2025-backend.onrender.com/api/admin/eventos \
+     -v
+```
+
+### Verificar CORS con ngrok:
+
+```bash
+curl -H "Origin: https://tu-dominio.ngrok-free.app" \
+     -H "Access-Control-Request-Method: GET" \
+     -H "Access-Control-Request-Headers: X-Requested-With,ngrok-skip-browser-warning" \
      -X OPTIONS \
      https://expokossodo2025-backend.onrender.com/api/admin/eventos \
      -v

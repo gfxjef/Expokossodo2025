@@ -14,7 +14,7 @@ console.log('📍 Admin Service - URL base final:', API_BASE_URL);
 
 const adminApi = axios.create({
   baseURL: `${API_BASE_URL}/admin`,
-  headers: API_CONFIG.defaultHeaders,
+  headers: API_CONFIG.getDefaultHeaders(),
   timeout: 15000, // 15 segundos para admin
 });
 
