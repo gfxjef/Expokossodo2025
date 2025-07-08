@@ -24,7 +24,9 @@ allowed_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
     "https://expokossodo2025.vercel.app",
-    "https://*.vercel.app"  # Permitir todos los subdominios de Vercel
+    "https://*.vercel.app",  # Permitir todos los subdominios de Vercel
+    "https://*.ngrok-free.app",  # Permitir todos los subdominios de ngrok
+    "https://*.ngrok.io"  # Permitir también ngrok.io
 ]
 
 CORS(app, 
@@ -32,7 +34,7 @@ CORS(app,
          r"/*": {
              "origins": allowed_origins,
              "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-             "allow_headers": ["Content-Type", "Authorization"],
+             "allow_headers": ["Content-Type", "Authorization", "ngrok-skip-browser-warning"],
              "expose_headers": ["Content-Type"],
              "supports_credentials": True,
              "max_age": 3600
@@ -70,7 +72,7 @@ def handle_preflight():
         # Responder a las solicitudes preflight
         response = make_response()
         response.headers.add("Access-Control-Allow-Origin", request.headers.get('Origin', '*'))
-        response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization")
+        response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization,ngrok-skip-browser-warning")
         response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS")
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response
@@ -97,8 +99,11 @@ def after_request(response):
                 "https://expokossodo2025.vercel.app"
             ]
             
-            # También permitir cualquier subdominio de vercel.app
-            if origin in allowed_origins or origin.endswith('.vercel.app'):
+            # También permitir cualquier subdominio de vercel.app y ngrok
+            if (origin in allowed_origins or 
+                origin.endswith('.vercel.app') or 
+                origin.endswith('.ngrok-free.app') or 
+                origin.endswith('.ngrok.io')):
                 response.headers['Access-Control-Allow-Origin'] = origin
                 response.headers['Access-Control-Allow-Credentials'] = 'true'
     

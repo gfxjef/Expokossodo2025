@@ -14,7 +14,7 @@ console.log('📍 API Service - URL base final:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: API_CONFIG.defaultHeaders,
+  headers: API_CONFIG.getDefaultHeaders(),
   timeout: API_CONFIG.defaultTimeout,
 });
 

@@ -28,10 +28,30 @@ const API_CONFIG = {
     return devUrl;
   },
   
+  // Detectar si estamos en ngrok
+  isNgrok: () => {
+    return window.location.hostname.includes('ngrok');
+  },
+  
   // Timeout por defecto
   defaultTimeout: 30000,
   
   // Headers por defecto
+  getDefaultHeaders: () => {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Si estamos en ngrok, agregar header especial
+    if (API_CONFIG.isNgrok()) {
+      headers['ngrok-skip-browser-warning'] = 'true';
+      console.log('🌐 Detectado ngrok, agregando headers especiales');
+    }
+    
+    return headers;
+  },
+  
+  // Para mantener compatibilidad
   defaultHeaders: {
     'Content-Type': 'application/json',
   }
@@ -39,5 +59,8 @@ const API_CONFIG = {
 
 // Log inicial al cargar el módulo
 console.log('🚀 API Config cargada. URL base:', API_CONFIG.getApiUrl());
+if (API_CONFIG.isNgrok()) {
+  console.log('🌐 Ejecutando desde ngrok');
+}
 
 export default API_CONFIG; 
