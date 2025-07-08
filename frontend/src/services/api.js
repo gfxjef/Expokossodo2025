@@ -1,14 +1,13 @@
 import axios from 'axios';
+import API_CONFIG from '../config/api.config';
 
 // Configuración base de la API
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = API_CONFIG.getApiUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 30000, // 30 segundos para cargas grandes
+  headers: API_CONFIG.defaultHeaders,
+  timeout: API_CONFIG.defaultTimeout,
 });
 
 // Interceptor para manejar errores globalmente

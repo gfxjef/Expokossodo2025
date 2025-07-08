@@ -1,13 +1,12 @@
 import axios from 'axios';
+import API_CONFIG from '../config/api.config';
 
 // Configuración base de la API Admin
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = API_CONFIG.getApiUrl();
 
 const adminApi = axios.create({
   baseURL: `${API_BASE_URL}/admin`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: API_CONFIG.defaultHeaders,
   timeout: 15000, // 15 segundos para admin
 });
 

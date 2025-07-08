@@ -7,6 +7,7 @@ import AdminEventGrid from './AdminEventGrid';
 import ScheduleManager from './ScheduleManager';
 import DateInfoManager from './DateInfoManager';
 import LoadingSpinner from '../LoadingSpinner';
+import ConfigDebug from './ConfigDebug'; // Temporal para debug
 
 const AdminDashboard = () => {
   // Estados principales
@@ -326,6 +327,9 @@ const AdminDashboard = () => {
           </div>
         </div>
       </footer>
+      
+      {/* Debug Component - TEMPORAL */}
+      <ConfigDebug />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 import mysql.connector
 from mysql.connector import Error
@@ -17,7 +17,27 @@ load_dotenv()
 
 # --- CONFIGURACIÓN ---
 app = Flask(__name__, static_folder='../frontend/build', static_url_path='/')
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+# Configuración de CORS más permisiva para producción
+# Permitir múltiples orígenes incluyendo localhost para desarrollo
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://expokossodo2025.vercel.app",
+    "https://*.vercel.app"  # Permitir todos los subdominios de Vercel
+]
+
+CORS(app, 
+     resources={
+         r"/*": {
+             "origins": allowed_origins,
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "allow_headers": ["Content-Type", "Authorization"],
+             "expose_headers": ["Content-Type"],
+             "supports_credentials": True,
+             "max_age": 3600
+         }
+     })
 
 # Configuración de la base de datos
 DB_CONFIG = {
@@ -43,6 +63,44 @@ client = OpenAI(
 # Almacenamiento en memoria para hilos de conversación (para producción, usar una base de datos)
 threads_in_memory = {}
 
+# Middleware para manejar solicitudes OPTIONS (preflight)
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        # Responder a las solicitudes preflight
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization")
+        response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS")
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+
+# Middleware para logging de solicitudes
+@app.before_request
+def log_request_info():
+    print(f"🔍 {request.method} {request.path} from {request.remote_addr}")
+    print(f"   Origin: {request.headers.get('Origin', 'No origin')}")
+    if request.method in ['POST', 'PUT'] and request.is_json:
+        print(f"   Body preview: {str(request.get_json())[:100]}...")
+
+# Agregar headers CORS después de cada respuesta
+@app.after_request
+def after_request(response):
+    origin = request.headers.get('Origin')
+    if origin:
+        # Verificar si el origen está en la lista permitida
+        allowed_origins = [
+            "http://localhost:3000",
+            "http://localhost:3001", 
+            "https://expokossodo2025.vercel.app"
+        ]
+        
+        # También permitir cualquier subdominio de vercel.app
+        if origin in allowed_origins or origin.endswith('.vercel.app'):
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+    
+    return response
 
 # --- CONEXIÓN A LA BASE DE DATOS ---
 def get_db_connection():
