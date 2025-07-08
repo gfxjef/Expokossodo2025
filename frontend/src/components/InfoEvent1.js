@@ -117,7 +117,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
   const eventCards = [
     {
       id: 1,
-      image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+      image: "https://i.ibb.co/TxS2X8xK/confe-1.webp",
       title: "Conferencias y Talleres",
       description: "Participa en conferencias especializadas y talleres prácticos con líderes en la industria sobre temas clave en tecnología de laboratorio.",
       type: "conferencias"
@@ -131,14 +131,14 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
     },
     {
       id: 3,
-      image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+      image: "https://i.ibb.co/ZzgwLhRB/vaccubrand-lab1.webp",
       title: "Laboratorio Modelo",
       description: "Visita nuestro laboratorio de demostración y observa en acción los equipos más avanzados del mercado.",
       type: "laboratorio"
     },
     {
       id: 4,
-      image: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+      image: "https://i.ibb.co/nsvNbg59/exp-inty.webp",
       title: "Expositores Internacionales",
       description: "Esta es tu oportunidad para descubrir productos innovadores y establecer conexiones globales en un solo lugar.",
       type: "expositores"
