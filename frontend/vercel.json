@@ -1,0 +1,13 @@
+{
+  "build": {
+    "env": {
+      "REACT_APP_API_URL": "https://expokossodo2025-backend.onrender.com/api"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+} 

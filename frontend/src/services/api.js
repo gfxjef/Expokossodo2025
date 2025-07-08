@@ -2,7 +2,15 @@ import axios from 'axios';
 import API_CONFIG from '../config/api.config';
 
 // Configuración base de la API
-const API_BASE_URL = API_CONFIG.getApiUrl();
+let API_BASE_URL = API_CONFIG.getApiUrl();
+
+// Validación adicional para asegurar que siempre tengamos /api
+if (!API_BASE_URL.includes('/api')) {
+  console.warn('⚠️ La URL base no incluye /api, agregándolo...');
+  API_BASE_URL = API_BASE_URL + '/api';
+}
+
+console.log('📍 API Service - URL base final:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,

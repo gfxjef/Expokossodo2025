@@ -88,17 +88,19 @@ def log_request_info():
 def after_request(response):
     origin = request.headers.get('Origin')
     if origin:
-        # Verificar si el origen está en la lista permitida
-        allowed_origins = [
-            "http://localhost:3000",
-            "http://localhost:3001", 
-            "https://expokossodo2025.vercel.app"
-        ]
-        
-        # También permitir cualquier subdominio de vercel.app
-        if origin in allowed_origins or origin.endswith('.vercel.app'):
-            response.headers.add('Access-Control-Allow-Origin', origin)
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
+        # Verificar si ya existe el header para evitar duplicados
+        if not response.headers.get('Access-Control-Allow-Origin'):
+            # Verificar si el origen está en la lista permitida
+            allowed_origins = [
+                "http://localhost:3000",
+                "http://localhost:3001", 
+                "https://expokossodo2025.vercel.app"
+            ]
+            
+            # También permitir cualquier subdominio de vercel.app
+            if origin in allowed_origins or origin.endswith('.vercel.app'):
+                response.headers['Access-Control-Allow-Origin'] = origin
+                response.headers['Access-Control-Allow-Credentials'] = 'true'
     
     return response
 
