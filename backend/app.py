@@ -31,7 +31,10 @@ allowed_origins = [
     "https://expokossodo2025.vercel.app",
     "https://*.vercel.app",  # Permitir todos los subdominios de Vercel
     "https://*.ngrok-free.app",  # Permitir todos los subdominios de ngrok
-    "https://*.ngrok.io"  # Permitir también ngrok.io
+    "https://*.ngrok.io",  # Permitir también ngrok.io
+    "https://expokossodo.grupokossodo.com/",
+    "https://www.grupokossodo.com",
+    "https://grupokossodo.com"
 ]
 
 CORS(app, 
