@@ -511,11 +511,72 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                   onShowEventInfo={handleShowEventInfo}
                   timeSlots={timeSlots}
                   key={`calendar-${currentDateIndex}`} // Forzar re-render al cambiar fecha
+                  mobileButtons={
+                    <div className="grid gap-2 items-center" style={{ gridTemplateColumns: '1fr 2fr 1fr' }}>
+                      {/* Columna izquierda - Botón anterior */}
+                      <div className="flex justify-start">
+                        {currentDateIndex > 0 ? (
+                          <motion.button
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            onClick={goToPreviousDate}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="btn-secondary flex items-center space-x-1 group px-2 py-2 text-xs w-full max-w-[80px]"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5 group-hover:-translate-x-1 transition-transform" />
+                            <span className="text-xs">Día {currentDateIndex}</span>
+                          </motion.button>
+                        ) : (
+                          <div className="w-full max-w-[80px]"></div>
+                        )}
+                      </div>
+                      
+                      {/* Columna central - Botón cerrar registro */}
+                      <div className="flex justify-center">
+                        <motion.button
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          onClick={selectedEvents.length > 0 ? proceedToRegistration : undefined}
+                          whileHover={selectedEvents.length > 0 ? { scale: 1.02 } : {}}
+                          whileTap={selectedEvents.length > 0 ? { scale: 0.98 } : {}}
+                          className={`flex items-center justify-center space-x-1 px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200 w-full ${
+                            selectedEvents.length > 0
+                              ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer shadow-md'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                          }`}
+                          disabled={selectedEvents.length === 0}
+                        >
+                          <Users className="h-3.5 w-3.5" />
+                          <span>Cerrar Registro</span>
+                        </motion.button>
+                      </div>
+                      
+                      {/* Columna derecha - Botón siguiente */}
+                      <div className="flex justify-end">
+                        {currentDateIndex < eventDates.length - 1 ? (
+                          <motion.button
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            onClick={goToNextDate}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="btn-primary flex items-center space-x-1 group px-2 py-2 text-xs w-full max-w-[80px]"
+                          >
+                            <span className="text-xs">Día {currentDateIndex + 2}</span>
+                            <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                          </motion.button>
+                        ) : (
+                          <div className="w-full max-w-[80px]"></div>
+                        )}
+                      </div>
+                    </div>
+                  }
                 />
               </div>
               
-              {/* Botones de navegación mejorados */}
-              <div className="mt-4 md:mt-8 flex justify-between items-center relative z-20">
+              {/* Botones de navegación mejorados - Solo visible en desktop */}
+              <div className="hidden md:flex mt-4 md:mt-8 justify-between items-center relative z-20">
                 <div className="flex space-x-2 md:space-x-3">
                   {currentDateIndex > 0 && (
                     <motion.button

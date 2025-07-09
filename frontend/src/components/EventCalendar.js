@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, MapPin, Users, Globe, Star, AlertCircle, CheckCircle } from 'lucide-react';
 import { eventService } from '../services/api';
 
-const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect, onShowEventInfo, timeSlots = [] }) => {
+const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect, onShowEventInfo, timeSlots = [], mobileButtons = null }) => {
   const [expandedEvent, setExpandedEvent] = useState(null);
   const [hoveredEvent, setHoveredEvent] = useState(null);
   
@@ -244,6 +244,13 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
           </div>
         </div>
       </div>
+      
+      {/* Botones móviles - Renderizados aquí si se proporcionan */}
+      {mobileButtons && (
+        <div className="md:hidden px-4 py-2 bg-white border-b border-gray-200">
+          {mobileButtons}
+        </div>
+      )}
       
       {/* Grid principal del calendario */}
       <div className="p-6">

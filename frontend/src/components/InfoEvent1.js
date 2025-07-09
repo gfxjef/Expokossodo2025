@@ -1151,12 +1151,12 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
               Desde charlas informativas y talleres prácticos, hasta un laboratorio modelo, la ExpoKossodo 2025 te brinda la oportunidad de conectarte con expertos y adquirir herramientas esenciales para destacar en tu industria.
             </p>
             
-            {/* Logos de partners */}
+            {/* Logos de partners - Solo visible en desktop */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="w-full max-w-5xl mx-auto"
+              className="hidden md:block w-full max-w-5xl mx-auto"
             >
                              <div className="flex flex-wrap justify-center items-center gap-4 md:gap-8">
                  <img 
