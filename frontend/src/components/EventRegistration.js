@@ -33,8 +33,8 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
   // const [validationErrors, setValidationErrors] = useState({});
   
   // Fechas del evento
-  const eventDates = ['2024-07-22', '2024-07-23', '2024-07-24', '2024-07-25'];
-  const dateNames = ['Día 1 - Lunes', 'Día 2 - Martes', 'Día 3 - Miércoles', 'Día 4 - Jueves'];
+  const eventDates = ['2025-09-02', '2025-09-03', '2025-09-04'];
+  const dateNames = ['Día 1', 'Día 2', 'Día 3'];
   
   // Cargar datos adicionales al montar el componente (eventsData ya viene como prop)
   useEffect(() => {
@@ -99,7 +99,7 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
     } catch (error) {
       console.error('Error loading time slots:', error);
       // Fallback a horarios por defecto
-      const fallbackSlots = ['09:00-10:00', '10:30-11:30', '12:00-13:00', '14:00-15:00', '15:30-16:30'];
+      const fallbackSlots = ['15:00-15:45', '16:00-16:45', '17:00-17:45', '18:00-18:45', '19:00-19:45'];
       setTimeSlots(fallbackSlots);
       console.log('⚠️ Usando horarios por defecto');
     }
@@ -427,40 +427,32 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                                 transition={{ delay: 0.2, duration: 0.3 }}
                               >
                                 <p className="text-sm md:text-lg leading-relaxed text-gray-100 max-w-4xl">
-                                  {fechaInfo.descripcion 
-                                    ? (fechaInfo.descripcion.length > 200 
-                                        ? fechaInfo.descripcion.substring(0, 200) + '...' 
-                                        : fechaInfo.descripcion)
-                                    : 'Descripción del día no disponible.'
-                                  }
-                                </p>
-                              </motion.div>
+                                  {(() => {
+                                    if (!fechaInfo.descripcion) {
+                                      return 'Descripción del día no disponible.';
+                                    }
 
-                              {/* Ponentes Destacados - Solo en desktop */}
-                              <motion.div 
-                                className="hidden md:block mb-6"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.3, duration: 0.3 }}
-                              >
-                                <h3 className="text-xl font-semibold mb-3">Ponentes Destacados</h3>
-                                <div className="flex flex-wrap gap-2">
-                                  {fechaInfo.ponentes_destacados && fechaInfo.ponentes_destacados.length > 0 ? (
-                                    fechaInfo.ponentes_destacados.map((ponente, index) => (
-                                      <motion.span 
-                                        key={`${ponente}-${index}`}
-                                        className="bg-white bg-opacity-20 px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm"
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: 0.4 + (index * 0.1), duration: 0.2 }}
-                                      >
-                                        {ponente}
-                                      </motion.span>
-                                    ))
-                                  ) : (
-                                    <span className="text-gray-300">Información de ponentes no disponible</span>
-                                  )}
-                                </div>
+                                    // Calcular número aproximado de caracteres para 3 líneas
+                                    // En móvil: ~40 caracteres por línea, en desktop: ~80 caracteres por línea
+                                    const isMobile = window.innerWidth < 768;
+                                    const maxCharsPerLine = isMobile ? 40 : 80;
+                                    const maxCharsFor3Lines = maxCharsPerLine * 3;
+
+                                    if (fechaInfo.descripcion.length > maxCharsFor3Lines) {
+                                      // Buscar el último espacio antes del límite para no cortar palabras
+                                      let cutPoint = maxCharsFor3Lines;
+                                      while (cutPoint > 0 && fechaInfo.descripcion[cutPoint] !== ' ') {
+                                        cutPoint--;
+                                      }
+                                      // Si no encuentra espacio, usar el límite directo
+                                      if (cutPoint === 0) cutPoint = maxCharsFor3Lines;
+                                      
+                                      return fechaInfo.descripcion.substring(0, cutPoint).trim() + '...';
+                                    }
+                                    
+                                    return fechaInfo.descripcion;
+                                  })()}
+                                </p>
                               </motion.div>
 
                               {/* Info adicional (Marcas y Países) - Oculto en móvil */}
@@ -468,7 +460,7 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                                 className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6"
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.5, duration: 0.3 }}
+                                transition={{ delay: 0.3, duration: 0.3 }}
                               >
                                 {/* Marcas Patrocinadoras */}
                                 {fechaInfo.marcas_patrocinadoras && fechaInfo.marcas_patrocinadoras.length > 0 && (

@@ -307,4 +307,24 @@ body > a[style*="position: fixed"] {
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
+}
+
+/* Animación personalizada de resplandor para auto-hover */
+@keyframes glow-pulse {
+  0% {
+    box-shadow: 0 0 15px rgba(108, 183, 154, 0.4), 0 0 30px rgba(108, 183, 154, 0.2), 0 0 40px rgba(108, 183, 154, 0.1);
+    border-color: rgba(108, 183, 154, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(108, 183, 154, 0.7), 0 0 50px rgba(108, 183, 154, 0.4), 0 0 70px rgba(108, 183, 154, 0.2);
+    border-color: rgba(108, 183, 154, 1);
+  }
+  100% {
+    box-shadow: 0 0 15px rgba(108, 183, 154, 0.4), 0 0 30px rgba(108, 183, 154, 0.2), 0 0 40px rgba(108, 183, 154, 0.1);
+    border-color: rgba(108, 183, 154, 0.8);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
 } 

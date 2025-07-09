@@ -273,7 +273,9 @@ export const validators = {
 // Utilidades
 export const utils = {
   formatDate: (dateString) => {
-    const date = new Date(dateString);
+    // Evitar problemas de zona horaria parseando la fecha manualmente
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // mes es 0-indexado
     const options = { 
       weekday: 'long', 
       year: 'numeric', 
@@ -284,7 +286,9 @@ export const utils = {
   },
   
   formatDateNice: (dateString) => {
-    const date = new Date(dateString);
+    // Evitar problemas de zona horaria parseando la fecha manualmente
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // mes es 0-indexado
     const options = { 
       weekday: 'long', 
       month: 'long', 
@@ -294,14 +298,18 @@ export const utils = {
   },
   
   formatDateShort: (dateString) => {
-    const date = new Date(dateString);
-    const day = date.getDate();
-    const month = date.toLocaleDateString('es-ES', { month: 'short' });
-    return `${day} ${month}`;
+    // Evitar problemas de zona horaria parseando la fecha manualmente
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // mes es 0-indexado
+    const dayNumber = date.getDate();
+    const monthShort = date.toLocaleDateString('es-ES', { month: 'short' });
+    return `${dayNumber} ${monthShort}`;
   },
   
   getDayName: (dateString) => {
-    const date = new Date(dateString);
+    // Evitar problemas de zona horaria parseando la fecha manualmente
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // mes es 0-indexado
     const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     return days[date.getDay()];
   },

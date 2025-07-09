@@ -10,6 +10,11 @@ import io
 import bcrypt
 import time
 import re
+import json
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 from openai import OpenAI
 
 # Cargar variables de entorno desde .env
@@ -285,7 +290,7 @@ def init_database():
         """)
         
         # Insertar horarios por defecto si no existen
-        horarios_default = ['09:00-10:00', '10:30-11:30', '12:00-13:00', '14:00-15:00', '15:30-16:30']
+        horarios_default = ['15:00-15:45', '16:00-16:45', '17:00-17:45', '18:00-18:45', '19:00-19:45']
         for horario in horarios_default:
             cursor.execute("""
                 INSERT IGNORE INTO expokossodo_horarios (horario, activo) 
@@ -538,7 +543,7 @@ def populate_sample_data(cursor, connection):
     """Poblar la base de datos con datos de ejemplo"""
     try:
         fechas = ['2024-07-22', '2024-07-23', '2024-07-24', '2024-07-25']
-        horarios = ['09:00-10:00', '10:30-11:30', '12:00-13:00', '14:00-15:00', '15:30-16:30']
+        horarios = ['15:00-15:45', '16:00-16:45', '17:00-17:45', '18:00-18:45', '19:00-19:45']
         salas = ['sala1', 'sala2', 'sala3', 'sala5']
         
         # Datos de ejemplo para las charlas con descripciones
@@ -636,7 +641,7 @@ def send_confirmation_email(user_data, selected_events, qr_text=None):
         msg = MIMEMultipart()
         msg['From'] = email_user
         msg['To'] = user_data['correo']
-        msg['Subject'] = "Confirmación de Registro - ExpoKossodo 2024"
+        msg['Subject'] = "Confirmación de Registro - ExpoKossodo 2025"
         
         # Crear contenido del email con diseño moderno
         eventos_html = ""

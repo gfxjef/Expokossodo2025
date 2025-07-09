@@ -19,8 +19,8 @@ const AdminDashboard = () => {
   const [error, setError] = useState(null);
 
   // Fechas del evento
-  const eventDates = ['2024-07-22', '2024-07-23', '2024-07-24', '2024-07-25'];
-  const dateNames = ['Día 1 - Lunes', 'Día 2 - Martes', 'Día 3 - Miércoles', 'Día 4 - Jueves'];
+  const eventDates = ['2025-09-02', '2025-09-03', '2025-09-04'];
+  const dateNames = ['Día 1 - Martes', 'Día 2 - Miercoles', 'Día 3 - Jueves'];
 
   // Cargar datos de eventos al montar el componente
   useEffect(() => {
@@ -107,7 +107,7 @@ const AdminDashboard = () => {
                 <Settings className="h-8 w-8 text-indigo-600" />
                 <div>
                   <h1 className="text-xl font-bold text-gray-900">Panel de Administración</h1>
-                  <p className="text-sm text-gray-500">ExpoKossodo 2024</p>
+                  <p className="text-sm text-gray-500">ExpoKossodo 2025</p>
                 </div>
               </div>
             </div>
@@ -322,7 +322,7 @@ const AdminDashboard = () => {
       <footer className="mt-12 py-8 border-t border-gray-200 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center text-gray-600">
-            <p>Panel de Administración - ExpoKossodo 2024</p>
+            <p>Panel de Administración - ExpoKossodo 2025</p>
             <p className="text-sm mt-1">Gestión de eventos y contenido</p>
           </div>
         </div>

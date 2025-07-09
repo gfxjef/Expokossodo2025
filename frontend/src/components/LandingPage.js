@@ -159,7 +159,7 @@ const LandingPage = ({ onScrollToNext }) => {
               className="group mt-4 md:mt-6 px-4 md:px-8 py-2 md:py-4 bg-white/15 border-2 rounded-full text-white hover:bg-white/25 transition-all duration-300 backdrop-blur-md shadow-2xl flex items-center space-x-2 md:space-x-3"
               style={{ borderColor: '#6cb79a' }}
             >
-              <span className="text-sm md:text-lg font-medium">Aprende más sobre sostenibilidad</span>
+              <span className="text-sm md:text-lg font-medium">Descubre más</span>
               <div className="w-6 h-6 md:w-8 md:h-8 rounded-full border flex items-center justify-center transition-all duration-300" style={{ borderColor: '#6cb79a', backgroundColor: '#6cb79a' }}>
                 <ChevronDown className="h-3 w-3 md:h-4 md:w-4 group-hover:translate-y-1 transition-transform text-white" />
               </div>

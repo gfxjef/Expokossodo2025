@@ -280,7 +280,7 @@ export const adminUtils = {
   
   // Organizar eventos por horario para la vista de grilla
   organizarEventosPorHorario: (eventos) => {
-    const horarios = ['09:00-10:00', '10:30-11:30', '12:00-13:00', '14:00-15:00', '15:30-16:30'];
+    const horarios = ['15:00-15:45', '16:00-16:45', '17:00-17:45', '18:00-18:45', '19:00-19:45'];
     const salas = ['sala1', 'sala2', 'sala3', 'sala5'];
     
     const grid = {};

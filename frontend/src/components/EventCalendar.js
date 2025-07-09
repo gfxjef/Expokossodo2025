@@ -10,10 +10,10 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
   // Salas fijas (estas no cambiarán)
   const rooms = ['sala1', 'sala2', 'sala3', 'sala5'];
   const roomNames = {
-    'sala1': 'Auditorio Principal',
-    'sala2': 'Sala Cardio',
-    'sala3': 'Sala Neuro',
-    'sala5': 'Sala de Innovación'
+    'sala1': 'Sala 1',
+    'sala2': 'Sala 2',
+    'sala3': 'Sala 3',
+    'sala5': 'Sala 4'
   };
 
   // Obtener eventos para la fecha actual
@@ -193,7 +193,7 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
   // Si no hay timeSlots, mostrar fallback pero sin loading
   const displayTimeSlots = timeSlots.length > 0 
     ? timeSlots 
-    : ['09:00-10:00', '10:30-11:30', '12:00-13:00', '14:00-15:00', '15:30-16:30'];
+    : ['15:00-15:45', '16:00-16:45', '17:00-17:45', '18:00-18:45', '19:00-19:45'];
 
   return (
     <motion.div 

@@ -85,6 +85,12 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
   const [hoveredCard, setHoveredCard] = useState(null);
   const debounceTimerRef = useRef(null);
   
+  // Estados para auto-hover automático
+  const [isAutoHoverActive, setIsAutoHoverActive] = useState(true);
+  const [autoHoverIndex, setAutoHoverIndex] = useState(0);
+  const autoHoverTimerRef = useRef(null);
+  const userInteractionTimeoutRef = useRef(null);
+  
   // Estado para tarjeta expandida en móvil
   const [expandedCardMobile, setExpandedCardMobile] = useState(null);
   
@@ -113,7 +119,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
   //   eventsDataType: typeof eventsData
   // });
 
-  // Datos de las tarjetas para ExpoKossodo 2024
+  // Datos de las tarjetas para ExpoKossodo 2025
   const eventCards = [
     {
       id: 1,
@@ -124,7 +130,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
     },
     {
       id: 2,
-      image: "https://images.unsplash.com/photo-1581092795360-fd1ca04f0952?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+      image: "https://i.ibb.co/wr45xjsy/mcas.webp",
       title: "Marcas Participantes",
       description: "Conoce las principales marcas del sector con sus últimas innovaciones y soluciones tecnológicas para laboratorios.",
       type: "marcas"
@@ -149,51 +155,45 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
   const labImages = [
     {
       id: 1,
-      url: "https://images.unsplash.com/photo-1582719471384-894fbb16e074?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+      url: "https://i.ibb.co/qMmL4cDj/velp-lab8.webp",
       title: "Microscopio de Alta Resolución",
       description: "Tecnología de última generación para análisis microscópicos"
     },
     {
       id: 2,
-      url: "https://images.unsplash.com/photo-1579154204601-01588f351e67?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+      url: "https://i.ibb.co/35sX1jWb/velp-lab7.webp",
       title: "Espectrofotómetro UV-Vis",
       description: "Análisis espectroscópico de alta precisión"
     },
     {
       id: 3,
-      url: "https://images.unsplash.com/photo-1583911860205-72f8ac8ddcbe?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+      url: "https://i.ibb.co/9HxKS0vT/velp-lab6.webp",
       title: "Centrífuga de Alta Velocidad",
       description: "Separación de muestras con máxima eficiencia"
     },
     {
       id: 4,
-      url: "https://images.unsplash.com/photo-1579154204845-5d0b4c3a0047?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+      url: "https://i.ibb.co/kV0ZXWYP/velp-lab5.webp",
       title: "Cromatógrafo HPLC",
       description: "Sistema de cromatografía líquida de alto rendimiento"
     },
     {
       id: 5,
-      url: "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+      url: "https://i.ibb.co/PG7hz5Gt/velp-lab2.webp",
       title: "Incubadora CO2",
       description: "Control preciso de temperatura y atmósfera"
     },
     {
       id: 6,
-      url: "https://images.unsplash.com/photo-1581093450021-4a7360e9a6b5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+      url: "https://i.ibb.co/HD1HMrqY/velp-lab1.webp",
       title: "Cabina de Flujo Laminar",
       description: "Ambiente estéril para trabajo con cultivos"
     },
     {
       id: 7,
-      url: "https://images.unsplash.com/photo-1579165466949-3180a3d056d5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+      url: "https://i.ibb.co/DfzrTqXD/vaccubrand-lab1.webp",
       title: "Termociclador PCR",
       description: "Amplificación de ADN con precisión"
-    },
-    {
-      id: 8,
-      url: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-      title: "Analizador Automático",
-      description: "Procesamiento de muestras automatizado"
     }
   ];
 
@@ -204,6 +204,50 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
   useEffect(() => {
     setPortalReady(true);
     return () => setPortalReady(false);
+  }, []);
+
+  // Auto-hover automático cada 3 segundos
+  useEffect(() => {
+    if (!isAutoHoverActive) return;
+
+    const startAutoHover = () => {
+      autoHoverTimerRef.current = setInterval(() => {
+        setAutoHoverIndex(prevIndex => {
+          const nextIndex = (prevIndex + 1) % eventCards.length;
+          // Establecer la tarjeta activa para mostrar contenido
+          setActiveCard(eventCards[nextIndex].id);
+          return nextIndex;
+        });
+      }, 3000); // Cambiar cada 3 segundos
+    };
+
+    // Iniciar el auto-hover inmediatamente con la primera tarjeta
+    if (activeCard === null) {
+      setActiveCard(eventCards[0].id);
+    }
+    
+    startAutoHover();
+
+    return () => {
+      if (autoHoverTimerRef.current) {
+        clearInterval(autoHoverTimerRef.current);
+      }
+    };
+  }, [isAutoHoverActive]);
+
+  // Cleanup de timers al desmontar
+  useEffect(() => {
+    return () => {
+      if (autoHoverTimerRef.current) {
+        clearInterval(autoHoverTimerRef.current);
+      }
+      if (userInteractionTimeoutRef.current) {
+        clearTimeout(userInteractionTimeoutRef.current);
+      }
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
   }, []);
 
   // Obtener todos los eventos de todas las fechas
@@ -483,16 +527,27 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
     return labImages.slice(start, start + imagesPerSlide);
   }, [currentLabSlide, imagesPerSlide, labImages]);
 
-  // useEffect para el scroll continuo de expositores
+  // useEffect para el scroll continuo de expositores - MEJORADO PARA LOOP INFINITO SIN SALTOS
   useEffect(() => {
     if (!isPaused) {
       const interval = setInterval(() => {
         setScrollPosition(prev => {
           const newPosition = prev - 1;
-          // Reiniciar cuando llegue al final (ancho de 8 expositores: 8 * 280px = 2240px)
-          return newPosition <= -1920 ? 0 : newPosition;
+          
+          // Calculamos el ancho total de un set de expositores (16 expositores * 280px = 4480px)
+          const expositorWidth = 280; // w-56 (224px) + gap-8 (32px) + margen = ~280px
+          const totalExpositores = 16; // Cantidad de expositores originales
+          const totalWidth = totalExpositores * expositorWidth;
+          
+          // Cuando llegamos al final del primer set duplicado, reseteamos suavemente
+          // al inicio del segundo set (que es idéntico al primero)
+          if (newPosition <= -totalWidth) {
+            return 0; // Reset suave al inicio
+          }
+          
+          return newPosition;
         });
-      }, 20); // Reducido de 50ms a 20ms para mayor velocidad
+      }, 16); // 60fps para mayor suavidad (1000ms/60fps ≈ 16ms)
 
       return () => clearInterval(interval);
     }
@@ -712,16 +767,61 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
         );
         
       case 'expositores':
-        // Array de 8 expositores con alternancia de imágenes y banderas
+        // Configuración de colores de banderas por país
+        const flagColors = {
+          DE: { colors: ['#000000', '#DD0000', '#FFCC00'], direction: 'horizontal' }, // Alemania: Negro, Rojo, Amarillo (horizontal)
+          AR: { colors: ['#74ACDF', '#FFFFFF', '#74ACDF'], direction: 'horizontal' }, // Argentina: Celeste, Blanco, Celeste (horizontal)
+          CO: { colors: ['#FFCC00', '#0033A0', '#CE1126'], direction: 'horizontal' }, // Colombia: Amarillo, Azul, Rojo (horizontal)
+          PE: { colors: ['#D91023', '#FFFFFF', '#D91023'], direction: 'vertical' }, // Perú: Rojo, Blanco, Rojo (vertical)
+          VE: { colors: ['#FFCC00', '#0033A0', '#CF142B'], direction: 'horizontal' },  // Venezuela: Amarillo, Azul, Rojo (horizontal)
+          BR: { colors: ['#009C3B', '#FFCC00', '#3E4095'], direction: 'horizontal' }, // Brasil: Verde, Amarillo, Azul (sin franjas)
+          CH: { colors: ['#FF0000', '#FFFFFF'], direction: 'horizontal' }, // Suiza: Rojo, Blanco (fondo con cruz)
+
+
+        };
+
+        // Componente para mostrar bandera con colores que ocupe todo el círculo
+        const FlagDisplay = ({ countryCode }) => {
+          const flagData = flagColors[countryCode] || { colors: ['#CCCCCC', '#FFFFFF', '#CCCCCC'], direction: 'horizontal' };
+          const { colors, direction } = flagData;
+          
+          return (
+            <div className="w-12 h-12 rounded-full shadow-lg border-2 border-gray-200 overflow-hidden">
+              <div className={`w-full h-full ${direction === 'horizontal' ? 'flex flex-col' : 'flex flex-row'}`}>
+                {colors.map((color, idx) => (
+                  <div 
+                    key={idx} 
+                    className="flex-1" 
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        };
+
+        // Array de expositores con códigos de país
         const expositores = [
-          { id: 1, nombre: "Cristina Blanco", empresa: "VELP", imagen: "https://i.ibb.co/HLQyKyWq/sarpin-copia.webp", bandera: "🇵🇦" },
-          { id: 2, nombre: "Lion Lambert", empresa: "SARTORIUS", imagen: "https://i.ibb.co/gbgRbBQx/minia-sart.webp", bandera: "🇩🇪" },
-          { id: 3, nombre: "María Rodríguez", empresa: "EVIDENT", imagen: "https://i.ibb.co/HLQyKyWq/sarpin-copia.webp", bandera: "🇯🇵" },
-          { id: 4, nombre: "John Smith", empresa: "LAUDA", imagen: "https://i.ibb.co/gbgRbBQx/minia-sart.webp", bandera: "🇺🇸" },
-          { id: 5, nombre: "Ana García", empresa: "ESCO", imagen: "https://i.ibb.co/HLQyKyWq/sarpin-copia.webp", bandera: "🇪🇸" },
-          { id: 6, nombre: "Carlos Mendez", empresa: "CAMAG", imagen: "https://i.ibb.co/gbgRbBQx/minia-sart.webp", bandera: "🇨🇭" },
-          { id: 7, nombre: "Laura Torres", empresa: "VACUUBRAND", imagen: "https://i.ibb.co/HLQyKyWq/sarpin-copia.webp", bandera: "🇫🇷" },
-          { id: 8, nombre: "Pedro Sánchez", empresa: "BINDER", imagen: "https://i.ibb.co/gbgRbBQx/minia-sart.webp", bandera: "🇮🇹" }
+          
+          { id: 7, nombre: "Jhonny Quispe", empresa: "KOSSOMET", imagen: "https://i.ibb.co/4njcfDPD/Quispe.webp", pais: "PE" },
+          { id: 1, nombre: "PhD. Fernando Vargas", empresa: "BINDER", imagen: "https://i.ibb.co/q32hWpYT/Fernando-Vargas.webp", pais: "PE" },
+          { id: 1, nombre: "Pablo Scarpin", empresa: "VELP", imagen: "https://i.ibb.co/TMCXBVs2/pablo.webp", pais: "AR" },
+          { id: 1, nombre: "Andre Sautchuk", empresa: "LAUDA", imagen: "https://i.ibb.co/rfLn38YJ/Andre-Sautchuk.webp", pais: "BR" },
+          { id: 1, nombre: "Guillermo Casanova ", empresa: "BINDER", imagen: "https://i.ibb.co/x8jdYrqn/Guillermo-Casanova.webp", pais: "AR" },
+          { id: 1, nombre: "Ing. Eliezer Ceniviva", empresa: "CAMAG", imagen: "https://i.ibb.co/ZRnxQmFV/Eliezer-Ceniviva.webp", pais: "CH" },
+          { id: 3, nombre: "Mario Esteban Muñoz", empresa: "EVIDENT", imagen: "https://i.ibb.co/XxLPqT5M/Mario-Esteban-Mu-oz.webp", pais: "CO" },
+          { id: 2, nombre: "Lic. Mónica Klarreich", empresa: "SARTORIUS", imagen: "https://i.ibb.co/gLhmS8Ph/minia-sart.webp", pais: "AR" },
+          { id: 1, nombre: "Dr. Roberto Friztler", empresa: "VACUUBRAND", imagen: "https://i.ibb.co/67Gk0X9s/Friztler.webp", pais: "DE" },
+          { id: 1, nombre: "Qco. James Rojas Sanchez", empresa: "KOSSODO", imagen: "https://i.ibb.co/tPF9CjJR/James.webp", pais: "PE" },
+          { id: 4, nombre: "Ing. Milagros Passaro", empresa: "KOSSODO", imagen: "https://i.ibb.co/0p7pk8nK/milagros.webp", pais: "PE" },
+
+
+
+          { id: 4, nombre: "Fis. Wilmer Matta", empresa: "KOSSODO", imagen: "https://i.ibb.co/Ld0hHVr4/Wilmer-Matta.webp", pais: "PE" },
+          { id: 5, nombre: "Edwin Aparicio", empresa: "KOSSOMET", imagen: "https://i.ibb.co/Jjhx1wJj/Edwin-Aparicio.webp", pais: "PE" },
+          { id: 6, nombre: "Lic. Luis E. Urbano", empresa: "KOSSOMET", imagen: "https://i.ibb.co/FLzptB6z/Urbano.webp", pais: "PE" },
+          { id: 8, nombre: "Diether Aguire", empresa: "KOSSOMET", imagen: "https://i.ibb.co/TqmSF064/deither.webp", pais: "PE" },
+          { id: 9, nombre: "Daniel Torres", empresa: "KOSSOMET", imagen: "https://i.ibb.co/fVBHfWQ8/daniel-torres.webp", pais: "VE" },
         ];
         
         return (
@@ -745,20 +845,25 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                   x: scrollPosition
                 }}
               >
-                {/* Duplicamos el array para el efecto infinito */}
-                {[...expositores, ...expositores].map((expositor, index) => {
-                  const isHovered = hoveredExpositor === `${expositor.id}-${index}`;
+                {/* Triplicamos el array para el efecto infinito suave */}
+                {[...expositores, ...expositores, ...expositores].map((expositor, index) => {
+                  // Calculamos el índice dentro del conjunto original para colores alternados consistentes
+                  const originalIndex = index % expositores.length;
+                  const setNumber = Math.floor(index / expositores.length); // 0, 1, o 2
+                  const uniqueKey = `${expositor.nombre}-${expositor.empresa}-${setNumber}-${originalIndex}`;
+                  const isHovered = hoveredExpositor === uniqueKey;
                   const shouldFade = hoveredExpositor !== null && !isHovered;
                   
                   return (
                     <div
-                      key={`${expositor.id}-${index}`}
+                      key={uniqueKey}
                       className="flex flex-col items-center flex-shrink-0 transition-all duration-500"
                       style={{
                         filter: shouldFade ? 'grayscale(100%) brightness(0.4)' : 'none',
-                        transform: shouldFade ? 'scale(0.95)' : 'scale(1)'
+                        transform: shouldFade ? 'scale(0.95)' : 'scale(1)',
+                        width: '224px' // w-56 equivalente para cálculos precisos
                       }}
-                      onMouseEnter={() => setHoveredExpositor(`${expositor.id}-${index}`)}
+                      onMouseEnter={() => setHoveredExpositor(uniqueKey)}
                       onMouseLeave={() => setHoveredExpositor(null)}
                     >
                       {/* Contenedor con SVG de fondo */}
@@ -771,7 +876,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                         >
                           <path
                             d="M181.62,0v82.44c0,58.05-44.75,98.77-93.53,98.77H0v-78.21C0,29.63,53.62,0,98.37,0h83.25Z"
-                            fill={index % 2 === 0 ? '#6cb799' : '#1f2f55'}
+                            fill={originalIndex % 2 === 0 ? '#6cb799' : '#1f2f55'}
                           />
                         </svg>
                         
@@ -789,10 +894,9 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                           <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            transition={{ duration: 0.3, delay: index * 0.05 }}
-                            className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-gray-200"
+                            transition={{ duration: 0.3, delay: originalIndex * 0.05 }}
                           >
-                            <span className="text-xl">{expositor.bandera}</span>
+                            <FlagDisplay countryCode={expositor.pais} />
                           </motion.div>
                         </div>
                       </div>
@@ -1018,16 +1122,16 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
       
       {/* Imagen de fondo - Sección superior */}
       <div 
-        className="relative h-[320px] md:h-[500px] w-full bg-cover bg-center bg-no-repeat"
+        className="relative h-[320px] md:h-[550px] w-full bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: "url('https://i.ibb.co/zV3q1zcb/fondotop1-view.webp')"
+          backgroundImage: "url('https://i.ibb.co/My8SfgP2/Sin-t-tulo-18.webp')"
         }}
       >
         {/* Overlay gradiente con los nuevos colores */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1f2f56]/50 to-[#121f3a]/50"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1f2f56]/80 to-[#1f2f56]/80"></div>
         
         {/* Contenido sobre la imagen */}
-        <div className="relative z-10 h-full flex flex-col justify-end md:justify-center items-center text-center px-6 pb-12 md:pb-0">
+        <div className="relative z-10 h-full flex flex-col justify-center items-center text-center px-6 pt-8 md:pt-0 pb-20 md:pb-28">
           {/* Título principal */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -1043,15 +1147,66 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                 tenemos preparado para ti.
               </span>
             </h1>
-            <p className="text-sm md:text-lg text-white/90 max-w-[58rem] mx-auto leading-relaxed px-4 md:px-0">
+            <p className="text-sm md:text-lg text-white/90 max-w-[58rem] mx-auto leading-relaxed px-4 md:px-0 mb-8 md:mb-10">
               Desde charlas informativas y talleres prácticos, hasta un laboratorio modelo, la ExpoKossodo 2025 te brinda la oportunidad de conectarte con expertos y adquirir herramientas esenciales para destacar en tu industria.
             </p>
+            
+            {/* Logos de partners */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="w-full max-w-5xl mx-auto"
+            >
+              <div className="flex flex-wrap justify-center items-center gap-4 md:gap-8">
+                <img 
+                  src="https://i.ibb.co/67rBmW1c/camag-blanco.webp" 
+                  alt="CAMAG" 
+                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
+                />
+                <img 
+                  src="https://i.ibb.co/My7PfY0f/chem-blanco.webp" 
+                  alt="CHEM" 
+                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
+                />
+                <img 
+                  src="https://i.ibb.co/Xzx38vPP/ams-blanco.webp" 
+                  alt="AMS" 
+                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
+                />
+                <img 
+                  src="https://i.ibb.co/ZQj8wKzn/evident-blanco.webp" 
+                  alt="EVIDENT" 
+                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
+                />
+                <img 
+                  src="https://i.ibb.co/xgWXH7vT/esco-blanco.webp" 
+                  alt="ESCO" 
+                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
+                />
+                <img 
+                  src="https://i.ibb.co/xJdXJJWm/vaccubrand-blanco.webp" 
+                  alt="VACUUBRAND" 
+                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
+                />
+                <img 
+                  src="https://i.ibb.co/J0RJjdxg/binder-blanco.webp" 
+                  alt="BINDER" 
+                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
+                />
+                <img 
+                  src="https://i.ibb.co/tQVTMdgH/lauda-blanco.webp" 
+                  alt="LAUDA" 
+                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
+                />
+              </div>
+            </motion.div>
           </motion.div>
         </div>
       </div>
 
       {/* Tarjetas flotantes - Posicionadas sobre la imagen de fondo */}
-      <div className="relative -mt-[51px] md:-mt-[150px] z-20 px-4 sm:px-6 lg:px-8">
+      <div className="relative -mt-[80px] md:-mt-[120px] z-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Grid de tarjetas estilo glassmorphism */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 justify-items-center">
@@ -1064,6 +1219,15 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                 viewport={{ once: true }}
                 whileHover={{ y: -8, transition: { duration: 0.2, ease: "easeOut" } }}
                 onHoverStart={() => {
+                  // Pausar auto-hover cuando el usuario interactúa
+                  setIsAutoHoverActive(false);
+                  if (autoHoverTimerRef.current) {
+                    clearInterval(autoHoverTimerRef.current);
+                  }
+                  if (userInteractionTimeoutRef.current) {
+                    clearTimeout(userInteractionTimeoutRef.current);
+                  }
+
                   setHoveredCard(card.id);
                   // Cancelar el debounce anterior si existe
                   if (debounceTimerRef.current) {
@@ -1080,6 +1244,16 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                   if (debounceTimerRef.current) {
                     clearTimeout(debounceTimerRef.current);
                   }
+
+                  // Reanudar auto-hover después de 2 segundos de inactividad
+                  userInteractionTimeoutRef.current = setTimeout(() => {
+                    setIsAutoHoverActive(true);
+                    // Actualizar el índice actual basado en la tarjeta activa
+                    const currentCardIndex = eventCards.findIndex(c => c.id === activeCard);
+                    if (currentCardIndex !== -1) {
+                      setAutoHoverIndex(currentCardIndex);
+                    }
+                  }, 2000); // Reanudar después de 2 segundos
                 }}
                 onClick={() => {
                   // En móvil, toggle del acordeón
@@ -1090,8 +1264,23 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                 className="w-full h-full group cursor-pointer"
               >
                 {/* Card estilo glassmorphism con borde blanco y hover verde */}
-                <div className={`bg-white/15 backdrop-blur-md rounded-[24px] border-2 border-white shadow-2xl hover:border-[#6cb79a] transition-all duration-300 overflow-hidden h-auto md:h-[420px] flex flex-col ${
+                <div className={`bg-white/15 backdrop-blur-md rounded-[24px] border-2 shadow-2xl transition-all duration-500 overflow-hidden h-auto md:h-[420px] flex flex-col ${
                   expandedCardMobile === card.id ? 'border-[#6cb79a]' : ''
+                } ${
+                  // Auto-hover activo: efecto de resplandor pulsante PERSONALIZADO con borde grueso
+                  isAutoHoverActive && eventCards[autoHoverIndex]?.id === card.id
+                    ? 'border-2 animate-glow-pulse scale-[1.01]'
+                    : 'border-white'
+                } ${
+                  // Hover manual del usuario: efecto de elevación DIFERENTE (más scale, sin pulse)
+                  hoveredCard === card.id 
+                    ? 'border-[#6cb79a] border-2 shadow-[0_0_20px_rgba(108,183,154,0.5)] shadow-2xl scale-[1.05] hover:shadow-[0_0_30px_rgba(108,183,154,0.8)]' 
+                    : ''
+                } ${
+                  // Hover CSS adicional para cuando no hay auto-hover ni manual hover
+                  !isAutoHoverActive || (eventCards[autoHoverIndex]?.id !== card.id && hoveredCard !== card.id)
+                    ? 'hover:border-[#6cb79a] hover:border-2 hover:shadow-[0_0_20px_rgba(108,183,154,0.5)] hover:scale-[1.05]'
+                    : ''
                 }`}>
                   {/* Card Header - Imagen */}
                   <div className="h-[160px] md:h-[200px] p-3 md:p-4">

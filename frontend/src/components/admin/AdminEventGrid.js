@@ -11,12 +11,12 @@ const AdminEventGrid = ({ eventos, fecha, onEventUpdate }) => {
   // Organizar eventos por horario y sala
   const eventGrid = adminUtils.organizarEventosPorHorario(eventos);
   
-  const horarios = ['09:00-10:00', '10:30-11:30', '12:00-13:00', '14:00-15:00', '15:30-16:30'];
+  const horarios = ['15:00-15:45', '16:00-16:45', '17:00-17:45', '18:00-18:45', '19:00-19:45'];
   const salas = [
-    { id: 'sala1', name: 'Auditorio Principal' },
-    { id: 'sala2', name: 'Sala Cardio' },
-    { id: 'sala3', name: 'Sala Neuro' },
-    { id: 'sala5', name: 'Sala de Innovación' }
+    { id: 'sala1', name: 'Sala 1' },
+    { id: 'sala2', name: 'Sala 2' },
+    { id: 'sala3', name: 'Sala 3' },
+    { id: 'sala5', name: 'Sala 4' }
   ];
 
   const handleEditEvent = (evento) => {
