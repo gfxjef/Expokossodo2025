@@ -32,7 +32,7 @@ allowed_origins = [
     "https://*.vercel.app",  # Permitir todos los subdominios de Vercel
     "https://*.ngrok-free.app",  # Permitir todos los subdominios de ngrok
     "https://*.ngrok.io",  # Permitir también ngrok.io
-    "https://expokossodo.grupokossodo.com/",
+    "https://expokossodo.grupokossodo.com",
     "https://www.grupokossodo.com",
     "https://grupokossodo.com"
 ]
@@ -104,7 +104,10 @@ def after_request(response):
             allowed_origins = [
                 "http://localhost:3000",
                 "http://localhost:3001", 
-                "https://expokossodo2025.vercel.app"
+                "https://expokossodo2025.vercel.app",
+                "https://expokossodo.grupokossodo.com",
+                "https://www.grupokossodo.com",
+                "https://grupokossodo.com"
             ]
             
             # También permitir cualquier subdominio de vercel.app y ngrok
