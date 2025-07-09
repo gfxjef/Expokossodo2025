@@ -71,6 +71,7 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
     const isTimeSlotConflict = isTimeSlotTaken(timeSlot) && !isSelected;
     const isAvailable = eventForRoom.disponible;
     const slotsLeft = eventForRoom.slots_disponibles - eventForRoom.slots_ocupados;
+    const isFull = slotsLeft <= 0;
     const isHovered = hoveredEvent === eventForRoom.id;
     
     // Definir estilos según el estado
@@ -85,11 +86,11 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
       statusIcon = <Star className="h-4 w-4 text-blue-600" fill="currentColor" />;
       statusText = "Seleccionado";
       statusColor = "text-blue-600";
-    } else if (!isAvailable) {
-      // 🔴 ROJO: Sin cupos (siempre rojo, prioridad máxima)
+    } else if (!isAvailable || isFull) {
+      // 🔴 ROJO: Sin cupos (desactivado o lleno)
       cardClasses += "border-red-400 bg-red-50 opacity-80 cursor-not-allowed";
       statusIcon = <AlertCircle className="h-4 w-4 text-red-500" />;
-      statusText = "Sin cupos";
+      statusText = !isAvailable ? "Sin cupos" : "Lleno";
       statusColor = "text-red-600";
     } else if (isTimeSlotConflict) {
       // ⚫ PLOMO: Mismo horario, disponible a elección/intercambio
@@ -105,8 +106,8 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
       statusColor = "text-green-600";
     }
     
-    // Puede seleccionar si está disponible (incluso si hay conflicto de horario para intercambiar)
-    const canSelect = isAvailable;
+    // Puede seleccionar si está disponible Y no está lleno (incluso si hay conflicto de horario para intercambiar)
+    const canSelect = isAvailable && !isFull;
     
     return (
       <motion.div

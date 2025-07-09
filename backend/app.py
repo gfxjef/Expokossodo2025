@@ -405,6 +405,19 @@ def init_database():
             else:
                 print(f"Error agregando columna imagen_url: {e}")
         
+        # Agregar columna disponible si no existe (NUEVA FUNCIONALIDAD)
+        try:
+            cursor.execute("""
+                ALTER TABLE expokossodo_eventos 
+                ADD COLUMN disponible BOOLEAN DEFAULT TRUE AFTER slots_ocupados
+            """)
+            print("✅ Columna 'disponible' agregada exitosamente")
+        except Error as e:
+            if "Duplicate column name" in str(e):
+                print("ℹ️ Columna 'disponible' ya existe")
+            else:
+                print(f"Error agregando columna disponible: {e}")
+        
         # Tabla de registros de usuarios
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS expokossodo_registros (
@@ -913,11 +926,11 @@ def get_eventos():
     cursor = connection.cursor(dictionary=True)
     
     try:
-        # Obtener eventos solo para horarios activos
+        # Obtener eventos solo para horarios activos Y disponibles
         cursor.execute("""
             SELECT e.* FROM expokossodo_eventos e
             INNER JOIN expokossodo_horarios h ON e.hora = h.horario
-            WHERE h.activo = TRUE
+            WHERE h.activo = TRUE AND e.disponible = TRUE
             ORDER BY e.fecha, e.hora, e.sala
         """)
         eventos = cursor.fetchall()
@@ -943,7 +956,10 @@ def get_eventos():
                 'imagen_url': evento.get('imagen_url', ''),
                 'slots_disponibles': evento['slots_disponibles'],
                 'slots_ocupados': evento['slots_ocupados'],
-                'disponible': evento['slots_ocupados'] < evento['slots_disponibles']
+                'disponible': (
+                    evento.get('disponible', True) and 
+                    evento['slots_ocupados'] < evento['slots_disponibles']
+                )
             })
         
         return jsonify(eventos_por_fecha)
@@ -1184,7 +1200,7 @@ def get_admin_eventos():
             SELECT 
                 id, fecha, hora, sala, titulo_charla, expositor, pais, 
                 descripcion, imagen_url, slots_disponibles, slots_ocupados,
-                created_at
+                disponible, created_at
             FROM expokossodo_eventos 
             ORDER BY fecha, hora, sala
         """)
@@ -1231,11 +1247,11 @@ def update_evento(evento_id):
         if not cursor.fetchone():
             return jsonify({'error': 'Evento no encontrado'}), 404
         
-        # Actualizar evento
+        # Actualizar evento - AHORA INCLUYE DISPONIBLE
         update_query = """
             UPDATE expokossodo_eventos 
             SET titulo_charla = %s, expositor = %s, pais = %s, 
-                descripcion = %s, imagen_url = %s
+                descripcion = %s, imagen_url = %s, disponible = %s
             WHERE id = %s
         """
         
@@ -1245,13 +1261,15 @@ def update_evento(evento_id):
             data['pais'],
             data.get('descripcion', ''),
             data.get('imagen_url', None),
+            data.get('disponible', True),  # NUEVO CAMPO
             evento_id
         ))
         
         connection.commit()
         
         # Log del cambio
-        print(f"✅ Evento {evento_id} actualizado por admin: {data['titulo_charla']}")
+        estado_disponible = "disponible" if data.get('disponible', True) else "no disponible"
+        print(f"✅ Evento {evento_id} actualizado por admin: {data['titulo_charla']} - {estado_disponible}")
         
         return jsonify({'message': 'Evento actualizado exitosamente'})
         
@@ -1259,6 +1277,53 @@ def update_evento(evento_id):
         print(f"Error actualizando evento {evento_id}: {e}")
         connection.rollback()
         return jsonify({'error': 'Error actualizando evento'}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.route('/api/admin/evento/<int:evento_id>/toggle-disponibilidad', methods=['PUT'])
+def toggle_evento_disponibilidad(evento_id):
+    """Toggle de disponibilidad de un evento específico"""
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Verificar que el evento existe y obtener estado actual
+        cursor.execute("SELECT id, titulo_charla, disponible FROM expokossodo_eventos WHERE id = %s", (evento_id,))
+        evento = cursor.fetchone()
+        
+        if not evento:
+            return jsonify({'error': 'Evento no encontrado'}), 404
+        
+        # Toggle del estado
+        nuevo_estado = not evento['disponible']
+        
+        cursor.execute("""
+            UPDATE expokossodo_eventos 
+            SET disponible = %s 
+            WHERE id = %s
+        """, (nuevo_estado, evento_id))
+        
+        connection.commit()
+        
+        # Log del cambio
+        estado_texto = "activado" if nuevo_estado else "desactivado"
+        print(f"✅ Evento {evento_id} ({evento['titulo_charla']}) {estado_texto} por admin")
+        
+        return jsonify({
+            'message': f'Evento {estado_texto} exitosamente',
+            'evento_id': evento_id,
+            'disponible': nuevo_estado,
+            'titulo_charla': evento['titulo_charla']
+        })
+        
+    except Error as e:
+        print(f"Error toggling disponibilidad evento {evento_id}: {e}")
+        connection.rollback()
+        return jsonify({'error': 'Error cambiando disponibilidad del evento'}), 500
     finally:
         cursor.close()
         connection.close()
@@ -1277,7 +1342,7 @@ def get_evento_detalle(evento_id):
             SELECT 
                 id, fecha, hora, sala, titulo_charla, expositor, pais, 
                 descripcion, imagen_url, slots_disponibles, slots_ocupados,
-                created_at
+                disponible, created_at
             FROM expokossodo_eventos 
             WHERE id = %s
         """, (evento_id,))

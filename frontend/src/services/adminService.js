@@ -143,6 +143,18 @@ export const adminService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  // ===== NUEVO MÉTODO PARA TOGGLE DE DISPONIBILIDAD DE EVENTOS =====
+  
+  // Toggle disponibilidad de un evento
+  toggleEventoDisponibilidad: async (eventoId) => {
+    try {
+      const response = await adminApi.put(`/evento/${eventoId}/toggle-disponibilidad`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 };
 

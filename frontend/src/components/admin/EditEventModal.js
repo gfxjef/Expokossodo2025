@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Calendar, Clock, MapPin, Globe, User, FileText, Image, AlertCircle } from 'lucide-react';
+import { X, Save, Calendar, Clock, MapPin, Globe, User, FileText, Image, AlertCircle, ToggleRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import { adminService, adminValidators } from '../../services/adminService';
@@ -11,7 +11,8 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
     expositor: '',
     pais: '',
     descripcion: '',
-    imagen_url: ''
+    imagen_url: '',
+    disponible: true
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -24,7 +25,8 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
         expositor: evento.expositor || '',
         pais: evento.pais || '',
         descripcion: evento.descripcion || '',
-        imagen_url: evento.imagen_url || ''
+        imagen_url: evento.imagen_url || '',
+        disponible: evento.disponible !== undefined ? evento.disponible : true
       });
     }
   }, [evento]);
@@ -217,6 +219,38 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
                         {errors.pais}
                       </p>
                     )}
+                  </div>
+
+                  {/* Disponibilidad del evento - NUEVO CAMPO */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      <ToggleRight className="h-4 w-4 inline mr-1" />
+                      Disponibilidad del Evento
+                    </label>
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="disponible"
+                          checked={formData.disponible}
+                          onChange={(e) => handleInputChange('disponible', e.target.checked)}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="disponible" className="text-sm font-medium text-gray-700">
+                          Evento disponible para registro
+                        </label>
+                      </div>
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${
+                        formData.disponible 
+                          ? 'text-green-700 bg-green-100' 
+                          : 'text-red-700 bg-red-100'
+                      }`}>
+                        {formData.disponible ? 'Activo' : 'Inactivo'}
+                      </div>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Cuando está desactivado, los usuarios no podrán seleccionar este evento para registro
+                    </p>
                   </div>
 
                   {/* URL de la imagen */}

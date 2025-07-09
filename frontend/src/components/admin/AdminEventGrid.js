@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Edit3, Clock, MapPin, Users, Globe, Image } from 'lucide-react';
-import { adminUtils } from '../../services/adminService';
+import { Edit3, Clock, MapPin, Users, Globe, Image, ToggleLeft, ToggleRight, AlertCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { adminUtils, adminService } from '../../services/adminService';
 import EditEventModal from './EditEventModal';
 
 const AdminEventGrid = ({ eventos, fecha, onEventUpdate }) => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [togglingEvents, setTogglingEvents] = useState(new Set());
 
   // Organizar eventos por horario y sala
   const eventGrid = adminUtils.organizarEventosPorHorario(eventos);
@@ -34,6 +36,34 @@ const AdminEventGrid = ({ eventos, fecha, onEventUpdate }) => {
     onEventUpdate(); // Recargar datos
   };
 
+  // NUEVA FUNCIÓN: Toggle de disponibilidad
+  const handleToggleDisponibilidad = async (evento, e) => {
+    e.stopPropagation(); // Evitar que se abra el modal de edición
+    
+    if (togglingEvents.has(evento.id)) return; // Evitar doble click
+    
+    try {
+      setTogglingEvents(prev => new Set([...prev, evento.id]));
+      
+      const response = await adminService.toggleEventoDisponibilidad(evento.id);
+      
+      const accion = response.disponible ? 'activado' : 'desactivado';
+      toast.success(`Evento ${accion} exitosamente`);
+      
+      onEventUpdate(); // Recargar datos
+      
+    } catch (error) {
+      console.error('Error toggling disponibilidad:', error);
+      toast.error(error.message || 'Error cambiando disponibilidad del evento');
+    } finally {
+      setTogglingEvents(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(evento.id);
+        return newSet;
+      });
+    }
+  };
+
   const getOccupancyColor = (ocupados, disponibles) => {
     const percentage = (ocupados / disponibles) * 100;
     if (percentage >= 90) return 'text-red-600 bg-red-50';
@@ -55,7 +85,7 @@ const AdminEventGrid = ({ eventos, fecha, onEventUpdate }) => {
           })}
         </h3>
         <p className="text-sm text-gray-600 mt-1">
-          Haz clic en cualquier evento para editarlo
+          Haz clic en cualquier evento para editarlo • Toggle para activar/desactivar
         </p>
       </div>
 
@@ -107,6 +137,9 @@ const AdminEventGrid = ({ eventos, fecha, onEventUpdate }) => {
                     );
                   }
 
+                  const isToggling = togglingEvents.has(evento.id);
+                  const isDisponible = evento.disponible;
+
                   return (
                     <td key={sala.id} className="px-4 py-6">
                       <motion.div
@@ -116,9 +149,13 @@ const AdminEventGrid = ({ eventos, fecha, onEventUpdate }) => {
                       >
                         <div
                           onClick={() => handleEditEvent(evento)}
-                          className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-indigo-300 hover:shadow-md transition-all duration-200 h-32"
+                          className={`relative bg-white border rounded-lg p-4 cursor-pointer hover:shadow-md transition-all duration-200 h-32 ${
+                            isDisponible 
+                              ? 'border-gray-200 hover:border-indigo-300' 
+                              : 'border-red-200 bg-red-50/30'
+                          }`}
                         >
-                          {/* Header del evento */}
+                          {/* Header del evento con toggle */}
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex items-center space-x-2">
                               <div className="flex items-center space-x-1">
@@ -128,17 +165,41 @@ const AdminEventGrid = ({ eventos, fecha, onEventUpdate }) => {
                               {evento.imagen_url && (
                                 <Image className="h-3 w-3 text-green-500" />
                               )}
+                              {!isDisponible && (
+                                <AlertCircle className="h-3 w-3 text-red-500" />
+                              )}
                             </div>
-                            <Edit3 className="h-4 w-4 text-gray-400 group-hover:text-indigo-600" />
+                            
+                            {/* Toggle de disponibilidad */}
+                            <button
+                              onClick={(e) => handleToggleDisponibilidad(evento, e)}
+                              disabled={isToggling}
+                              className={`p-1 rounded hover:bg-gray-100 transition-colors ${
+                                isToggling ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
+                              title={`${isDisponible ? 'Desactivar' : 'Activar'} evento`}
+                            >
+                              {isToggling ? (
+                                <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-indigo-600 rounded-full"></div>
+                              ) : isDisponible ? (
+                                <ToggleRight className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <ToggleLeft className="h-4 w-4 text-red-500" />
+                              )}
+                            </button>
                           </div>
 
                           {/* Título */}
-                          <h4 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">
+                          <h4 className={`text-sm font-semibold mb-1 line-clamp-2 ${
+                            isDisponible ? 'text-gray-900' : 'text-gray-500'
+                          }`}>
                             {evento.titulo_charla}
                           </h4>
 
                           {/* Expositor */}
-                          <p className="text-xs text-gray-600 mb-2 truncate">
+                          <p className={`text-xs mb-2 truncate ${
+                            isDisponible ? 'text-gray-600' : 'text-gray-400'
+                          }`}>
                             {evento.expositor}
                           </p>
 
@@ -150,10 +211,22 @@ const AdminEventGrid = ({ eventos, fecha, onEventUpdate }) => {
                                 {evento.slots_ocupados}/{evento.slots_disponibles}
                               </span>
                             </div>
-                            <div className={`px-2 py-1 rounded text-xs font-medium ${getOccupancyColor(evento.slots_ocupados, evento.slots_disponibles)}`}>
-                              {Math.round((evento.slots_ocupados / evento.slots_disponibles) * 100)}%
+                            <div className={`px-2 py-1 rounded text-xs font-medium ${
+                              isDisponible 
+                                ? getOccupancyColor(evento.slots_ocupados, evento.slots_disponibles)
+                                : 'text-red-600 bg-red-50'
+                            }`}>
+                              {isDisponible 
+                                ? `${Math.round((evento.slots_ocupados / evento.slots_disponibles) * 100)}%`
+                                : 'Inactivo'
+                              }
                             </div>
                           </div>
+
+                          {/* Overlay para eventos desactivados */}
+                          {!isDisponible && (
+                            <div className="absolute inset-0 bg-red-500/10 rounded-lg pointer-events-none"></div>
+                          )}
                         </div>
                       </motion.div>
                     </td>
@@ -165,7 +238,7 @@ const AdminEventGrid = ({ eventos, fecha, onEventUpdate }) => {
         </table>
       </div>
 
-      {/* Leyenda */}
+      {/* Leyenda actualizada */}
       <div className="bg-gray-50 border-t border-gray-200 p-4">
         <div className="flex items-center justify-between text-xs text-gray-600">
           <div className="flex items-center space-x-6">
@@ -174,8 +247,16 @@ const AdminEventGrid = ({ eventos, fecha, onEventUpdate }) => {
               <span>Haz clic para editar</span>
             </div>
             <div className="flex items-center space-x-2">
+              <ToggleRight className="h-4 w-4 text-green-600" />
+              <span>Activar/Desactivar</span>
+            </div>
+            <div className="flex items-center space-x-2">
               <Image className="h-4 w-4 text-green-500" />
               <span>Tiene imagen</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4 text-red-500" />
+              <span>Desactivado</span>
             </div>
           </div>
           <div className="flex items-center space-x-4">

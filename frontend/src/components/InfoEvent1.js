@@ -1131,7 +1131,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
         <div className="absolute inset-0 bg-gradient-to-r from-[#1f2f56]/80 to-[#1f2f56]/80"></div>
         
         {/* Contenido sobre la imagen */}
-        <div className="relative z-10 h-full flex flex-col justify-center items-center text-center px-6 pt-8 md:pt-0 pb-20 md:pb-28">
+        <div className="relative z-10 h-full flex flex-col justify-center items-center text-center px-6 pt-8 md:pt-0 pb-20 md:pb-16">
           {/* Título principal */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -1158,48 +1158,68 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
               transition={{ duration: 0.8, delay: 0.4 }}
               className="w-full max-w-5xl mx-auto"
             >
-              <div className="flex flex-wrap justify-center items-center gap-4 md:gap-8">
-                <img 
-                  src="https://i.ibb.co/67rBmW1c/camag-blanco.webp" 
-                  alt="CAMAG" 
-                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
-                />
-                <img 
-                  src="https://i.ibb.co/My7PfY0f/chem-blanco.webp" 
-                  alt="CHEM" 
-                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
-                />
-                <img 
-                  src="https://i.ibb.co/Xzx38vPP/ams-blanco.webp" 
-                  alt="AMS" 
-                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
-                />
-                <img 
-                  src="https://i.ibb.co/ZQj8wKzn/evident-blanco.webp" 
-                  alt="EVIDENT" 
-                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
-                />
-                <img 
-                  src="https://i.ibb.co/xgWXH7vT/esco-blanco.webp" 
-                  alt="ESCO" 
-                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
-                />
-                <img 
-                  src="https://i.ibb.co/xJdXJJWm/vaccubrand-blanco.webp" 
-                  alt="VACUUBRAND" 
-                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
-                />
-                <img 
-                  src="https://i.ibb.co/J0RJjdxg/binder-blanco.webp" 
-                  alt="BINDER" 
-                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
-                />
-                <img 
-                  src="https://i.ibb.co/tQVTMdgH/lauda-blanco.webp" 
-                  alt="LAUDA" 
-                  className="h-6 md:h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
-                />
-              </div>
+                             <div className="flex flex-wrap justify-center items-center gap-4 md:gap-8">
+                 <img 
+                   src="https://i.ibb.co/67rBmW1c/camag-blanco.webp" 
+                   alt="CAMAG" 
+                   style={{ height: '1.7rem' }}
+                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                 />
+                 <img 
+                   src="https://i.ibb.co/My7PfY0f/chem-blanco.webp" 
+                   alt="CHEM" 
+                   style={{ height: '1.7rem' }}
+                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                 />
+                 <img 
+                   src="https://i.ibb.co/LD44PGkG/ams-blanco.webp" 
+                   alt="AMS" 
+                   style={{ height: '1.7rem' }}
+                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                 />
+                 <img 
+                   src="https://i.ibb.co/9MgkP7L/evident-blanco.webp" 
+                   alt="EVIDENT" 
+                   style={{ height: '1.7rem' }}
+                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                 />
+                 <img 
+                   src="https://i.ibb.co/0RpVnmPF/esco-blanco.webp" 
+                   alt="ESCO" 
+                   style={{ height: '1.7rem' }}
+                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                 />
+                 <img 
+                   src="https://i.ibb.co/Y4tvtKyb/vacubrand-blanco.webp" 
+                   alt="VACUUBRAND" 
+                   style={{ height: '1.7rem' }}
+                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                 />
+                 <img 
+                   src="https://i.ibb.co/sv2g4YPT/binder-blanco.webp" 
+                   alt="BINDER" 
+                   style={{ height: '1.7rem' }}
+                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                 />
+                 <img 
+                   src="https://i.ibb.co/M5f6dwxS/lauda-blanco.webp" 
+                   alt="LAUDA" 
+                   style={{ height: '1.7rem' }}
+                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                 />
+                 <img 
+                   src="https://i.ibb.co/GvJhvb3w/sartorius-blanco.webp" 
+                   alt="SARTORIUS" 
+                   style={{ height: '1.7rem' }}
+                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                 />
+                 <img 
+                   src="https://i.ibb.co/QvT055f5/velp-blanco.webp" 
+                   alt="VELP" 
+                   style={{ height: '1.7rem' }}
+                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                 />
+               </div>
             </motion.div>
           </motion.div>
         </div>
