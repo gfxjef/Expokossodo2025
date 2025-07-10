@@ -670,7 +670,7 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                   className="mt-8 bg-[#01295c] rounded-xl shadow-lg p-6"
                 >
                   <h3 className="text-xl font-bold text-white mb-4">
-                    Eventos Seleccionados ({selectedEvents.length})
+                    Selecciona uno o más eventos para poder registrarte ({selectedEvents.length})
                   </h3>
                   <div className="grid gap-4">
                     {selectedEvents.map((event) => (

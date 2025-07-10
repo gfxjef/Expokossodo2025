@@ -581,11 +581,11 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.4 }}
-            className="bg-transparent rounded-xl p-8"
+            className="bg-transparent rounded-xl p-6 w-full h-full"
           >
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center justify-center space-x-8 h-full">
               {/* Contador grande a la izquierda */}
-              <div className="text-center">
+              <div className="text-center flex-shrink-0">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -626,21 +626,21 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="bg-white rounded-xl p-8"
+            className="bg-white rounded-xl p-6 w-full h-full flex items-center justify-center"
           >
             {/* Container centrado con ancho máximo 1200px */}
             <div className="container mx-auto max-w-[1200px]">
               {/* Header con título */}
-              <div className="header text-center mb-10">
+              <div className="header text-center mb-8">
                 <h2 className="text-3xl md:text-4xl font-bold text-[#0B3157] mb-4">
                   Marcas Participantes
                 </h2>
               </div>
               
               {/* Content - Dos columnas */}
-              <div className="content flex flex-col lg:flex-row gap-8 lg:gap-12">
+              <div className="content flex flex-col lg:flex-row gap-6 lg:gap-8">
                 {/* Columna izquierda - Texto descriptivo */}
-                <div className="column-left flex-1 space-y-6">
+                <div className="column-left flex-1 space-y-4">
                   <p className="text-gray-700 leading-relaxed text-base md:text-lg">
                     Exploraremos las prácticas sostenibles en el rubro 
                     minero, analizando cómo las empresas del sector están 
@@ -685,12 +685,12 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="bg-transparent rounded-xl p-6"
+            className="bg-transparent rounded-xl p-6 w-full h-full flex flex-col justify-center"
             onMouseEnter={() => setHoveredLab(true)}
             onMouseLeave={() => setHoveredLab(false)}
           >
             {/* Contenedor con altura fija para evitar scroll vertical */}
-            <div className="h-64 relative">
+            <div className="h-56 relative">
               {/* Grid de imágenes sin scroll horizontal */}
               <div className="flex justify-center items-center gap-3 h-full">
                 {getCurrentImages().map((img, index) => (
@@ -699,7 +699,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: index * 0.05 }}
-                    className="cursor-pointer flex-1 max-w-[200px] h-48"
+                    className="cursor-pointer flex-1 max-w-[200px] h-44"
                     onClick={() => {
                       const originalIndex = labImages.findIndex(labImg => labImg.id === img.id);
                       setCurrentLabImage(originalIndex);
@@ -759,7 +759,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: hoveredLab ? 1 : 0 }}
               transition={{ duration: 0.3 }}
-              className="text-center text-gray-700 mt-6 font-medium text-lg"
+              className="text-center text-gray-700 mt-4 font-medium text-lg"
             >
               Tendremos en exposición distintos equipos que podrán ayudarlo en su laboratorio
             </motion.p>
@@ -830,12 +830,12 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="bg-transparent rounded-xl overflow-hidden"
+            className="bg-transparent rounded-xl overflow-hidden w-full h-full flex items-center justify-center"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
           >
             {/* Contenedor con scroll infinito y fades en los bordes */}
-            <div className="relative overflow-hidden py-4">
+            <div className="relative overflow-hidden py-4 w-full">
               {/* Fade overlay izquierdo */}
               <div className="absolute top-0 bottom-0 left-0 w-24 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
               
@@ -867,7 +867,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                       onMouseLeave={() => setHoveredExpositor(null)}
                     >
                       {/* Contenedor con SVG de fondo */}
-                      <div className="relative w-56 h-56 mb-4">
+                      <div className="relative w-48 h-48 mb-4">
                         {/* SVG de fondo con colores alternados */}
                         <svg
                           className="absolute inset-0 w-full h-full"
@@ -1265,7 +1265,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                     clearTimeout(debounceTimerRef.current);
                   }
 
-                  // Reanudar auto-hover después de 2 segundos de inactividad
+                  // Reanudar auto-hover después de 10 segundos de inactividad
                   userInteractionTimeoutRef.current = setTimeout(() => {
                     setIsAutoHoverActive(true);
                     // Actualizar el índice actual basado en la tarjeta activa
@@ -1273,7 +1273,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
                     if (currentCardIndex !== -1) {
                       setAutoHoverIndex(currentCardIndex);
                     }
-                  }, 2000); // Reanudar después de 2 segundos
+                  }, 10000); // Reanudar después de 10 segundos
                 }}
                 onClick={() => {
                   // En móvil, toggle del acordeón
@@ -1369,9 +1369,12 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
         <div className="max-w-7xl mx-auto">
           {/* Sección interactiva que cambia según el hover - SIN TÍTULO */}
           <div className="hidden md:block mb-16">
-            <AnimatePresence mode="wait">
-              {getInteractiveContent()}
-            </AnimatePresence>
+            {/* Contenedor con altura fija para evitar layout shift */}
+            <div className="h-[370px] flex items-center justify-center overflow-hidden">
+              <AnimatePresence mode="wait">
+                {getInteractiveContent()}
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Botón de scroll estilo LandingPage */}
