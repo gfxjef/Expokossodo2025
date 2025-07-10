@@ -75,6 +75,16 @@ export const eventService = {
       throw error;
     }
   },
+
+  // Obtener un evento específico por slug
+  getEventBySlug: async (slug) => {
+    try {
+      const response = await api.get(`/evento/${slug}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
   
   // Obtener UN evento específico para verificación (SUPER RÁPIDO)
   getVerificationEvent: async (eventoId) => {

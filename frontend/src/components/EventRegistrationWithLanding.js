@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import ReactFullpage from '@fullpage/react-fullpage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { useParams } from 'react-router-dom';
 import LandingPage from './LandingPage';
 import InfoEvent1 from './InfoEvent1';
 import EventRegistration from './EventRegistration';
@@ -11,6 +12,7 @@ import { utils, eventService } from '../services/api';
 
 const EventRegistrationWithLanding = () => {
   const fullpageRef = useRef(null);
+  const { slug } = useParams(); // Capturar slug de la URL
 
   // === ESTADO Y LÓGICA CENTRALIZADOS ===
   const [isRegistrationActive, setIsRegistrationActive] = useState(false);
@@ -31,6 +33,26 @@ const EventRegistrationWithLanding = () => {
     loadEvents();
   }, []);
 
+  // Detectar slug en URL y auto-navegar
+  useEffect(() => {
+    if (slug && fullpageRef.current?.fullpageApi) {
+      console.log('🎯 Slug detectado en URL:', slug);
+      
+      // Auto-navegar a sección de registro (índice 2, que es la tercera sección)
+      setTimeout(() => {
+        if (fullpageRef.current?.fullpageApi) {
+          fullpageRef.current.fullpageApi.moveTo(3);
+          console.log('🚀 Auto-navegando a sección de registro');
+          
+          // Cargar evento específico después de navegar
+          setTimeout(() => {
+            loadEventBySlug(slug);
+          }, 500); // Pequeño delay para que termine la navegación
+        }
+      }, 100); // Pequeño delay para asegurar que fullpage esté listo
+    }
+  }, [slug, fullpageRef.current]); // Dependencias: slug y fullpageRef
+
   const loadEvents = async () => {
     try {
       setLoading(true);
@@ -45,6 +67,30 @@ const EventRegistrationWithLanding = () => {
       toast.error('Error al cargar los eventos');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Función para cargar evento específico por slug
+  const loadEventBySlug = async (slugParam) => {
+    try {
+      console.log('🔍 Cargando evento por slug:', slugParam);
+      const eventData = await eventService.getEventBySlug(slugParam);
+      
+      // Mostrar evento automáticamente
+      setSelectedEventInfo(eventData);
+      setShowEventInfo(true);
+      setIsRegistrationActive(true);
+      
+      toast.success(`Charla cargada: ${eventData.titulo_charla}`);
+      console.log('✅ Evento cargado por slug:', eventData);
+      
+    } catch (error) {
+      console.error('❌ Error cargando evento por slug:', error);
+      toast.error('Charla no encontrada o no disponible');
+      
+      // Si hay error, mantener el flujo normal
+      setShowEventInfo(false);
+      setSelectedEventInfo(null);
     }
   };
 

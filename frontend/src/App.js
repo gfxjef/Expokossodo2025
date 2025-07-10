@@ -42,6 +42,9 @@ function App() {
           <Route path="/verificarSala" element={<SelectorCharlas />} />
           <Route path="/verificarSala/:eventoId" element={<VerificadorSala />} />
           
+          {/* Ruta directa a charlas específicas */}
+          <Route path="/charla/:slug" element={<EventRegistrationWithLanding />} />
+          
           {/* Redirección por defecto */}
           <Route path="*" element={<EventRegistrationWithLanding />} />
         </Routes>

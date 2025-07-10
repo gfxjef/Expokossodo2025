@@ -253,6 +253,123 @@ def validar_formato_qr(qr_text):
         print(f"Error validando QR: {e}")
         return {"valid": False, "parsed": None}
 
+def generate_slug(titulo_charla):
+    """Generar slug URL-friendly desde titulo_charla"""
+    import re
+    import unicodedata
+    
+    if not titulo_charla:
+        return None
+    
+    # Normalizar unicode y remover acentos
+    slug = unicodedata.normalize('NFKD', titulo_charla)
+    slug = slug.encode('ascii', 'ignore').decode('ascii')
+    
+    # Convertir a minúsculas
+    slug = slug.lower()
+    
+    # Reemplazar espacios y caracteres especiales con guiones
+    slug = re.sub(r'[^a-z0-9\-]', '-', slug)
+    
+    # Remover guiones múltiples
+    slug = re.sub(r'-+', '-', slug)
+    
+    # Remover guiones al inicio y final
+    slug = slug.strip('-')
+    
+    # Limitar longitud a 200 caracteres
+    if len(slug) > 200:
+        # Cortar en última palabra completa
+        slug = slug[:200]
+        last_dash = slug.rfind('-')
+        if last_dash > 100:  # Solo cortar si no es muy corto
+            slug = slug[:last_dash]
+    
+    return slug if slug else 'evento-sin-titulo'
+
+def ensure_unique_slug(cursor, base_slug, evento_id=None):
+    """Asegurar que el slug sea único, agregando números si es necesario"""
+    original_slug = base_slug
+    counter = 1
+    
+    while True:
+        # Verificar si el slug ya existe (excluyendo el evento actual si estamos editando)
+        if evento_id:
+            cursor.execute(
+                "SELECT id FROM expokossodo_eventos WHERE slug = %s AND id != %s", 
+                (base_slug, evento_id)
+            )
+        else:
+            cursor.execute(
+                "SELECT id FROM expokossodo_eventos WHERE slug = %s", 
+                (base_slug,)
+            )
+        
+        existing = cursor.fetchone()
+        
+        if not existing:
+            return base_slug
+        
+        # Si existe, intentar con número
+        counter += 1
+        base_slug = f"{original_slug}-{counter}"
+        
+        # Evitar loops infinitos
+        if counter > 1000:
+            import time
+            base_slug = f"{original_slug}-{int(time.time())}"
+            break
+    
+    return base_slug
+
+def populate_existing_slugs():
+    """Poblar slugs para eventos existentes que no los tengan"""
+    connection = get_db_connection()
+    if not connection:
+        return False
+    
+    cursor = connection.cursor()
+    
+    try:
+        # Obtener eventos sin slug
+        cursor.execute("SELECT id, titulo_charla FROM expokossodo_eventos WHERE slug IS NULL OR slug = ''")
+        eventos_sin_slug = cursor.fetchall()
+        
+        print(f"📝 Procesando {len(eventos_sin_slug)} eventos sin slug...")
+        
+        for evento in eventos_sin_slug:
+            # Acceso por índice (id=0, titulo_charla=1)
+            evento_id = evento[0]
+            titulo_charla = evento[1]
+            
+            if not evento_id or not titulo_charla:
+                continue
+            
+            # Generar slug base
+            base_slug = generate_slug(titulo_charla)
+            
+            # Asegurar unicidad
+            final_slug = ensure_unique_slug(cursor, base_slug, evento_id)
+            
+            # Actualizar en base de datos
+            cursor.execute(
+                "UPDATE expokossodo_eventos SET slug = %s WHERE id = %s",
+                (final_slug, evento_id)
+            )
+            
+            print(f"✅ Evento {evento_id}: '{titulo_charla}' → '{final_slug}'")
+        
+        connection.commit()
+        print(f"🎯 {len(eventos_sin_slug)} slugs generados exitosamente")
+        return True
+        
+    except Error as e:
+        print(f"❌ Error poblando slugs: {e}")
+        return False
+    finally:
+        cursor.close()
+        connection.close()
+
 def init_database():
     """Inicializar tablas de la base de datos"""
     connection = get_db_connection()
@@ -424,6 +541,29 @@ def init_database():
             else:
                 print(f"Error agregando columna disponible: {e}")
         
+        # Agregar columna slug si no existe (URLs DIRECTAS)
+        try:
+            cursor.execute("""
+                ALTER TABLE expokossodo_eventos 
+                ADD COLUMN slug VARCHAR(255) UNIQUE AFTER titulo_charla
+            """)
+            print("✅ Columna 'slug' agregada exitosamente")
+        except Error as e:
+            if "Duplicate column name" in str(e):
+                print("ℹ️ Columna 'slug' ya existe")
+            else:
+                print(f"Error agregando columna slug: {e}")
+        
+        # Crear índice para slug si no existe
+        try:
+            cursor.execute("CREATE INDEX idx_slug ON expokossodo_eventos(slug)")
+            print("✅ Índice 'idx_slug' creado exitosamente")
+        except Error as e:
+            if "Duplicate key name" in str(e):
+                print("ℹ️ Índice 'idx_slug' ya existe")
+            else:
+                print(f"Error creando índice slug: {e}")
+        
         # Tabla de registros de usuarios
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS expokossodo_registros (
@@ -548,7 +688,10 @@ def init_database():
         
         if count == 0:
             populate_sample_data(cursor, connection)
-            
+        
+        # Poblar slugs para eventos existentes que no los tengan
+        print("🔄 Verificando slugs de eventos existentes...")
+        
         return True
         
     except Error as e:
@@ -969,6 +1112,56 @@ def get_eventos():
             })
         
         return jsonify(eventos_por_fecha)
+        
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.route('/api/evento/<slug>', methods=['GET'])
+def get_evento_by_slug(slug):
+    """Obtener un evento específico por su slug"""
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Buscar evento por slug
+        cursor.execute("""
+            SELECT e.* FROM expokossodo_eventos e
+            INNER JOIN expokossodo_horarios h ON e.hora = h.horario
+            WHERE e.slug = %s AND h.activo = TRUE AND e.disponible = TRUE
+        """, (slug,))
+        
+        evento = cursor.fetchone()
+        
+        if not evento:
+            return jsonify({"error": "Evento no encontrado"}), 404
+        
+        # Formatear respuesta similar a la estructura del frontend
+        evento_formateado = {
+            'id': evento['id'],
+            'fecha': evento['fecha'].strftime('%Y-%m-%d'),
+            'hora': evento['hora'],
+            'sala': evento['sala'],
+            'titulo_charla': evento['titulo_charla'],
+            'expositor': evento['expositor'],
+            'pais': evento['pais'],
+            'descripcion': evento.get('descripcion', ''),
+            'imagen_url': evento.get('imagen_url', ''),
+            'slots_disponibles': evento['slots_disponibles'],
+            'slots_ocupados': evento['slots_ocupados'],
+            'slug': evento['slug'],
+            'disponible': (
+                evento.get('disponible', True) and 
+                evento['slots_ocupados'] < evento['slots_disponibles']
+            )
+        }
+        
+        return jsonify(evento_formateado)
         
     except Error as e:
         return jsonify({"error": str(e)}), 500
