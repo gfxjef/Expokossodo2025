@@ -7,11 +7,19 @@ import { eventService, utils } from '../services/api';
 import EventCalendar from './EventCalendar';
 import RegistrationForm from './RegistrationForm';
 import LoadingSpinner from './LoadingSpinner';
+import SimpleMenu from './SimpleMenu';
 
-const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventSelect, onClearSelectedEvents, eventsData, loading }) => {
+const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventSelect, onClearSelectedEvents, eventsData, loading, onSectionChange }) => {
   // Estados principales
   const [currentStep, setCurrentStep] = useState('calendar'); // 'calendar' | 'registration' | 'success'
   const [currentDateIndex, setCurrentDateIndex] = useState(0);
+
+  // Función para manejar el cambio de sección
+  const handleSectionChange = (sectionId) => {
+    if (onSectionChange) {
+      onSectionChange(sectionId);
+    }
+  };
   
   // Debug: Log de props recibidas
   console.log('🏥 EventRegistration recibió props:', {
@@ -309,16 +317,28 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
       {currentStep !== 'success' && (
         <header className="relative bg-gradient-to-r from-[#1d2236] to-[#01295c] shadow-lg z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-between">
               {/* Logo de EXPO KOSSODO 2025 */}
-              <img 
-                src="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
-                alt="EXPO KOSSODO 2025"
-                className="w-48 h-16 object-contain"
-                onError={(e) => {
-                  console.log('Error loading header logo image');
-                  e.target.style.display = 'none';
-                }}
+              <div className="flex-shrink-0">
+                <img 
+                  src="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
+                  alt="EXPO KOSSODO 2025"
+                  className="w-32 h-10 md:w-48 md:h-16 object-contain"
+                  onError={(e) => {
+                    console.log('Error loading header logo image');
+                    e.target.style.display = 'none';
+                  }}
+                />
+              </div>
+              
+              {/* Menú simple */}
+              <SimpleMenu 
+                activeSection="registro"
+                onSectionChange={handleSectionChange}
+                textColor="text-white"
+                hoverColor="hover:text-[#6cb79a]"
+                mobileMenuBg="bg-white/95"
+                logoUrl="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
               />
             </div>
           </div>

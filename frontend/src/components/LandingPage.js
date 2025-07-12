@@ -1,11 +1,22 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
+import SimpleMenu from './SimpleMenu';
 
-const LandingPage = ({ onScrollToNext }) => {
+const LandingPage = ({ onScrollToNext, onSectionChange }) => {
   // Estado para el countdown
   const [timeLeft, setTimeLeft] = React.useState(null);
   const [showCountdown, setShowCountdown] = React.useState(true);
+  
+  // Estado para el índice actual de logos
+  const [logoIndex, setLogoIndex] = React.useState(0);
+
+  // Función para manejar el cambio de sección
+  const handleSectionChange = (sectionId) => {
+    if (onSectionChange) {
+      onSectionChange(sectionId);
+    }
+  };
 
   // Calcular tiempo restante hasta el 2 de septiembre de 2025
   React.useEffect(() => {
@@ -39,8 +50,8 @@ const LandingPage = ({ onScrollToNext }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // Logos de partners con estados active y hover
-  const partners = [
+  // Array completo de logos (los mismos que InfoEvent1.js)
+  const allPartners = [
     { name: 'CAMAG', active: 'https://i.ibb.co/67rBmW1c/camag-blanco.webp', hover: 'https://i.ibb.co/YFYknC9N/camag-color.webp' },
     { name: 'CHEM', active: 'https://i.ibb.co/My7PfY0f/chem-blanco.webp', hover: 'https://i.ibb.co/LXZ02Zb3/chem-color.webp' },
     { name: 'AMS', active: 'https://i.ibb.co/LD44PGkG/ams-blanco.webp', hover: 'https://i.ibb.co/Z16k8Xcy/ams-color.webp' },
@@ -52,6 +63,25 @@ const LandingPage = ({ onScrollToNext }) => {
     { name: 'SARTORIUS', active: 'https://i.ibb.co/GvJhvb3w/sartorius-blanco.webp', hover: 'https://i.ibb.co/pYPPZ6m/sartorius-color.webp' },
     { name: 'VELP', active: 'https://i.ibb.co/QvT055f5/velp-blanco.webp', hover: 'https://i.ibb.co/tVn3sdB/velp-color.webp' }
   ];
+
+  // Efecto para la rotación automática de logos
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setLogoIndex((prevIndex) => (prevIndex + 8) % allPartners.length);
+    }, 4000); // Cambiar cada 4 segundos
+
+    return () => clearInterval(interval);
+  }, [allPartners.length]);
+
+  // Función para obtener los 8 logos actuales
+  const getCurrentLogos = () => {
+    const logos = [];
+    for (let i = 0; i < 8; i++) {
+      const index = (logoIndex + i) % allPartners.length;
+      logos.push(allPartners[index]);
+    }
+    return logos;
+  };
 
   return (
     <div className="relative h-screen w-full overflow-hidden" style={{ zIndex: 1 }}>
@@ -98,6 +128,24 @@ const LandingPage = ({ onScrollToNext }) => {
               }}
             />
           </div>
+        </motion.div>
+
+        {/* Menú simple en la esquina superior derecha */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+          className="absolute top-6 right-6 md:top-8 md:right-16 lg:right-24 drop-shadow-lg"
+          style={{ zIndex: 9998, position: 'absolute' }}
+        >
+          <SimpleMenu 
+            activeSection="inicio"
+            onSectionChange={handleSectionChange}
+            textColor="text-white"
+            hoverColor="hover:text-[#6cb79a]"
+            mobileMenuBg="bg-black/95"
+            logoUrl="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
+          />
         </motion.div>
 
         {/* Contenido principal centrado */}
@@ -179,36 +227,39 @@ const LandingPage = ({ onScrollToNext }) => {
             <div className="text-left md:text-right">
               <div className="text-xs md:text-sm mb-2 md:mb-4 tracking-widest font-medium" style={{ color: '#6cb79a' }}>PARTNERS</div>
               <div className="grid grid-cols-4 gap-2 md:gap-3 items-center">
-                {partners.slice(0, 8).map((partner, index) => (
-                  <motion.div
-                    key={partner.name}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, delay: 1.1 + index * 0.05 }}
-                    className="group relative"
-                  >
-                    <div className="relative h-[2rem] md:h-[2.5rem] flex items-center justify-center overflow-hidden">
-                      <img
-                        src={partner.active}
-                        alt={partner.name}
-                        className="h-full w-auto object-contain transition-all duration-300 group-hover:opacity-0"
-                        onError={(e) => {
-                          console.error(`Error loading ${partner.name} active logo`);
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                      <img
-                        src={partner.hover}
-                        alt={partner.name}
-                        className="absolute inset-0 h-full w-auto object-contain opacity-0 transition-all duration-300 group-hover:opacity-100 mx-auto"
-                        onError={(e) => {
-                          console.error(`Error loading ${partner.name} hover logo`);
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  </motion.div>
-                ))}
+                <AnimatePresence mode="wait">
+                  {getCurrentLogos().map((partner, index) => (
+                    <motion.div
+                      key={`${partner.name}-${logoIndex}`}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.5, delay: index * 0.05 }}
+                      className="group relative"
+                    >
+                      <div className="relative h-[2rem] md:h-[2.5rem] flex items-center justify-center overflow-hidden">
+                        <img
+                          src={partner.active}
+                          alt={partner.name}
+                          className="h-full w-auto object-contain transition-all duration-300 group-hover:opacity-0"
+                          onError={(e) => {
+                            console.error(`Error loading ${partner.name} active logo`);
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                        <img
+                          src={partner.hover}
+                          alt={partner.name}
+                          className="absolute inset-0 h-full w-auto object-contain opacity-0 transition-all duration-300 group-hover:opacity-100 mx-auto"
+                          onError={(e) => {
+                            console.error(`Error loading ${partner.name} hover logo`);
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             </div>
           </div>

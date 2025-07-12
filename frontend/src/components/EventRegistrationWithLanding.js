@@ -164,6 +164,25 @@ const EventRegistrationWithLanding = () => {
     }
   };
 
+  // Función para manejar la navegación entre secciones desde el menú
+  const handleSectionChange = (sectionId) => {
+    if (!fullpageRef.current?.fullpageApi) return;
+
+    switch (sectionId) {
+      case 'inicio':
+        fullpageRef.current.fullpageApi.moveTo(1);
+        break;
+      case 'informacion':
+        fullpageRef.current.fullpageApi.moveTo(2);
+        break;
+      case 'registro':
+        fullpageRef.current.fullpageApi.moveTo(3);
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <>
       <ReactFullpage
@@ -190,13 +209,17 @@ const EventRegistrationWithLanding = () => {
           return (
             <ReactFullpage.Wrapper>
               <div className="section">
-                <LandingPage onScrollToNext={scrollToNext} />
+                <LandingPage 
+                  onScrollToNext={scrollToNext} 
+                  onSectionChange={handleSectionChange}
+                />
               </div>
               <div className="section">
                 <InfoEvent1 
                   onScrollToNext={scrollToNext} 
                   eventsData={eventsData}
                   loading={loading}
+                  onSectionChange={handleSectionChange}
                 />
               </div>
               <div className="section fp-auto-height-responsive">
@@ -209,6 +232,7 @@ const EventRegistrationWithLanding = () => {
                     onClearSelectedEvents={handleClearSelectedEvents}
                     eventsData={eventsData}
                     loading={loading}
+                    onSectionChange={handleSectionChange}
                   />
                 </div>
               </div>
@@ -240,7 +264,29 @@ const EventRegistrationWithLanding = () => {
                 <div className="p-6">
                   {/* Header del panel */}
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-semibold text-white">Información del Evento</h3>
+                    {/* Logo de la marca del evento o logo de ExpoKossodo como fallback */}
+                    {selectedEventInfo.marca_logo ? (
+                      <img 
+                        src={selectedEventInfo.marca_logo}
+                        alt={selectedEventInfo.marca_nombre || 'Marca'}
+                        className="h-12 object-contain bg-white/10 px-3 py-2 rounded-lg"
+                        onError={(e) => {
+                          console.log('Error loading brand logo, using fallback');
+                          e.target.src = 'https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp';
+                          e.target.className = 'h-10 object-contain';
+                        }}
+                      />
+                    ) : (
+                      <img 
+                        src="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
+                        alt="EXPO KOSSODO 2025"
+                        className="h-10 object-contain"
+                        onError={(e) => {
+                          console.log('Error loading panel logo');
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    )}
                     <button
                       onClick={handleCloseEventInfo}
                       className="p-2 hover:bg-white/10 rounded-full transition-colors"

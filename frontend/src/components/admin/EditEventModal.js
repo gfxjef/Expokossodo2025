@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Calendar, Clock, MapPin, Globe, User, FileText, Image, AlertCircle, ToggleRight } from 'lucide-react';
+import { X, Save, Calendar, Clock, MapPin, Globe, User, FileText, Image, AlertCircle, ToggleRight, Building2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import { adminService, adminValidators } from '../../services/adminService';
@@ -12,11 +12,14 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
     pais: '',
     descripcion: '',
     imagen_url: '',
-    disponible: true
+    disponible: true,
+    marca_id: null
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [marcas, setMarcas] = useState([]);
+  const [loadingMarcas, setLoadingMarcas] = useState(true);
 
   useEffect(() => {
     if (evento) {
@@ -26,10 +29,29 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
         pais: evento.pais || '',
         descripcion: evento.descripcion || '',
         imagen_url: evento.imagen_url || '',
-        disponible: evento.disponible !== undefined ? evento.disponible : true
+        disponible: evento.disponible !== undefined ? evento.disponible : true,
+        marca_id: evento.marca_id || null
       });
     }
   }, [evento]);
+
+  // Cargar marcas disponibles
+  useEffect(() => {
+    const fetchMarcas = async () => {
+      try {
+        setLoadingMarcas(true);
+        const response = await adminService.getMarcas();
+        setMarcas(response.marcas || []);
+      } catch (error) {
+        console.error('Error cargando marcas:', error);
+        toast.error('Error al cargar las marcas');
+      } finally {
+        setLoadingMarcas(false);
+      }
+    };
+
+    fetchMarcas();
+  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -221,7 +243,31 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
                     )}
                   </div>
 
-                  {/* Disponibilidad del evento - NUEVO CAMPO */}
+                  {/* Marca Patrocinadora */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Building2 className="h-4 w-4 inline mr-1" />
+                      Marca Patrocinadora
+                    </label>
+                    <select
+                      value={formData.marca_id || ''}
+                      onChange={(e) => handleInputChange('marca_id', e.target.value ? parseInt(e.target.value) : null)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      disabled={loadingMarcas}
+                    >
+                      <option value="">-- Sin marca asignada --</option>
+                      {marcas.map((marca) => (
+                        <option key={marca.id} value={marca.id}>
+                          {marca.marca} {marca.expositor ? `(${marca.expositor})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Selecciona la marca que patrocina esta charla
+                    </p>
+                  </div>
+
+                  {/* Disponibilidad del evento */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       <ToggleRight className="h-4 w-4 inline mr-1" />
@@ -338,6 +384,12 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
                       <p className="text-gray-700 font-medium mb-4">
                         {formData.expositor || 'Expositor'} • {formData.pais || 'País'}
                       </p>
+                      {formData.marca_id && (
+                        <p className="text-sm text-indigo-600 font-medium mb-4">
+                          <Building2 className="h-4 w-4 inline mr-1" />
+                          {marcas.find(m => m.id === formData.marca_id)?.marca || 'Marca'}
+                        </p>
+                      )}
                       <div className="prose prose-sm max-w-none">
                         <ReactMarkdown
                           components={{

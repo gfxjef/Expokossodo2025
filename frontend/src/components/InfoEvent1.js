@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, X, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import { eventService } from '../services/api';
+import SimpleMenu from './SimpleMenu';
 
 // --- Componente ConferenceSlider Extraído ---
 const ConferenceSlider = React.memo(({ conferences, loading, onScrollToNext, totalEvents }) => {
@@ -79,11 +80,18 @@ const ConferenceSlider = React.memo(({ conferences, loading, onScrollToNext, tot
   );
 });
 
-const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
+const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) => {
   // Estado para la tarjeta activa (mantiene el estado hasta cambiar a otra)
   const [activeCard, setActiveCard] = useState(null);
   const [hoveredCard, setHoveredCard] = useState(null);
   const debounceTimerRef = useRef(null);
+
+  // Función para manejar el cambio de sección
+  const handleSectionChange = (sectionId) => {
+    if (onSectionChange) {
+      onSectionChange(sectionId);
+    }
+  };
   
   // Estados para auto-hover automático
   const [isAutoHoverActive, setIsAutoHoverActive] = useState(true);
@@ -110,6 +118,9 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [hoveredExpositor, setHoveredExpositor] = useState(null);
+  
+  // Estado para la rotación de logos
+  const [logoIndex, setLogoIndex] = useState(0);
   
   // Debug: Log de props recibidas (solo en desarrollo)
   // console.log('🎭 InfoEvent1 recibió props:', {
@@ -156,46 +167,97 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
     {
       id: 1,
       url: "https://i.ibb.co/qMmL4cDj/velp-lab8.webp",
-      title: "Microscopio de Alta Resolución",
-      description: "Tecnología de última generación para análisis microscópicos"
+      title: "Equipos en nuestro laboratorio de Calidad",
+      description: "Tecnología de última generación para análisis"
     },
     {
       id: 2,
       url: "https://i.ibb.co/35sX1jWb/velp-lab7.webp",
-      title: "Espectrofotómetro UV-Vis",
-      description: "Análisis espectroscópico de alta precisión"
+      title: "Equipos en nuestro laboratorio de Microbiología",
+      description: "Análisis de alta precisión"
     },
     {
       id: 3,
       url: "https://i.ibb.co/9HxKS0vT/velp-lab6.webp",
-      title: "Centrífuga de Alta Velocidad",
-      description: "Separación de muestras con máxima eficiencia"
+      title: "Equipos en nuestro laboratorio de Calidad",
+      description: "Tecnología de última generación para análisis"
     },
     {
       id: 4,
       url: "https://i.ibb.co/kV0ZXWYP/velp-lab5.webp",
-      title: "Cromatógrafo HPLC",
-      description: "Sistema de cromatografía líquida de alto rendimiento"
+      title: "Equipos en nuestro laboratorio",
+      description: "Análisis de alta precisión"
     },
     {
       id: 5,
       url: "https://i.ibb.co/PG7hz5Gt/velp-lab2.webp",
-      title: "Incubadora CO2",
-      description: "Control preciso de temperatura y atmósfera"
+      title: "Equipos en nuestro laboratorio de Calidad",
+      description: "Tecnología de última generación para análisis"
     },
     {
       id: 6,
       url: "https://i.ibb.co/HD1HMrqY/velp-lab1.webp",
-      title: "Cabina de Flujo Laminar",
-      description: "Ambiente estéril para trabajo con cultivos"
+      title: "Equipos en nuestro laboratorio de Calidad",
+      description: "Tecnología de última generación para análisis"
     },
     {
       id: 7,
       url: "https://i.ibb.co/DfzrTqXD/vaccubrand-lab1.webp",
-      title: "Termociclador PCR",
-      description: "Amplificación de ADN con precisión"
+      title: "Equipos en nuestro laboratorio de Calidad",
+      description: "Tecnología de última generación para análisis"
+    },
+    {
+      id: 8,
+      url: "https://atusaludlicoreria.com/expokossodo/olympus_1.webp",
+      title: "Equipos en nuestro laboratorio de Microbiología",
+      description: "Tecnología de última generación para análisis"
+    },
+    {
+      id: 9,
+      url: "https://atusaludlicoreria.com/expokossodo/olympus_2.webp",
+      title: "Equipos en nuestro laboratorio de Microbiología",
+      description: "Tecnología de última generación para análisis"
+    },
+    {
+      id: 10,
+      url: "https://atusaludlicoreria.com/expokossodo/olympus_3.webp",
+      title: "Equipos en nuestro laboratorio de Microbiología",
+      description: "Tecnología de última generación para análisis"
     }
   ];
+
+  // Array de logos partners
+  const partnerLogos = [
+    { name: 'CAMAG', url: 'https://i.ibb.co/67rBmW1c/camag-blanco.webp' },
+    { name: 'CHEM', url: 'https://i.ibb.co/My7PfY0f/chem-blanco.webp' },
+    { name: 'AMS', url: 'https://i.ibb.co/LD44PGkG/ams-blanco.webp' },
+    { name: 'EVIDENT', url: 'https://i.ibb.co/9MgkP7L/evident-blanco.webp' },
+    { name: 'ESCO', url: 'https://i.ibb.co/0RpVnmPF/esco-blanco.webp' },
+    { name: 'VACUUBRAND', url: 'https://i.ibb.co/Y4tvtKyb/vacubrand-blanco.webp' },
+    { name: 'BINDER', url: 'https://i.ibb.co/sv2g4YPT/binder-blanco.webp' },
+    { name: 'LAUDA', url: 'https://i.ibb.co/M5f6dwxS/lauda-blanco.webp' },
+    { name: 'SARTORIUS', url: 'https://i.ibb.co/GvJhvb3w/sartorius-blanco.webp' },
+    { name: 'VELP', url: 'https://i.ibb.co/QvT055f5/velp-blanco.webp' }
+  ];
+
+  // Efecto para la rotación automática de logos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLogoIndex((prevIndex) => (prevIndex + 6) % partnerLogos.length);
+    }, 3500); // Cambiar cada 3.5 segundos
+
+    return () => clearInterval(interval);
+  }, [partnerLogos.length]);
+
+  // Función para obtener los 6 logos actuales
+  const getCurrentLogos = () => {
+    const logos = [];
+    for (let i = 0; i < 6; i++) {
+      const index = (logoIndex + i) % partnerLogos.length;
+      logos.push(partnerLogos[index]);
+    }
+    return logos;
+  };
 
   // Los datos ya vienen cargados desde el componente padre
   // No necesitamos cargar datos aquí
@@ -1018,6 +1080,33 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
+      {/* Header con menú simple */}
+      <div className="absolute top-0 left-0 right-0 z-50 p-6 md:p-8">
+        <div className="flex justify-between items-center">
+          {/* Logo */}
+          <div className="flex-shrink-0">
+            <img 
+              src="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
+              alt="EXPO KOSSODO 2025"
+              className="w-32 h-10 md:w-48 md:h-16 object-contain"
+              onError={(e) => {
+                console.log('Error loading header logo image');
+                e.target.style.display = 'none';
+              }}
+            />
+          </div>
+          
+          {/* Menú simple */}
+          <SimpleMenu 
+            activeSection="informacion"
+            onSectionChange={handleSectionChange}
+            textColor="text-white"
+            hoverColor="hover:text-[#6cb79a]"
+            mobileMenuBg="bg-white/95"
+            logoUrl="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
+          />
+        </div>
+      </div>
       {/* Modal de galería del laboratorio simplificado */}
       {showLabModal && portalReady && ReactDOM.createPortal(
         <AnimatePresence>
@@ -1158,68 +1247,24 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading }) => {
               transition={{ duration: 0.8, delay: 0.4 }}
               className="hidden md:block w-full max-w-5xl mx-auto"
             >
-                             <div className="flex flex-wrap justify-center items-center gap-4 md:gap-8">
-                 <img 
-                   src="https://i.ibb.co/67rBmW1c/camag-blanco.webp" 
-                   alt="CAMAG" 
-                   style={{ height: '1.7rem' }}
-                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
-                 />
-                 <img 
-                   src="https://i.ibb.co/My7PfY0f/chem-blanco.webp" 
-                   alt="CHEM" 
-                   style={{ height: '1.7rem' }}
-                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
-                 />
-                 <img 
-                   src="https://i.ibb.co/LD44PGkG/ams-blanco.webp" 
-                   alt="AMS" 
-                   style={{ height: '1.7rem' }}
-                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
-                 />
-                 <img 
-                   src="https://i.ibb.co/9MgkP7L/evident-blanco.webp" 
-                   alt="EVIDENT" 
-                   style={{ height: '1.7rem' }}
-                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
-                 />
-                 <img 
-                   src="https://i.ibb.co/0RpVnmPF/esco-blanco.webp" 
-                   alt="ESCO" 
-                   style={{ height: '1.7rem' }}
-                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
-                 />
-                 <img 
-                   src="https://i.ibb.co/Y4tvtKyb/vacubrand-blanco.webp" 
-                   alt="VACUUBRAND" 
-                   style={{ height: '1.7rem' }}
-                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
-                 />
-                 <img 
-                   src="https://i.ibb.co/sv2g4YPT/binder-blanco.webp" 
-                   alt="BINDER" 
-                   style={{ height: '1.7rem' }}
-                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
-                 />
-                 <img 
-                   src="https://i.ibb.co/M5f6dwxS/lauda-blanco.webp" 
-                   alt="LAUDA" 
-                   style={{ height: '1.7rem' }}
-                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
-                 />
-                 <img 
-                   src="https://i.ibb.co/GvJhvb3w/sartorius-blanco.webp" 
-                   alt="SARTORIUS" 
-                   style={{ height: '1.7rem' }}
-                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
-                 />
-                 <img 
-                   src="https://i.ibb.co/QvT055f5/velp-blanco.webp" 
-                   alt="VELP" 
-                   style={{ height: '1.7rem' }}
-                   className="w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
-                 />
-               </div>
+              <div className="flex justify-center items-center gap-4 md:gap-8">
+                <AnimatePresence mode="wait">
+                  {getCurrentLogos().map((logo, index) => (
+                    <motion.img
+                      key={`${logo.name}-${logoIndex}`}
+                      src={logo.url}
+                      alt={logo.name}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 0.7, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      whileHover={{ opacity: 1 }}
+                      transition={{ duration: 0.5, delay: index * 0.05 }}
+                      style={{ height: '1.7rem' }}
+                      className="w-auto object-contain transition-opacity"
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
             </motion.div>
           </motion.div>
         </div>

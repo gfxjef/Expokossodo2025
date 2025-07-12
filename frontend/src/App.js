@@ -6,6 +6,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import VerificadorGeneral from './components/VerificadorGeneral';
 import SelectorCharlas from './components/SelectorCharlas';
 import VerificadorSala from './components/VerificadorSala';
+import VisualizacionDashboard from './components/VisualizacionDashboard';
 import ChatWidget from './components/ChatWidget';
 import './index.css';
 
@@ -36,6 +37,9 @@ function App() {
           
           {/* Ruta de administración */}
           <Route path="/admin" element={<AdminDashboard />} />
+          
+          {/* Ruta de visualización para gestores */}
+          <Route path="/visualizacion" element={<VisualizacionDashboard />} />
           
           {/* Rutas de verificación QR */}
           <Route path="/verificar" element={<VerificadorGeneral />} />

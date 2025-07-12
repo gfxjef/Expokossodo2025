@@ -399,6 +399,41 @@ def init_database():
             )
         """)
         
+        # Nueva tabla para marcas patrocinadoras
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS expokossodo_marcas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                marca VARCHAR(100) NOT NULL UNIQUE,
+                expositor VARCHAR(100),
+                logo VARCHAR(500),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_marca (marca)
+            )
+        """)
+        
+        # Poblar marcas por defecto si no existen
+        marcas_default = [
+            ('CAMAG', 'Ing. Eliezer Ceniviva', 'https://i.ibb.co/YFYknC9N/camag-color.webp'),
+            ('EVIDENT', 'Mario Esteban Muñoz', 'https://i.ibb.co/RpHJ7W0C/evident-color.webp'),
+            ('ESCO', None, 'https://i.ibb.co/wFCJ2RK3/esco-color.webp'),
+            ('VACUUBRAND', 'Dr. Roberto Friztler', 'https://i.ibb.co/8nCL3Ksb/vacubrand-color.webp'),
+            ('SARTORIUS', 'Lic. Mónica Klarreich', 'https://i.ibb.co/pYPPZ6m/sartorius-color.webp'),
+            ('LAUDA', 'Andre Sautchuk', 'https://i.ibb.co/GfrzYHYS/lauda-color.webp'),
+            ('BINDER', 'PhD. Fernando Vargas', 'https://i.ibb.co/JR51wysn/binder-color.webp'),
+            ('VELP', 'Pablo Scarpin', 'https://i.ibb.co/tVn3sdB/velp-color.webp'),
+            ('CHEM', None, 'https://i.ibb.co/LXZ02Zb3/chem-color.webp'),
+            ('AMS', None, 'https://i.ibb.co/Z16k8Xcy/ams-color.webp'),
+            ('KOSSODO', 'Qco. James Rojas Sanchez', None),
+            ('KOSSOMET', 'Jhonny Quispe', None)
+        ]
+        
+        for marca, expositor, logo in marcas_default:
+            cursor.execute("""
+                INSERT IGNORE INTO expokossodo_marcas (marca, expositor, logo) 
+                VALUES (%s, %s, %s)
+            """, (marca, expositor, logo))
+        
         # Nueva tabla para gestionar horarios
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS expokossodo_horarios (
@@ -563,6 +598,22 @@ def init_database():
                 print("ℹ️ Índice 'idx_slug' ya existe")
             else:
                 print(f"Error creando índice slug: {e}")
+        
+        # Agregar columna marca_id si no existe (NUEVA FUNCIONALIDAD)
+        try:
+            cursor.execute("""
+                ALTER TABLE expokossodo_eventos 
+                ADD COLUMN marca_id INT AFTER imagen_url,
+                ADD CONSTRAINT fk_evento_marca 
+                FOREIGN KEY (marca_id) REFERENCES expokossodo_marcas(id) 
+                ON DELETE SET NULL
+            """)
+            print("✅ Columna 'marca_id' agregada exitosamente")
+        except Error as e:
+            if "Duplicate column name" in str(e):
+                print("ℹ️ Columna 'marca_id' ya existe")
+            else:
+                print(f"Error agregando columna marca_id: {e}")
         
         # Tabla de registros de usuarios
         cursor.execute("""
@@ -869,7 +920,7 @@ def send_confirmation_email(user_data, selected_events, qr_text=None):
                             <tr>
                                 <td style="background: linear-gradient(135deg, #01295c 0%, #1d2236 100%); padding: 40px 30px; text-align: center;">
                                                                                                               <!-- Logo -->
-                                     <img src="https://i.ibb.co/3mjHgkvb/EXPOKOSSODO-PNG.png" alt="ExpoKossodo 2025" style="width: 200px; height: auto; margin-bottom: 30px;">
+                                     <img src="https://atusaludlicoreria.com/expokossodo/EXPOKOSSODO_PNG.png" alt="ExpoKossodo 2025" style="width: 200px; height: auto; margin-bottom: 30px;">
                                      
                                      <!-- Title -->
                                      <h1 style="margin: 0; font-size: 32px; font-weight: 700; color: white; margin-bottom: 8px;">
@@ -1077,7 +1128,13 @@ def get_eventos():
     try:
         # Obtener eventos solo para horarios activos Y disponibles
         cursor.execute("""
-            SELECT e.* FROM expokossodo_eventos e
+            SELECT 
+                e.*,
+                m.marca as marca_nombre,
+                m.logo as marca_logo,
+                m.expositor as marca_expositor
+            FROM expokossodo_eventos e
+            LEFT JOIN expokossodo_marcas m ON e.marca_id = m.id
             INNER JOIN expokossodo_horarios h ON e.hora = h.horario
             WHERE h.activo = TRUE AND e.disponible = TRUE
             ORDER BY e.fecha, e.hora, e.sala
@@ -1108,7 +1165,11 @@ def get_eventos():
                 'disponible': (
                     evento.get('disponible', True) and 
                     evento['slots_ocupados'] < evento['slots_disponibles']
-                )
+                ),
+                'marca_id': evento.get('marca_id'),
+                'marca_nombre': evento.get('marca_nombre'),
+                'marca_logo': evento.get('marca_logo'),
+                'marca_expositor': evento.get('marca_expositor')
             })
         
         return jsonify(eventos_por_fecha)
@@ -1131,7 +1192,13 @@ def get_evento_by_slug(slug):
     try:
         # Buscar evento por slug
         cursor.execute("""
-            SELECT e.* FROM expokossodo_eventos e
+            SELECT 
+                e.*,
+                m.marca as marca_nombre,
+                m.logo as marca_logo,
+                m.expositor as marca_expositor
+            FROM expokossodo_eventos e
+            LEFT JOIN expokossodo_marcas m ON e.marca_id = m.id
             INNER JOIN expokossodo_horarios h ON e.hora = h.horario
             WHERE e.slug = %s AND h.activo = TRUE AND e.disponible = TRUE
         """, (slug,))
@@ -1158,7 +1225,11 @@ def get_evento_by_slug(slug):
             'disponible': (
                 evento.get('disponible', True) and 
                 evento['slots_ocupados'] < evento['slots_disponibles']
-            )
+            ),
+            'marca_id': evento.get('marca_id'),
+            'marca_nombre': evento.get('marca_nombre'),
+            'marca_logo': evento.get('marca_logo'),
+            'marca_expositor': evento.get('marca_expositor')
         }
         
         return jsonify(evento_formateado)
@@ -1397,11 +1468,13 @@ def get_admin_eventos():
     try:
         cursor.execute("""
             SELECT 
-                id, fecha, hora, sala, titulo_charla, expositor, pais, 
-                descripcion, imagen_url, slots_disponibles, slots_ocupados,
-                disponible, created_at
-            FROM expokossodo_eventos 
-            ORDER BY fecha, hora, sala
+                e.id, e.fecha, e.hora, e.sala, e.titulo_charla, e.expositor, e.pais, 
+                e.descripcion, e.imagen_url, e.slots_disponibles, e.slots_ocupados,
+                e.disponible, e.created_at, e.marca_id,
+                m.marca as marca_nombre, m.logo as marca_logo
+            FROM expokossodo_eventos e
+            LEFT JOIN expokossodo_marcas m ON e.marca_id = m.id
+            ORDER BY e.fecha, e.hora, e.sala
         """)
         
         eventos = cursor.fetchall()
@@ -1446,11 +1519,11 @@ def update_evento(evento_id):
         if not cursor.fetchone():
             return jsonify({'error': 'Evento no encontrado'}), 404
         
-        # Actualizar evento - AHORA INCLUYE DISPONIBLE
+        # Actualizar evento - AHORA INCLUYE DISPONIBLE Y MARCA_ID
         update_query = """
             UPDATE expokossodo_eventos 
             SET titulo_charla = %s, expositor = %s, pais = %s, 
-                descripcion = %s, imagen_url = %s, disponible = %s
+                descripcion = %s, imagen_url = %s, disponible = %s, marca_id = %s
             WHERE id = %s
         """
         
@@ -1461,6 +1534,7 @@ def update_evento(evento_id):
             data.get('descripcion', ''),
             data.get('imagen_url', None),
             data.get('disponible', True),  # NUEVO CAMPO
+            data.get('marca_id', None),     # NUEVO CAMPO MARCA
             evento_id
         ))
         
@@ -2399,6 +2473,35 @@ def chat():
     except Exception as e:
         print(f"Error in OpenAI chat endpoint: {e}")
         return jsonify({'error': str(e)}), 500
+
+# ===== ENDPOINT PARA MARCAS =====
+
+@app.route('/api/admin/marcas', methods=['GET'])
+def get_marcas():
+    """Obtener todas las marcas disponibles"""
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        cursor.execute("""
+            SELECT id, marca, expositor, logo
+            FROM expokossodo_marcas
+            ORDER BY marca
+        """)
+        
+        marcas = cursor.fetchall()
+        
+        return jsonify({"marcas": marcas})
+        
+    except Error as e:
+        print(f"Error obteniendo marcas: {e}")
+        return jsonify({"error": "Error del servidor"}), 500
+    finally:
+        cursor.close()
+        connection.close()
 
 if __name__ == '__main__':
     print("🚀 Iniciando ExpoKossodo Backend...")

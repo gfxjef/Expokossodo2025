@@ -155,6 +155,18 @@ export const adminService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  // ===== NUEVO MÉTODO PARA MARCAS =====
+  
+  // Obtener todas las marcas disponibles
+  getMarcas: async () => {
+    try {
+      const response = await adminApi.get('/marcas');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 };
 
