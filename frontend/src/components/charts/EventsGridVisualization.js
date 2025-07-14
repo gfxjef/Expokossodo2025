@@ -61,6 +61,12 @@ const EventsGridVisualization = ({ eventos, fecha, onEventClick, registrados, on
     return flags[pais] || '🌐';
   };
 
+  // Función para truncar títulos largos
+  const truncateTitle = (title, maxLength = 30) => {
+    if (!title) return '';
+    return title.length > maxLength ? `${title.substring(0, maxLength)}...` : title;
+  };
+
   if (!eventos || eventos.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-8 text-center">
@@ -102,19 +108,19 @@ const EventsGridVisualization = ({ eventos, fecha, onEventClick, registrados, on
 
       {/* Grid de eventos */}
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4" />
+              <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                <div className="flex items-center space-x-1">
+                  <Clock className="h-3 w-3" />
                   <span>Horario</span>
                 </div>
               </th>
               {salas.map(sala => (
-                <th key={sala.id} className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="h-4 w-4" />
+                <th key={sala.id} className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: `${80 / salas.length}%` }}>
+                  <div className="flex items-center space-x-1">
+                    <MapPin className="h-3 w-3" />
                     <span>{sala.name}</span>
                   </div>
                 </th>
@@ -126,12 +132,12 @@ const EventsGridVisualization = ({ eventos, fecha, onEventClick, registrados, on
             {horarios.map((horario, timeIndex) => (
               <tr key={horario} className="hover:bg-gray-50/50">
                 {/* Columna de horario */}
-                <td className="px-6 py-6 whitespace-nowrap">
-                  <div className="text-sm font-bold text-gray-900">{horario}</div>
+                <td className="px-4 py-6 whitespace-nowrap">
+                  <div className="text-xs font-bold text-gray-900">{horario}</div>
                   <div className="text-xs text-gray-500 mt-1">
-                    {timeIndex === 0 && '🌅 Apertura'}
-                    {timeIndex === 2 && '🍽️ Almuerzo'}
-                    {timeIndex === 4 && '🌅 Cierre'}
+                    {timeIndex === 0 && '🌅'}
+                    {timeIndex === 2 && '🍽️'}
+                    {timeIndex === 4 && '🌅'}
                   </div>
                 </td>
 
@@ -141,7 +147,7 @@ const EventsGridVisualization = ({ eventos, fecha, onEventClick, registrados, on
                   
                   if (!evento) {
                     return (
-                      <td key={sala.id} className="px-6 py-6">
+                      <td key={sala.id} className="px-4 py-6">
                         <div className="h-28 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center">
                           <span className="text-xs text-gray-400">Sin evento</span>
                         </div>
@@ -154,7 +160,7 @@ const EventsGridVisualization = ({ eventos, fecha, onEventClick, registrados, on
                     Math.round((evento.slots_ocupados / evento.slots_disponibles) * 100) : 0;
 
                   return (
-                    <td key={sala.id} className="px-6 py-6">
+                    <td key={sala.id} className="px-4 py-6">
                       <motion.div
                         whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
                         whileTap={{ scale: 0.98 }}
@@ -162,37 +168,38 @@ const EventsGridVisualization = ({ eventos, fecha, onEventClick, registrados, on
                       >
                         <div
                           onClick={() => handleEventClick(evento)}
-                          className={`relative bg-white border rounded-lg p-4 cursor-pointer transition-all duration-200 h-32 ${
+                          className={`relative bg-white border rounded-lg p-3 cursor-pointer transition-all duration-200 h-32 ${
                             isDisponible 
                               ? 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/30' 
                               : 'border-red-200 bg-red-50/30'
                           }`}
+                          title={evento.titulo_charla} // Tooltip con título completo
                         >
                           {/* Header del evento con país */}
                           <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-lg">{getCountryFlag(evento.pais)}</span>
+                            <div className="flex items-center space-x-1">
+                              <span className="text-sm">{getCountryFlag(evento.pais)}</span>
                               <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                                 {evento.pais}
                               </span>
                             </div>
                             <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Eye className="h-4 w-4 text-blue-500" />
+                              <Eye className="h-3 w-3 text-blue-500" />
                             </div>
                           </div>
 
                           {/* Título del evento */}
-                          <h4 className={`text-sm font-semibold mb-1 line-clamp-2 leading-tight ${
+                          <h4 className={`text-xs font-semibold mb-1 leading-tight ${
                             isDisponible ? 'text-gray-900' : 'text-gray-500'
                           }`}>
-                            {evento.titulo_charla}
+                            {truncateTitle(evento.titulo_charla, 30)}
                           </h4>
 
                           {/* Expositor */}
                           <p className={`text-xs mb-2 truncate ${
                             isDisponible ? 'text-gray-600' : 'text-gray-400'
                           }`}>
-                            {evento.expositor}
+                            {truncateTitle(evento.expositor, 25)}
                           </p>
 
                           {/* Footer con ocupación */}

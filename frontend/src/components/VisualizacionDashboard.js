@@ -30,6 +30,7 @@ const RegistrosPorCharlaChart = lazy(() => import('./charts/RegistrosPorCharlaCh
 const EstadisticasAvanzadas = lazy(() => import('./charts/EstadisticasAvanzadas'));
 const CharlaDetailModal = lazy(() => import('./charts/CharlaDetailModal'));
 const EventsGridVisualization = lazy(() => import('./charts/EventsGridVisualization'));
+const UserCharlasModal = lazy(() => import('./charts/UserCharlasModal'));
 
 const VisualizacionDashboard = () => {
   // Estados principales
@@ -67,6 +68,10 @@ const VisualizacionDashboard = () => {
   // Estado para modal de detalles de charla
   const [showCharlaModal, setShowCharlaModal] = useState(false);
   const [selectedCharla, setSelectedCharla] = useState(null);
+  
+  // Estado para modal de charlas del usuario
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   // === ESTADO Y LÓGICA PARA NAVEGACIÓN DE FECHAS (como en AdminDashboard) ===
   const [currentDateIndex, setCurrentDateIndex] = useState(0);
@@ -212,6 +217,12 @@ const VisualizacionDashboard = () => {
     
     // Cerrar modal
     setShowCharlaModal(false);
+  }, []);
+
+  // Manejar click en usuario para ver sus charlas (memoizado)
+  const handleUserClick = useCallback((usuario) => {
+    setSelectedUser(usuario);
+    setShowUserModal(true);
   }, []);
 
   // Limpiar filtro de charla al cambiar de tab
@@ -596,20 +607,24 @@ const VisualizacionDashboard = () => {
                   <h3 className="text-lg font-semibold text-gray-900">
                     Lista de Registrados ({registrosFiltrados.length})
                   </h3>
-                  {filtros.charlaFiltro && (
-                    <div className="mt-1 flex items-center space-x-2">
-                      <span className="text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded flex items-center space-x-1">
+                  <div className="mt-1 flex items-center space-x-4">
+                    <span className="text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded flex items-center space-x-1">
+                      <UserCheck className="h-3 w-3" />
+                      <span>👆 Clickeable - Haz clic en cualquier registro para ver sus charlas</span>
+                    </span>
+                    {filtros.charlaFiltro && (
+                      <span className="text-sm text-green-600 bg-green-100 px-2 py-1 rounded flex items-center space-x-1">
                         <Users className="h-3 w-3" />
                         <span>Filtrado por charla: "{filtros.charlaFiltro}"</span>
                         <button
                           onClick={() => setFiltros(prev => ({ ...prev, charlaFiltro: '' }))}
-                          className="ml-1 text-blue-700 hover:text-blue-900"
+                          className="ml-1 text-green-700 hover:text-green-900"
                         >
                           <X className="h-3 w-3" />
                         </button>
                       </span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={() => setMostrarFiltros(!mostrarFiltros)}
@@ -683,51 +698,60 @@ const VisualizacionDashboard = () => {
 
               {/* Tabla de registros */}
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
+                <table className="w-full table-fixed divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '35%' }}>
                         Usuario
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '20%' }}>
                         Empresa
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '20%' }}>
                         Cargo
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>
                         Fecha Registro
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '10%' }}>
                         Charlas
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {registrosFiltrados.slice(0, 50).map((registro, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                      <tr 
+                        key={index} 
+                        className="hover:bg-blue-50 cursor-pointer transition-colors"
+                        onClick={() => handleUserClick(registro)}
+                        title="Haz clic para ver las charlas registradas"
+                      >
+                        <td className="px-4 py-4">
                           <div className="flex items-center">
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{registro.nombres}</div>
-                              <div className="text-sm text-gray-500">{registro.correo}</div>
+                            <div className="ml-2">
+                              <div className="text-sm font-medium text-gray-900 truncate">{registro.nombres}</div>
+                              <div className="text-xs text-gray-500 truncate">{registro.correo}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{registro.empresa}</div>
+                        <td className="px-4 py-4">
+                          <div className="text-sm text-gray-900 truncate" title={registro.empresa}>
+                            {registro.empresa}
+                          </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{registro.cargo}</div>
+                        <td className="px-4 py-4">
+                          <div className="text-sm text-gray-900 truncate" title={registro.cargo}>
+                            {registro.cargo}
+                          </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
+                        <td className="px-4 py-4">
+                          <div className="text-xs text-gray-900">
                             {visualizacionUtils.formatearFecha(registro.fecha_registro)}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            {visualizacionUtils.formatearEventos(registro.eventos).length} charlas
+                        <td className="px-4 py-4 text-center">
+                          <div className="text-sm font-semibold text-blue-600">
+                            {visualizacionUtils.formatearEventos(registro.eventos).length}
                           </div>
                         </td>
                       </tr>
@@ -765,6 +789,15 @@ const VisualizacionDashboard = () => {
           charla={selectedCharla}
           registrados={registros}
           onVerRegistrados={handleVerRegistrados}
+        />
+      </Suspense>
+
+      {/* User Charlas Modal */}
+      <Suspense fallback={null}>
+        <UserCharlasModal
+          isOpen={showUserModal}
+          onClose={() => setShowUserModal(false)}
+          usuario={selectedUser}
         />
       </Suspense>
     </div>

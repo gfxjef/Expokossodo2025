@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "titulo": "Base de Datos de Charlas - ExpoKossodo 2025",
+    "descripcion": "Información completa de todas las charlas y eventos de ExpoKossodo 2025",
+    "fecha_generacion": "2025-07-12T15:22:02.930855",
+    "version": "1.0",
+    "total_registros": 48,
+    "campos_incluidos": [
+      "id",
+      "titulo",
+      "descripcion",
+      "expositor",
+      "marca",
+      "sala",
+      "fecha",
+      "hora",
+      "pais",
+      "imagen_url",
+      "slots_disponibles",
+      "slots_ocupados",
+      "disponible",
+      "slug",
+      "fecha_creacion",
+      "marca_info"
+    ]
+  },
+  "estadisticas": {
+    "total_charlas": 48,
+    "charlas_disponibles": 42,
+    "charlas_con_registros": 39,
+    "distribución_por_fecha": {
+      "2025-09-02": 16,
+      "2025-09-03": 16,
+      "2025-09-04": 16
+    },
+    "distribución_por_sala": {
+      "sala1": 12,
+      "sala2": 12,
+      "sala3": 12,
+      "sala5": 12
+    },
+    "distribución_por_marca": {
+      "VACUUBRAND": 3,
+      "VELP": 3,
+      "Sin marca": 6,
+      "KOSSOMET": 8,
+      "BINDER": 7,
+      "LAUDA": 2,
+      "CAMAG": 2,
+      "SARTORIUS": 9,
+      "AMS": 2,
+      "EVIDENT": 3,
+      "ESCO": 2,
+      "ANALITYCCHEM": 1
+    },
+    "distribución_por_país": {
+      "Alemania": 3,
+      "Argentina": 16,
+      "Perú": 15,
+      "Brasil": 1,
+      "Venezuela": 3,
+      "Suiza": 2,
+      "España": 2,
+      "Colombia": 2,
+      "Brazil": 1,
+      "Argentina ": 1
+    },
+    "última_extracción": "2025-07-12T15:22:02.930855"
+  }
+}
