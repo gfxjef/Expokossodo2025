@@ -49,6 +49,9 @@ function App() {
           {/* Ruta directa a charlas específicas */}
           <Route path="/charla/:slug" element={<EventRegistrationWithLanding />} />
           
+          {/* Ruta directa para registro */}
+          <Route path="/registrate" element={<EventRegistrationWithLanding />} />
+          
           {/* Redirección por defecto */}
           <Route path="*" element={<EventRegistrationWithLanding />} />
         </Routes>

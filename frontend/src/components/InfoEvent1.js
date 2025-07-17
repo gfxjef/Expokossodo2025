@@ -96,6 +96,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
   // Estados para auto-hover automático
   const [isAutoHoverActive, setIsAutoHoverActive] = useState(true);
   const [autoHoverIndex, setAutoHoverIndex] = useState(0);
+  const [userHasInteracted, setUserHasInteracted] = useState(false); // Nuevo estado para rastrear interacción
   const autoHoverTimerRef = useRef(null);
   const userInteractionTimeoutRef = useRef(null);
   
@@ -270,7 +271,8 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
 
   // Auto-hover automático cada 3 segundos
   useEffect(() => {
-    if (!isAutoHoverActive) return;
+    // Si el usuario ya ha interactuado, no activar auto-hover
+    if (!isAutoHoverActive || userHasInteracted) return;
 
     const startAutoHover = () => {
       autoHoverTimerRef.current = setInterval(() => {
@@ -295,7 +297,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
         clearInterval(autoHoverTimerRef.current);
       }
     };
-  }, [isAutoHoverActive]);
+  }, [isAutoHoverActive, userHasInteracted]); // Agregado userHasInteracted como dependencia
 
   // Cleanup de timers al desmontar
   useEffect(() => {
@@ -1284,6 +1286,9 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
                 viewport={{ once: true }}
                 whileHover={{ y: -8, transition: { duration: 0.2, ease: "easeOut" } }}
                 onHoverStart={() => {
+                  // Marcar que el usuario ha interactuado (desactiva auto-hover permanentemente)
+                  setUserHasInteracted(true);
+                  
                   // Pausar auto-hover cuando el usuario interactúa
                   setIsAutoHoverActive(false);
                   if (autoHoverTimerRef.current) {
@@ -1310,15 +1315,8 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
                     clearTimeout(debounceTimerRef.current);
                   }
 
-                  // Reanudar auto-hover después de 10 segundos de inactividad
-                  userInteractionTimeoutRef.current = setTimeout(() => {
-                    setIsAutoHoverActive(true);
-                    // Actualizar el índice actual basado en la tarjeta activa
-                    const currentCardIndex = eventCards.findIndex(c => c.id === activeCard);
-                    if (currentCardIndex !== -1) {
-                      setAutoHoverIndex(currentCardIndex);
-                    }
-                  }, 10000); // Reanudar después de 10 segundos
+                  // Ya no se reactiva el auto-hover - el usuario ha interactuado
+                  // Una vez que el usuario interactúa, el auto-hover queda desactivado permanentemente
                 }}
                 onClick={() => {
                   // En móvil, toggle del acordeón
@@ -1333,7 +1331,8 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
                   expandedCardMobile === card.id ? 'border-[#6cb79a]' : ''
                 } ${
                   // Auto-hover activo: efecto de resplandor pulsante PERSONALIZADO con borde grueso
-                  isAutoHoverActive && eventCards[autoHoverIndex]?.id === card.id
+                  // Solo se activa si no ha habido interacción del usuario
+                  isAutoHoverActive && !userHasInteracted && eventCards[autoHoverIndex]?.id === card.id
                     ? 'border-2 animate-glow-pulse scale-[1.01]'
                     : 'border-white'
                 } ${
@@ -1343,7 +1342,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
                     : ''
                 } ${
                   // Hover CSS adicional para cuando no hay auto-hover ni manual hover
-                  !isAutoHoverActive || (eventCards[autoHoverIndex]?.id !== card.id && hoveredCard !== card.id)
+                  (!isAutoHoverActive || userHasInteracted || (eventCards[autoHoverIndex]?.id !== card.id && hoveredCard !== card.id))
                     ? 'hover:border-[#6cb79a] hover:border-2 hover:shadow-[0_0_20px_rgba(108,183,154,0.5)] hover:scale-[1.05]'
                     : ''
                 }`}>

@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import ReactFullpage from '@fullpage/react-fullpage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import LandingPage from './LandingPage';
 import InfoEvent1 from './InfoEvent1';
 import EventRegistration from './EventRegistration';
@@ -13,6 +13,7 @@ import { utils, eventService } from '../services/api';
 const EventRegistrationWithLanding = () => {
   const fullpageRef = useRef(null);
   const { slug } = useParams(); // Capturar slug de la URL
+  const location = useLocation(); // Capturar la ruta actual
 
   // === ESTADO Y LÓGICA CENTRALIZADOS ===
   const [isRegistrationActive, setIsRegistrationActive] = useState(false);
@@ -52,6 +53,21 @@ const EventRegistrationWithLanding = () => {
       }, 100); // Pequeño delay para asegurar que fullpage esté listo
     }
   }, [slug, fullpageRef.current]); // Dependencias: slug y fullpageRef
+
+  // Detectar ruta /registrate y auto-navegar
+  useEffect(() => {
+    if (location.pathname === '/registrate' && fullpageRef.current?.fullpageApi) {
+      console.log('🎯 Ruta /registrate detectada');
+      
+      // Auto-navegar a sección de registro (índice 3)
+      setTimeout(() => {
+        if (fullpageRef.current?.fullpageApi) {
+          fullpageRef.current.fullpageApi.moveTo(3);
+          console.log('🚀 Auto-navegando a sección de registro desde /registrate');
+        }
+      }, 100); // Pequeño delay para asegurar que fullpage esté listo
+    }
+  }, [location.pathname, fullpageRef.current]); // Dependencias: pathname y fullpageRef
 
   const loadEvents = async () => {
     try {
