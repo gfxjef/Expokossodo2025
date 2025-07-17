@@ -50,7 +50,7 @@ const EventRegistrationWithLanding = () => {
             loadEventBySlug(slug);
           }, 500); // Pequeño delay para que termine la navegación
         }
-      }, 100); // Pequeño delay para asegurar que fullpage esté listo
+      }, 20); // Pequeño delay para asegurar que fullpage esté listo
     }
   }, [slug, fullpageRef.current]); // Dependencias: slug y fullpageRef
 
@@ -65,7 +65,7 @@ const EventRegistrationWithLanding = () => {
           fullpageRef.current.fullpageApi.moveTo(3);
           console.log('🚀 Auto-navegando a sección de registro desde /registrate');
         }
-      }, 100); // Pequeño delay para asegurar que fullpage esté listo
+      }, 20); // Pequeño delay para asegurar que fullpage esté listo
     }
   }, [location.pathname, fullpageRef.current]); // Dependencias: pathname y fullpageRef
 
