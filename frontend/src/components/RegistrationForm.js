@@ -438,7 +438,7 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
             <ul className="text-sm text-[#01295c] space-y-1">
               <li>• Recibirás un email de confirmación inmediatamente</li>
               <li>• Tu registro incluye acceso a {selectedEvents.length} evento(s) seleccionado(s)</li>
-              <li>• El evento se realizará del  2 al 5 de Septiembre de 2025</li>
+              <li>• El evento se realizará del  2 al 4 de Septiembre de 2025</li>
               <li>• En caso de dudas, contacta a: jcamacho@kossodo.com</li>
             </ul>
           </div>
