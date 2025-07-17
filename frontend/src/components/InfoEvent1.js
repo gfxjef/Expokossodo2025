@@ -867,7 +867,7 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
         // Array de expositores con códigos de país
         const expositores = [
           
-          { id: 7, nombre: "Jhonny Quispe", empresa: "KOSSOMET", imagen: "https://i.ibb.co/4njcfDPD/Quispe.webp", pais: "PE" },
+          { id: 7, nombre: "Jhonny Quispe", empresa: "KOSSOMET", imagen: "https://i.ibb.co/fzNhy6Sc/hgoasd.webp", pais: "PE" },
           { id: 1, nombre: "PhD. Fernando Vargas", empresa: "BINDER", imagen: "https://i.ibb.co/q32hWpYT/Fernando-Vargas.webp", pais: "PE" },
           { id: 1, nombre: "Pablo Scarpin", empresa: "VELP", imagen: "https://i.ibb.co/TMCXBVs2/pablo.webp", pais: "AR" },
           { id: 1, nombre: "Andre Sautchuk", empresa: "LAUDA", imagen: "https://i.ibb.co/rfLn38YJ/Andre-Sautchuk.webp", pais: "BR" },
@@ -883,8 +883,8 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
 
           { id: 4, nombre: "Fis. Wilmer Matta", empresa: "KOSSODO", imagen: "https://i.ibb.co/Ld0hHVr4/Wilmer-Matta.webp", pais: "PE" },
           { id: 5, nombre: "Edwin Aparicio", empresa: "KOSSOMET", imagen: "https://i.ibb.co/Jjhx1wJj/Edwin-Aparicio.webp", pais: "PE" },
-          { id: 6, nombre: "Lic. Luis E. Urbano", empresa: "KOSSOMET", imagen: "https://i.ibb.co/FLzptB6z/Urbano.webp", pais: "PE" },
-          { id: 8, nombre: "Diether Aguire", empresa: "KOSSOMET", imagen: "https://i.ibb.co/TqmSF064/deither.webp", pais: "PE" },
+          { id: 6, nombre: "Lic. Luis E. Urbano", empresa: "KOSSOMET", imagen: "https://i.ibb.co/9SsCCZ5/Urbano.webp", pais: "PE" },
+          { id: 8, nombre: "Diether Aguire", empresa: "KOSSOMET", imagen: "https://i.ibb.co/Vp0s8Wxy/deither.webp", pais: "PE" },
           { id: 9, nombre: "Daniel Torres", empresa: "KOSSOMET", imagen: "https://i.ibb.co/fVBHfWQ8/daniel-torres.webp", pais: "VE" },
         ];
         
