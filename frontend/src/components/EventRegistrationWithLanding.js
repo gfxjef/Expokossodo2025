@@ -396,19 +396,31 @@ const EventRegistrationWithLanding = () => {
                         </button>
                       </div>
                     ) : selectedEventInfo.disponible ? (
-                      <button 
-                        onClick={() => {
-                          handleEventSelect(selectedEventInfo);
-                          handleCloseEventInfo();
-                        }}
-                        className="w-full bg-[#6cb79a] hover:bg-[#5aa485] text-white py-5 px-6 rounded-xl font-bold transition-all duration-300 text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-                      >
-                        Seleccionar Evento
-                      </button>
+                      <>
+                        <button 
+                          onClick={() => {
+                            handleEventSelect(selectedEventInfo);
+                            handleCloseEventInfo();
+                          }}
+                          className="w-full bg-[#6cb79a] hover:bg-[#5aa485] text-white py-5 px-6 rounded-xl font-bold transition-all duration-300 text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                        >
+                          Seleccionar Evento
+                        </button>
+                        {/* Texto instructivo solo para móviles */}
+                        <p className="mt-3 text-center text-sm text-[#6cb79a]/70 md:hidden leading-relaxed">
+                          Dale click a "Seleccionar Evento" para separar un cupo disponible y luego culminar el registro
+                        </p>
+                      </>
                     ) : (
-                      <button className="w-full bg-gray-600 text-white py-5 px-6 rounded-xl font-bold text-lg cursor-not-allowed" disabled>
-                        Sin cupos disponibles
-                      </button>
+                      <>
+                        <button className="w-full bg-gray-600 text-white py-5 px-6 rounded-xl font-bold text-lg cursor-not-allowed" disabled>
+                          Sin cupos disponibles
+                        </button>
+                        {/* Texto instructivo solo para móviles */}
+                        <p className="mt-3 text-center text-sm text-gray-400 md:hidden leading-relaxed">
+                          Este evento no tiene cupos disponibles. Selecciona otro evento para continuar.
+                        </p>
+                      </>
                     )}
                   </div>
                 </div>
