@@ -276,8 +276,8 @@ const EventRegistrationWithLanding = () => {
               className="fixed left-0 top-0 h-screen w-full max-w-md bg-gradient-to-b from-[#01295c] to-[#1d2236] shadow-2xl z-[110] flex flex-col"
             >
               {/* === ÁREA DE CONTENIDO SCROLLEABLE === */}
-              <div className="flex-1 overflow-y-auto min-h-0">
-                <div className="p-6 pb-24">
+              <div className="flex-1 overflow-y-auto pb-24 md:pb-28">
+                <div className="p-6">
                   {/* Header del panel */}
                   <div className="flex items-center justify-between mb-6">
                     {/* Logo de la marca del evento o logo de ExpoKossodo como fallback */}
@@ -382,7 +382,7 @@ const EventRegistrationWithLanding = () => {
               </div>
 
               {/* === BOTÓN DE ACCIÓN FIJO (STICKY) === */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-[#01295c]/95 backdrop-blur-sm border-t border-white/20">
+              <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-[#01295c]/95 backdrop-blur-sm border-t border-white/20 shadow-lg">
                 {selectedEvents.some(event => event.id === selectedEventInfo.id) ? (
                   <div className="flex w-full rounded-lg overflow-hidden border border-[#6cb79a]">
                     <div className="flex-1 bg-[#6cb79a]/20 text-[#6cb79a] py-3 px-4 flex items-center justify-center font-bold text-lg">
