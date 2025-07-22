@@ -594,6 +594,25 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                   }
                 />
               </div>
+
+              {/* Botón adicional "Culminar registro" - Solo visible cuando hay eventos seleccionados */}
+              {selectedEvents.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6"
+                >
+                  <motion.button
+                    onClick={proceedToRegistration}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full bg-[#6cb79a] hover:bg-[#5aa485] text-white px-6 py-4 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+                  >
+                    <Users className="h-5 w-5" />
+                    <span>Culminar Registro</span>
+                  </motion.button>
+                </motion.div>
+              )}
               
               {/* Botones de navegación mejorados - Solo visible en desktop */}
               <div className="hidden md:flex mt-4 md:mt-8 justify-between items-center relative z-20">
