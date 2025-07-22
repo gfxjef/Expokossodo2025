@@ -276,7 +276,7 @@ const EventRegistrationWithLanding = () => {
               className="fixed left-0 top-0 h-screen w-full max-w-md bg-gradient-to-b from-[#01295c] to-[#1d2236] shadow-2xl z-[110] flex flex-col"
             >
               {/* === ÁREA DE CONTENIDO SCROLLEABLE === */}
-              <div className="flex-1 overflow-y-auto pb-24 md:pb-28">
+              <div className="flex-1 overflow-y-auto">
                 <div className="p-6">
                   {/* Header del panel */}
                   <div className="flex items-center justify-between mb-6">
@@ -378,40 +378,40 @@ const EventRegistrationWithLanding = () => {
                       </ReactMarkdown>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* === BOTÓN DE ACCIÓN FIJO (STICKY) === */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-[#01295c]/95 backdrop-blur-sm border-t border-white/20 shadow-lg">
-                {selectedEvents.some(event => event.id === selectedEventInfo.id) ? (
-                  <div className="flex w-full rounded-lg overflow-hidden border border-[#6cb79a]">
-                    <div className="flex-1 bg-[#6cb79a]/20 text-[#6cb79a] py-3 px-4 flex items-center justify-center font-bold text-lg">
-                      <CheckCircle className="h-6 w-6 mr-3" />
-                      <span>Seleccionado</span>
-                    </div>
-                    <button
-                      onClick={() => handleEventSelect(selectedEventInfo)}
-                      className="w-20 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition-colors group"
-                      title="Remover selección"
-                    >
-                      <X className="h-6 w-6 group-hover:scale-110 transition-transform" />
-                    </button>
+                  {/* === BOTÓN DE ACCIÓN DENTRO DEL SCROLL === */}
+                  <div className="mt-8">
+                    {selectedEvents.some(event => event.id === selectedEventInfo.id) ? (
+                      <div className="flex w-full rounded-lg overflow-hidden border border-[#6cb79a]">
+                        <div className="flex-1 bg-[#6cb79a]/20 text-[#6cb79a] py-4 px-6 flex items-center justify-center font-bold text-lg">
+                          <CheckCircle className="h-6 w-6 mr-3" />
+                          <span>Seleccionado</span>
+                        </div>
+                        <button
+                          onClick={() => handleEventSelect(selectedEventInfo)}
+                          className="w-20 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition-colors group"
+                          title="Remover selección"
+                        >
+                          <X className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                        </button>
+                      </div>
+                    ) : selectedEventInfo.disponible ? (
+                      <button 
+                        onClick={() => {
+                          handleEventSelect(selectedEventInfo);
+                          handleCloseEventInfo();
+                        }}
+                        className="w-full bg-[#6cb79a] hover:bg-[#5aa485] text-white py-5 px-6 rounded-xl font-bold transition-all duration-300 text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                      >
+                        Seleccionar Evento
+                      </button>
+                    ) : (
+                      <button className="w-full bg-gray-600 text-white py-5 px-6 rounded-xl font-bold text-lg cursor-not-allowed" disabled>
+                        Sin cupos disponibles
+                      </button>
+                    )}
                   </div>
-                ) : selectedEventInfo.disponible ? (
-                  <button 
-                    onClick={() => {
-                      handleEventSelect(selectedEventInfo);
-                      handleCloseEventInfo();
-                    }}
-                    className="w-full bg-[#6cb79a] hover:bg-[#5aa485] text-white py-3 px-4 rounded-lg font-bold transition-colors text-lg"
-                  >
-                    Seleccionar Evento
-                  </button>
-                ) : (
-                  <button className="w-full bg-gray-600 text-white py-3 px-4 rounded-lg font-bold text-lg cursor-not-allowed" disabled>
-                    Sin cupos disponibles
-                  </button>
-                )}
+                </div>
               </div>
             </motion.div>
           </>
