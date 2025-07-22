@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Calendar, Users, MapPin, Globe, Clock, Check
 import { toast } from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import { eventService, utils } from '../services/api';
+import { analyticsService } from '../services/analytics';
 import EventCalendar from './EventCalendar';
 import RegistrationForm from './RegistrationForm';
 import LoadingSpinner from './LoadingSpinner';
@@ -206,6 +207,7 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
       
       await eventService.createRegistration(registrationData);
       
+      analyticsService.trackRegistration(selectedEvents.length, formData.tipo_usuario || 'general');
       toast.success('¡Registro completado exitosamente! Revisa tu email para la confirmación.');
       
       // Resetear el formulario - Llamada a la función del padre
@@ -218,7 +220,7 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
       
     } catch (error) {
       console.error('Registration error:', error);
-      
+      analyticsService.trackFormError('Registro', error.message || 'Error desconocido');
       // Manejar específicamente el error de correo electrónico duplicado
       let errorMessage = error.message || 'Error en el registro';
       

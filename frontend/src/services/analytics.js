@@ -1,7 +1,7 @@
 import ReactGA from 'react-ga4';
 
-// ID de Google Analytics - usar variable de entorno o valor por defecto
-const GA_MEASUREMENT_ID = process.env.REACT_APP_GA_MEASUREMENT_ID || 'G-EPRBXXTWTM';
+// ID de Google Analytics - usar solo variable de entorno
+const GA_MEASUREMENT_ID = process.env.REACT_APP_GA_MEASUREMENT_ID;
 
 /**
  * Servicio de Google Analytics para ExpoKossodo 2025

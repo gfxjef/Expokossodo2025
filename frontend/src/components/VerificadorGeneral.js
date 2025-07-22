@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import QRScanner from './QRScanner';
+import { analyticsService } from '../services/analytics';
 
 const VerificadorGeneral = () => {
   const [userData, setUserData] = useState(null);
@@ -30,11 +31,13 @@ const VerificadorGeneral = () => {
 
       setUserData(data);
       setSuccess('✅ Usuario encontrado exitosamente');
+      analyticsService.trackQRVerification('General', 'Usuario Encontrado');
 
     } catch (error) {
       console.error('Error:', error);
       setError(error.message);
       setUserData(null);
+      analyticsService.trackQRVerification('General', 'Error: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -66,7 +69,7 @@ const VerificadorGeneral = () => {
       }
 
       setSuccess('🎉 ¡Asistencia confirmada exitosamente!');
-      
+      analyticsService.trackQRVerification('General', 'Asistencia Confirmada');
       // Actualizar estado local
       setUserData(prev => ({
         ...prev,
@@ -80,6 +83,7 @@ const VerificadorGeneral = () => {
     } catch (error) {
       console.error('Error:', error);
       setError(error.message);
+      analyticsService.trackQRVerification('General', 'Error Confirmación: ' + error.message);
     } finally {
       setLoading(false);
     }

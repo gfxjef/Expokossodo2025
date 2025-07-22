@@ -9,6 +9,7 @@ import EventRegistration from './EventRegistration';
 import { Calendar, Clock, Globe, Users, CheckCircle, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { utils, eventService } from '../services/api';
+import { analyticsService } from '../services/analytics';
 
 const EventRegistrationWithLanding = () => {
   const fullpageRef = useRef(null);
@@ -139,6 +140,7 @@ const EventRegistrationWithLanding = () => {
     if (isSelected) {
       setSelectedEvents(currentEvents => currentEvents.filter(event => event.id !== eventData.id));
       toast.success('Evento deseleccionado');
+      analyticsService.trackEventDeselection(eventData.titulo_charla);
       return;
     }
     
@@ -152,6 +154,7 @@ const EventRegistrationWithLanding = () => {
       );
       setSelectedEvents([...updatedEvents, eventData]);
       toast.success(`Evento intercambiado para el horario ${eventData.hora}.`);
+      analyticsService.trackEventSelection(eventData.titulo_charla, eventData.fecha, eventData.hora);
     } else {
       if (!eventData.disponible) {
         toast.error('Este evento ya no tiene cupos disponibles.');
@@ -159,6 +162,7 @@ const EventRegistrationWithLanding = () => {
       }
       setSelectedEvents(currentEvents => [...currentEvents, eventData]);
       toast.success('Evento seleccionado!');
+      analyticsService.trackEventSelection(eventData.titulo_charla, eventData.fecha, eventData.hora);
     }
   };
 
