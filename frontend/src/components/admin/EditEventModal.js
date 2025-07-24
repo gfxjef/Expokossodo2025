@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Calendar, Clock, MapPin, Globe, User, FileText, Image, AlertCircle, ToggleRight, Building2 } from 'lucide-react';
+import { X, Save, Calendar, Clock, MapPin, Globe, User, FileText, Image, AlertCircle, ToggleRight, Building2, Tag } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import { adminService, adminValidators } from '../../services/adminService';
@@ -13,7 +13,8 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
     descripcion: '',
     imagen_url: '',
     disponible: true,
-    marca_id: null
+    marca_id: null,
+    rubro: []
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -30,7 +31,8 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
         descripcion: evento.descripcion || '',
         imagen_url: evento.imagen_url || '',
         disponible: evento.disponible !== undefined ? evento.disponible : true,
-        marca_id: evento.marca_id || null
+        marca_id: evento.marca_id || null,
+        rubro: evento.rubro || []
       });
     }
   }, [evento]);
@@ -267,6 +269,50 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
                     </p>
                   </div>
 
+                  {/* Rubro - Selección Múltiple */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Tag className="h-4 w-4 inline mr-1" />
+                      Rubro(s) *
+                    </label>
+                    <div className="space-y-2">
+                      {[
+                        'Salud',
+                        'Química & Petrolera',
+                        'Educación',
+                        'Aguas y bebidas',
+                        'Farmacéutica',
+                        'Alimentos',
+                        'Minería',
+                        'Pesquera'
+                      ].map((rubro) => (
+                        <label key={rubro} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.rubro.includes(rubro)}
+                            onChange={(e) => {
+                              const newRubros = e.target.checked
+                                ? [...formData.rubro, rubro]
+                                : formData.rubro.filter(r => r !== rubro);
+                              handleInputChange('rubro', newRubros);
+                            }}
+                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                          />
+                          <span className="text-sm font-medium text-gray-700">{rubro}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {formData.rubro.length === 0 && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        Debes seleccionar al menos un rubro
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      Selecciona uno o más rubros que correspondan a esta charla
+                    </p>
+                  </div>
+
                   {/* Disponibilidad del evento */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -389,6 +435,24 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
                           <Building2 className="h-4 w-4 inline mr-1" />
                           {marcas.find(m => m.id === formData.marca_id)?.marca || 'Marca'}
                         </p>
+                      )}
+                      {formData.rubro && formData.rubro.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-sm text-gray-600 font-medium mb-2">
+                            <Tag className="h-4 w-4 inline mr-1" />
+                            Rubros:
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {formData.rubro.map((rubro) => (
+                              <span
+                                key={rubro}
+                                className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full font-medium"
+                              >
+                                {rubro}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       )}
                       <div className="prose prose-sm max-w-none">
                         <ReactMarkdown

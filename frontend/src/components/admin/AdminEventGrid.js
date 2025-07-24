@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Edit3, Clock, MapPin, Users, Globe, Image, ToggleLeft, ToggleRight, AlertCircle } from 'lucide-react';
+import { Edit3, Clock, MapPin, Users, Globe, Image, ToggleLeft, ToggleRight, AlertCircle, Tag } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { adminUtils, adminService } from '../../services/adminService';
 import EditEventModal from './EditEventModal';
@@ -202,6 +202,27 @@ const AdminEventGrid = ({ eventos, fecha, onEventUpdate }) => {
                           }`}>
                             {evento.expositor}
                           </p>
+
+                          {/* Rubros */}
+                          {Array.isArray(evento.rubro) && evento.rubro.length > 0 && (
+                            <div className="mb-2">
+                              <div className="flex flex-wrap gap-1">
+                                {evento.rubro.slice(0, 2).map((rubro) => (
+                                  <span
+                                    key={rubro}
+                                    className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded font-medium"
+                                  >
+                                    {rubro}
+                                  </span>
+                                ))}
+                                {evento.rubro.length > 2 && (
+                                  <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded font-medium">
+                                    +{evento.rubro.length - 2}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Footer con ocupación */}
                           <div className="flex items-center justify-between">

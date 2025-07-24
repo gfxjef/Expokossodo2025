@@ -240,6 +240,31 @@ export const adminValidators = {
     return null;
   },
   
+  // Validar rubro
+  rubro: (value) => {
+    if (!value || !Array.isArray(value) || value.length === 0) {
+      return 'Debes seleccionar al menos un rubro';
+    }
+    
+    const rubrosValidos = [
+      'Salud',
+      'Química & Petrolera',
+      'Educación',
+      'Aguas y bebidas',
+      'Farmacéutica',
+      'Alimentos',
+      'Minería',
+      'Pesquera'
+    ];
+    
+    const rubrosInvalidos = value.filter(rubro => !rubrosValidos.includes(rubro));
+    if (rubrosInvalidos.length > 0) {
+      return `Rubros inválidos: ${rubrosInvalidos.join(', ')}`;
+    }
+    
+    return null;
+  },
+  
   // Validar todo el formulario
   validateEvento: (eventoData) => {
     const errors = {};
@@ -258,6 +283,9 @@ export const adminValidators = {
     
     const imagenError = adminValidators.imagenUrl(eventoData.imagen_url);
     if (imagenError) errors.imagen_url = imagenError;
+    
+    const rubroError = adminValidators.rubro(eventoData.rubro);
+    if (rubroError) errors.rubro = rubroError;
     
     return {
       isValid: Object.keys(errors).length === 0,

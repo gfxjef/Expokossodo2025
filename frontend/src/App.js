@@ -7,6 +7,7 @@ import VerificadorGeneral from './components/VerificadorGeneral';
 import SelectorCharlas from './components/SelectorCharlas';
 import VerificadorSala from './components/VerificadorSala';
 import VisualizacionDashboard from './components/VisualizacionDashboard';
+import AsesoresDashboard from './components/asesores/AsesoresDashboard';
 import ChatWidget from './components/ChatWidget';
 import { analyticsService } from './services/analytics';
 import './index.css';
@@ -31,6 +32,7 @@ function RouteTracker() {
     if (path === '/') return 'Landing Principal';
     if (path === '/admin') return 'Panel Administración';
     if (path === '/visualizacion') return 'Dashboard Visualización';
+    if (path === '/asesores') return 'Panel Asesores';
     if (path.startsWith('/verificar')) return 'Verificación QR';
     if (path.startsWith('/charla/')) return 'Charlas Específicas';
     if (path === '/registrate') return 'Registro Directo';
@@ -87,6 +89,9 @@ function App() {
           
           {/* Ruta de visualización para gestores */}
           <Route path="/visualizacion" element={<VisualizacionDashboard />} />
+          
+          {/* Ruta de asesores */}
+          <Route path="/asesores" element={<AsesoresDashboard />} />
           
           {/* Rutas de verificación QR */}
           <Route path="/verificar" element={<VerificadorGeneral />} />

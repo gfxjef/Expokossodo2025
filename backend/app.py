@@ -393,9 +393,14 @@ def init_database():
                 imagen_url VARCHAR(500),
                 slots_disponibles INT DEFAULT 60,
                 slots_ocupados INT DEFAULT 0,
+                rubro JSON,
+                disponible BOOLEAN DEFAULT TRUE,
+                marca_id INT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_fecha_hora (fecha, hora),
-                INDEX idx_sala (sala)
+                INDEX idx_sala (sala),
+                INDEX idx_rubro ((CAST(rubro AS CHAR(100)))),
+                FOREIGN KEY (marca_id) REFERENCES expokossodo_marcas(id) ON DELETE SET NULL
             )
         """)
         
@@ -1470,7 +1475,7 @@ def get_admin_eventos():
             SELECT 
                 e.id, e.fecha, e.hora, e.sala, e.titulo_charla, e.expositor, e.pais, 
                 e.descripcion, e.imagen_url, e.slots_disponibles, e.slots_ocupados,
-                e.disponible, e.created_at, e.marca_id,
+                e.disponible, e.created_at, e.marca_id, e.rubro,
                 m.marca as marca_nombre, m.logo as marca_logo
             FROM expokossodo_eventos e
             LEFT JOIN expokossodo_marcas m ON e.marca_id = m.id
@@ -1479,12 +1484,22 @@ def get_admin_eventos():
         
         eventos = cursor.fetchall()
         
-        # Organizar por fecha para la interfaz
+        # Organizar por fecha para la interfaz y parsear rubro
         eventos_por_fecha = {}
         for evento in eventos:
             fecha_str = evento['fecha'].strftime('%Y-%m-%d')
             if fecha_str not in eventos_por_fecha:
                 eventos_por_fecha[fecha_str] = []
+            
+            # Parsear rubro de JSON string a array
+            if evento['rubro']:
+                try:
+                    evento['rubro'] = json.loads(evento['rubro'])
+                except (json.JSONDecodeError, TypeError):
+                    evento['rubro'] = []
+            else:
+                evento['rubro'] = []
+            
             eventos_por_fecha[fecha_str].append(evento)
         
         return jsonify(eventos_por_fecha)
@@ -1519,13 +1534,20 @@ def update_evento(evento_id):
         if not cursor.fetchone():
             return jsonify({'error': 'Evento no encontrado'}), 404
         
-        # Actualizar evento - AHORA INCLUYE DISPONIBLE Y MARCA_ID
+        # Actualizar evento - AHORA INCLUYE RUBRO, DISPONIBLE Y MARCA_ID
         update_query = """
             UPDATE expokossodo_eventos 
             SET titulo_charla = %s, expositor = %s, pais = %s, 
-                descripcion = %s, imagen_url = %s, disponible = %s, marca_id = %s
+                descripcion = %s, imagen_url = %s, disponible = %s, marca_id = %s, rubro = %s
             WHERE id = %s
         """
+        
+        # Procesar rubro como JSON
+        rubro_data = data.get('rubro', [])
+        if isinstance(rubro_data, list):
+            rubro_json = json.dumps(rubro_data)
+        else:
+            rubro_json = None
         
         cursor.execute(update_query, (
             data['titulo_charla'],
@@ -1533,8 +1555,9 @@ def update_evento(evento_id):
             data['pais'],
             data.get('descripcion', ''),
             data.get('imagen_url', None),
-            data.get('disponible', True),  # NUEVO CAMPO
-            data.get('marca_id', None),     # NUEVO CAMPO MARCA
+            data.get('disponible', True),
+            data.get('marca_id', None),
+            rubro_json,
             evento_id
         ))
         
