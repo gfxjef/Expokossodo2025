@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, X, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
+import { ChevronDown, X, ChevronLeft, ChevronRight, ChevronUp, MapPin } from 'lucide-react';
 import { eventService } from '../services/api';
 import SimpleMenu from './SimpleMenu';
 
@@ -122,14 +122,29 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
   
   // Estado para la rotación de logos
   const [logoIndex, setLogoIndex] = useState(0);
-  
-  // Debug: Log de props recibidas (solo en desarrollo)
-  // console.log('🎭 InfoEvent1 recibió props:', {
-  //   eventsData,
-  //   loading,
-  //   eventsDataKeys: eventsData ? Object.keys(eventsData) : 'NO_DATA',
-  //   eventsDataType: typeof eventsData
-  // });
+
+  // Estado para el hover del cuadro de ubicación
+  const [isLocationHovered, setIsLocationHovered] = useState(false);
+
+  // Estado para la animación de color de fondo
+  const [colorIndex, setColorIndex] = useState(0);
+
+  // Colores para la animación
+  const colors = ['#1d2237', '#6db69d'];
+
+  // Función para abrir Google Maps
+  const handleOpenLocation = () => {
+    window.open('https://maps.app.goo.gl/23RUxnvSqbNm4wrb8', '_blank');
+  };
+
+  // Animación de color de fondo
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setColorIndex(prev => (prev + 1) % 2);
+    }, 2000); // Cambiar cada 2 segundos
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Datos de las tarjetas para ExpoKossodo 2025
   const eventCards = [
@@ -143,8 +158,8 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
     {
       id: 2,
       image: "https://i.ibb.co/wr45xjsy/mcas.webp",
-      title: "Marcas Participantes",
-      description: "Conoce las principales marcas del sector con sus últimas innovaciones y soluciones tecnológicas para laboratorios.",
+      title: "Grandes Beneficios",
+      description: "Podrá ganar equipos de laboratorio innovadores y asegure un certificado por cada conferencia o taller en la que participe.",
       type: "marcas"
     },
     {
@@ -497,19 +512,51 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
       case 'marcas':
         return (
           <div className="px-4 py-4 bg-white/90 backdrop-blur-sm rounded-b-xl">
-            <h4 className="font-semibold text-gray-800 mb-3 text-center">Marcas Destacadas</h4>
-            <div className="grid grid-cols-3 gap-2">
-              {['CAMAG', 'CHEM', 'AMS', 'EVIDENT', 'ESCO', 'VACUUBRAND'].map((brand) => (
-                <div key={brand} className="bg-gray-50 rounded-lg p-2 text-center">
-                  <span className="text-xs font-medium text-gray-700">{brand}</span>
+            <h4 className="font-semibold text-gray-800 mb-3 text-center">Grandes Beneficios</h4>
+            <div className="space-y-4">
+              {/* Sorteo de equipos */}
+              <div className="bg-white rounded-lg p-4 border-2 border-gray-200 shadow-md">
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src="https://i.ibb.co/LzjSxFJ6/sorteoo.webp"
+                        alt="Sorteo de Equipos"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h5 className="font-semibold text-[#0B3157] text-sm mb-1">Sorteo de Equipos</h5>
+                    <p className="text-xs text-gray-700">Participe en el sorteo de equipos de laboratorio.</p>
+                  </div>
                 </div>
-              ))}
+              </div>
+              
+              {/* Certificados */}
+              <div className="bg-white rounded-lg p-4 border-2 border-gray-200 shadow-md">
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src="https://i.ibb.co/BH2kZXVb/certiciado.webp"
+                        alt="Certificados Oficiales"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h5 className="font-semibold text-[#0B3157] text-sm mb-1">Brindamos Certificados</h5>
+                    <p className="text-xs text-gray-700">Reciba un certificado tras cada charla especializada.</p>
+                  </div>
+                </div>
+              </div>
             </div>
             <button 
               onClick={onScrollToNext}
               className="mt-4 w-full py-2 bg-[#6cb79a] text-white rounded-lg text-sm font-medium"
             >
-              Ver Todas las Marcas
+              Conocer Más Beneficios
             </button>
           </div>
         );
@@ -674,16 +721,6 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
         );
         
       case 'marcas':
-        // Partners con logos coloridos
-        const partners = [
-          { name: 'CAMAG', logo: 'https://i.ibb.co/YFYknC9N/camag-color.webp' },
-          { name: 'EVIDENT', logo: 'https://i.ibb.co/RpHJ7W0C/evident-color.webp' },
-          { name: 'ESCO', logo: 'https://i.ibb.co/wFCJ2RK3/esco-color.webp' },
-          { name: 'VACUUBRAND', logo: 'https://i.ibb.co/8nCL3Ksb/vacubrand-color.webp' },
-          { name: 'SARTORIUS', logo: 'https://i.ibb.co/pYPPZ6m/sartorius-color.webp' },
-          { name: 'LAUDA', logo: 'https://i.ibb.co/GfrzYHYS/lauda-color.webp' }
-        ];
-
         return (
           <motion.div
             key="marcas"
@@ -697,44 +734,84 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
               {/* Header con título */}
               <div className="header text-center mb-8">
                 <h2 className="text-3xl md:text-4xl font-bold text-[#0B3157] mb-4">
-                  Marcas Participantes
+                  Grandes Beneficios
                 </h2>
               </div>
               
-              {/* Content - Dos columnas */}
-              <div className="content flex flex-col lg:flex-row gap-6 lg:gap-8">
-                {/* Columna izquierda - Texto descriptivo */}
-                <div className="column-left flex-1 space-y-4">
-                  <p className="text-gray-700 leading-relaxed text-base md:text-lg">
-                    Exploraremos las prácticas sostenibles en el rubro 
-                    minero, analizando cómo las empresas del sector están 
-                    incorporando tecnologías limpias.
-                  </p>
-                  <p className="text-gray-700 leading-relaxed text-base md:text-lg">
-                    Esta conferencia busca generar un espacio de diálogo y 
-                    aprendizaje en torno a una minería más consciente.
-                  </p>
+              {/* Content - Dos columnas principales */}
+              <div className="content flex flex-col lg:flex-row gap-8 lg:gap-12">
+                {/* Columna izquierda - Sorteo de equipos */}
+                <div className="column-left flex-1">
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className="bg-white rounded-2xl p-6 h-full border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                  >
+                    {/* Layout: Imagen a la izquierda, texto a la derecha */}
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                      {/* Imagen */}
+                      <div className="flex-shrink-0">
+                        <div className="w-32 h-32 md:w-40 md:h-40 rounded-xl overflow-hidden border-2 border-gray-200 shadow-md">
+                          <img
+                            src="https://i.ibb.co/LzjSxFJ6/sorteoo.webp"
+                            alt="Sorteo de Equipos"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.src = "https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80";
+                            }}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Texto */}
+                      <div className="flex-1 text-center md:text-left">
+                        <h3 className="text-xl font-bold text-[#0B3157] mb-3">
+                          Sorteo de Equipos
+                        </h3>
+                        <p className="text-gray-700 leading-relaxed text-base">
+                          Participe en el sorteo de equipos de laboratorio y obtenga recursos que impulsen sus proyectos científicos.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
                 </div>
                 
-                {/* Columna derecha - Logos en grid de 2x3 */}
+                {/* Columna derecha - Certificados */}
                 <div className="column-right flex-1">
-                  <div className="grid grid-cols-3 gap-4 md:gap-6">
-                    {partners.map((partner, index) => (
-                      <motion.div
-                        key={partner.name}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                        className="logo flex items-center justify-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all hover:scale-105 border border-gray-200"
-                      >
-                        <img
-                          src={partner.logo}
-                          alt={partner.name}
-                          className="w-full h-16 object-contain"
-                        />
-                      </motion.div>
-                    ))}
-                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                    className="bg-white rounded-2xl p-6 h-full border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                  >
+                    {/* Layout: Imagen a la izquierda, texto a la derecha */}
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                      {/* Imagen */}
+                      <div className="flex-shrink-0">
+                        <div className="w-32 h-32 md:w-40 md:h-40 rounded-xl overflow-hidden border-2 border-gray-200 shadow-md">
+                          <img
+                            src="https://i.ibb.co/fYwM2GqY/certiciado.webp"
+                            alt="Certificados Oficiales"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.src = "https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80";
+                            }}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Texto */}
+                      <div className="flex-1 text-center md:text-left">
+                        <h3 className="text-xl font-bold text-[#0B3157] mb-3">
+                          Certificacion Kossodo
+                        </h3>
+                        <p className="text-gray-700 leading-relaxed text-base">
+                          Reciba un certificado tras cada charla especializada, validando su formación y su compromiso con la excelencia.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
                 </div>
               </div>
             </div>
@@ -1085,17 +1162,72 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
       {/* Header con menú simple */}
       <div className="absolute top-0 left-0 right-0 z-50 p-6 md:p-8">
         <div className="flex justify-between items-center">
-          {/* Logo */}
-          <div className="flex-shrink-0">
-            <img 
-              src="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
-              alt="EXPO KOSSODO 2025"
-              className="w-32 h-10 md:w-48 md:h-16 object-contain"
-              onError={(e) => {
-                console.log('Error loading header logo image');
-                e.target.style.display = 'none';
-              }}
-            />
+          {/* Logo y botón "Evento Presencial" */}
+          <div className="flex items-center space-x-4 md:space-x-6">
+            {/* Logo */}
+            <div className="flex-shrink-0">
+              <img 
+                src="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
+                alt="EXPO KOSSODO 2025"
+                className="w-32 h-10 md:w-48 md:h-16 object-contain"
+                onError={(e) => {
+                  console.log('Error loading header logo image');
+                  e.target.style.display = 'none';
+                }}
+              />
+            </div>
+            
+            {/* Botón "Evento Presencial" */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <motion.button
+                onMouseEnter={() => setIsLocationHovered(true)}
+                onMouseLeave={() => setIsLocationHovered(false)}
+                onClick={handleOpenLocation}
+                className="group relative transition-all duration-300 rounded-lg px-4 md:px-6 shadow-lg hover:shadow-xl cursor-pointer flex items-center justify-center"
+                style={{
+                  backgroundColor: colors[colorIndex],
+                  height: '48px', // Altura fija más grande
+                  minWidth: '160px' // Ancho mínimo más grande
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <AnimatePresence mode="wait">
+                  {!isLocationHovered ? (
+                    <motion.div
+                      key="evento-presencial"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex items-center space-x-2"
+                    >
+                      <span className="text-white font-semibold text-base md:text-lg whitespace-nowrap">
+                        Evento Presencial
+                      </span>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="abrir-ubicacion"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex items-center space-x-2"
+                    >
+                      <MapPin className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                      <span className="text-white font-semibold text-base md:text-lg whitespace-nowrap">
+                        Abrir Ubicación
+                      </span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            </motion.div>
           </div>
           
           {/* Menú simple */}

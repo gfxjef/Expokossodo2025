@@ -1,9 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, MapPin, Users, Globe, Star, AlertCircle, CheckCircle } from 'lucide-react';
+import { Clock, MapPin, Users, Globe, Star, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { eventService } from '../services/api';
 
-const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect, onShowEventInfo, timeSlots = [], mobileButtons = null }) => {
+const EventCalendar = ({ 
+  eventsData, 
+  currentDate, 
+  selectedEvents, 
+  onEventSelect, 
+  onShowEventInfo, 
+  timeSlots = [], 
+  mobileButtons = null,
+  // Nuevas props para navegación
+  currentDateIndex = 0,
+  totalDates = 3,
+  dateNames = ['Día 1', 'Día 2', 'Día 3'],
+  onNextDate = null,
+  onPreviousDate = null,
+  onDateSelect = null
+}) => {
   const [expandedEvent, setExpandedEvent] = useState(null);
   const [hoveredEvent, setHoveredEvent] = useState(null);
   
@@ -204,6 +219,80 @@ const EventCalendar = ({ eventsData, currentDate, selectedEvents, onEventSelect,
       className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
     >
 
+      {/* Navegación de fechas - Solo en desktop */}
+      {onNextDate && onPreviousDate && (
+        <div className="hidden md:block bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
+          <div className="grid grid-cols-3 items-center pb-4">
+            {/* Columna izquierda - Botón anterior */}
+            <div className="flex justify-start">
+              {currentDateIndex > 0 ? (
+                <motion.button
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  onClick={onPreviousDate}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex items-center space-x-2 px-6 py-3 text-sm font-medium text-white bg-[#1c2237] hover:bg-[#2a3147] rounded-lg transition-all duration-200 shadow-md hover:shadow-lg border border-[#1c2237] hover:border-[#2a3147]"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Fecha Anterior</span>
+                </motion.button>
+              ) : (
+                <div className="w-32"></div>
+              )}
+            </div>
+
+            {/* Columna central - Indicadores de progreso */}
+            <div className="flex flex-col items-center space-y-2">
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-6 w-6 text-[#1c2237]" />
+                <span className="text-xl font-bold text-gray-800">
+                  {dateNames[currentDateIndex]}
+                </span>
+              </div>
+              
+              {/* Indicadores de puntos */}
+              <div className="flex items-center space-x-3">
+                {Array.from({ length: totalDates }, (_, index) => (
+                  <motion.button
+                    key={index}
+                    onClick={() => onDateSelect && onDateSelect(index)}
+                    whileHover={{ scale: 1.3 }}
+                    whileTap={{ scale: 0.9 }}
+                    className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                      index === currentDateIndex 
+                        ? 'bg-[#1c2237] scale-125 shadow-md' 
+                        : index < currentDateIndex
+                          ? 'bg-[#67b699] hover:bg-[#5aa485]'
+                          : 'bg-gray-300 hover:bg-gray-400'
+                    }`}
+                    title={dateNames[index]}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Columna derecha - Botón siguiente */}
+            <div className="flex justify-end">
+              {currentDateIndex < totalDates - 1 ? (
+                <motion.button
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  onClick={onNextDate}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex items-center space-x-2 px-6 py-3 text-sm font-medium text-white bg-[#67b699] hover:bg-[#5aa485] rounded-lg transition-all duration-200 shadow-md hover:shadow-lg border border-[#67b699] hover:border-[#5aa485]"
+                >
+                  <span>Siguiente Fecha</span>
+                  <ChevronRight className="h-4 w-4" />
+                </motion.button>
+              ) : (
+                <div className="w-32"></div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Leyenda con instrucciones */}
       <div className="p-4 bg-gray-50 border-b border-gray-200">

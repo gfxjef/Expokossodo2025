@@ -15,6 +15,29 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
   const [currentStep, setCurrentStep] = useState('calendar'); // 'calendar' | 'registration' | 'success'
   const [currentDateIndex, setCurrentDateIndex] = useState(0);
 
+  // Estado para el hover del cuadro de ubicación
+  const [isLocationHovered, setIsLocationHovered] = useState(false);
+
+  // Estado para la animación de color de fondo
+  const [colorIndex, setColorIndex] = useState(0);
+
+  // Colores para la animación
+  const colors = ['#1d2237', '#6db69d'];
+
+  // Función para abrir Google Maps
+  const handleOpenLocation = () => {
+    window.open('https://maps.app.goo.gl/23RUxnvSqbNm4wrb8', '_blank');
+  };
+
+  // Animación de color de fondo
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setColorIndex(prev => (prev + 1) % 2);
+    }, 2000); // Cambiar cada 2 segundos
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Función para manejar el cambio de sección
   const handleSectionChange = (sectionId) => {
     if (onSectionChange) {
@@ -320,17 +343,72 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
         <header className="relative bg-gradient-to-r from-[#1d2236] to-[#01295c] shadow-lg z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
             <div className="flex items-center justify-between">
-              {/* Logo de EXPO KOSSODO 2025 */}
-              <div className="flex-shrink-0">
-                <img 
-                  src="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
-                  alt="EXPO KOSSODO 2025"
-                  className="w-32 h-10 md:w-48 md:h-16 object-contain"
-                  onError={(e) => {
-                    console.log('Error loading header logo image');
-                    e.target.style.display = 'none';
-                  }}
-                />
+              {/* Logo y botón "Evento Presencial" */}
+              <div className="flex items-center space-x-4 md:space-x-6">
+                {/* Logo de EXPO KOSSODO 2025 */}
+                <div className="flex-shrink-0">
+                  <img 
+                    src="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
+                    alt="EXPO KOSSODO 2025"
+                    className="w-32 h-10 md:w-48 md:h-16 object-contain"
+                    onError={(e) => {
+                      console.log('Error loading header logo image');
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </div>
+                
+                {/* Botón "Evento Presencial" */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                >
+                  <motion.button
+                    onMouseEnter={() => setIsLocationHovered(true)}
+                    onMouseLeave={() => setIsLocationHovered(false)}
+                    onClick={handleOpenLocation}
+                    className="group relative transition-all duration-300 rounded-lg px-4 md:px-6 shadow-lg hover:shadow-xl cursor-pointer flex items-center justify-center"
+                    style={{
+                      backgroundColor: colors[colorIndex],
+                      height: '48px', // Altura fija más grande
+                      minWidth: '160px' // Ancho mínimo más grande
+                    }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <AnimatePresence mode="wait">
+                      {!isLocationHovered ? (
+                        <motion.div
+                          key="evento-presencial"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex items-center space-x-2"
+                        >
+                          <span className="text-white font-semibold text-base md:text-lg whitespace-nowrap">
+                            Evento Presencial
+                          </span>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="abrir-ubicacion"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex items-center space-x-2"
+                        >
+                          <MapPin className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                          <span className="text-white font-semibold text-base md:text-lg whitespace-nowrap">
+                            Abrir Ubicación
+                          </span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                </motion.div>
               </div>
               
               {/* Menú simple */}
@@ -533,6 +611,13 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                   onShowEventInfo={handleShowEventInfo}
                   timeSlots={timeSlots}
                   key={`calendar-${currentDateIndex}`} // Forzar re-render al cambiar fecha
+                  // Nuevas props para navegación de fechas
+                  currentDateIndex={currentDateIndex}
+                  totalDates={eventDates.length}
+                  dateNames={dateNames}
+                  onNextDate={goToNextDate}
+                  onPreviousDate={goToPreviousDate}
+                  onDateSelect={setCurrentDateIndex}
                   mobileButtons={
                     <div className="grid gap-2 items-center" style={{ gridTemplateColumns: '1fr 2fr 1fr' }}>
                       {/* Columna izquierda - Botón anterior */}
@@ -597,111 +682,26 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                 />
               </div>
 
-              {/* Botón adicional "Culminar registro" - Solo visible cuando hay eventos seleccionados */}
+              {/* Botón "Culminar registro" - Solo visible cuando hay eventos seleccionados */}
               {selectedEvents.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-6"
+                  className="mt-8"
                 >
                   <motion.button
                     onClick={proceedToRegistration}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full bg-[#6cb79a] hover:bg-[#5aa485] text-white px-6 py-4 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+                    className="w-full bg-gradient-to-r from-[#6cb79a] to-[#5aa485] hover:from-[#5aa485] hover:to-[#4a9375] text-white px-8 py-5 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-3 text-lg"
                   >
-                    <Users className="h-5 w-5" />
-                    <span>Culminar Registro</span>
+                    <Users className="h-6 w-6" />
+                    <span>Culminar Registro ({selectedEvents.length} eventos)</span>
                   </motion.button>
                 </motion.div>
               )}
               
-              {/* Botones de navegación mejorados - Solo visible en desktop */}
-              <div className="hidden md:flex mt-4 md:mt-8 justify-between items-center relative z-20">
-                <div className="flex space-x-2 md:space-x-3">
-                  {currentDateIndex > 0 && (
-                    <motion.button
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      onClick={goToPreviousDate}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="btn-secondary flex items-center space-x-1 md:space-x-2 group px-[0.55rem] py-[0.55rem] md:px-4 md:py-2 text-xs md:text-base"
-                    >
-                      <ChevronLeft className="h-3.5 w-3.5 md:h-5 md:w-5 group-hover:-translate-x-1 transition-transform" />
-                      <div className="text-left">
-                        <span className="hidden md:block text-sm">Fecha Anterior</span>
-                        <span className="text-xs md:hidden">Día {currentDateIndex}</span>
-                        <span className="hidden md:block text-xs text-gray-500">
-                          {dateNames[currentDateIndex - 1]}
-                        </span>
-                      </div>
-                    </motion.button>
-                  )}
-                </div>
-                
-                {/* Indicadores de navegación */}
-                <div className="flex items-center space-x-2 md:space-x-4">
-                  {/* Indicadores de progreso - Ocultos en móvil */}
-                  <div className="hidden md:flex items-center space-x-2">
-                    {eventDates.map((_, index) => (
-                      <motion.button
-                        key={index}
-                        onClick={() => setCurrentDateIndex(index)}
-                        whileHover={{ scale: 1.2 }}
-                        whileTap={{ scale: 0.9 }}
-                        className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                          index === currentDateIndex 
-                            ? 'bg-primary-600 scale-125' 
-                            : index < currentDateIndex
-                              ? 'bg-primary-300 hover:bg-primary-400'
-                              : 'bg-gray-300 hover:bg-gray-400'
-                        }`}
-                        title={dateNames[index]}
-                      />
-                    ))}
-                  </div>
 
-                  {/* Botón culminar registro */}
-                  <motion.button
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onClick={proceedToRegistration}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="btn-primary flex items-center space-x-1 md:space-x-2 bg-green-600 hover:bg-green-700 px-[0.55rem] py-[0.55rem] md:px-4 md:py-2 text-xs md:text-base"
-                    disabled={selectedEvents.length === 0}
-                  >
-                    <Users className="h-3.5 w-3.5 md:h-5 md:w-5" />
-                    <span>
-                      <span className="hidden md:inline">Culminar Registro</span>
-                      <span className="md:hidden">Cerrar registro</span>
-                    </span>
-                  </motion.button>
-                </div>
-                
-                <div className="flex space-x-2 md:space-x-3">
-                  {currentDateIndex < eventDates.length - 1 && (
-                    <motion.button
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      onClick={goToNextDate}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="btn-primary flex items-center space-x-1 md:space-x-2 group px-[0.55rem] py-[0.55rem] md:px-4 md:py-2 text-xs md:text-base"
-                    >
-                      <div className="text-right">
-                        <span className="hidden md:block text-sm">Siguiente Fecha</span>
-                        <span className="text-xs md:hidden">Día {currentDateIndex + 2}</span>
-                        <span className="hidden md:block text-xs text-blue-200">
-                          {dateNames[currentDateIndex + 1]}
-                        </span>
-                      </div>
-                      <ChevronRight className="h-3.5 w-3.5 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform" />
-                    </motion.button>
-                  )}
-                </div>
-              </div>
               
               {/* Resumen de selecciones */}
               {selectedEvents.length > 0 && (

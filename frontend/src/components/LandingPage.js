@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, MapPin } from 'lucide-react';
 import SimpleMenu from './SimpleMenu';
 
 const LandingPage = ({ onScrollToNext, onSectionChange }) => {
@@ -11,12 +11,35 @@ const LandingPage = ({ onScrollToNext, onSectionChange }) => {
   // Estado para el índice actual de logos
   const [logoIndex, setLogoIndex] = React.useState(0);
 
+  // Estado para el hover del cuadro de ubicación
+  const [isLocationHovered, setIsLocationHovered] = React.useState(false);
+
+  // Estado para la animación de color de fondo
+  const [colorIndex, setColorIndex] = React.useState(0);
+
   // Función para manejar el cambio de sección
   const handleSectionChange = (sectionId) => {
     if (onSectionChange) {
       onSectionChange(sectionId);
     }
   };
+
+  // Función para abrir Google Maps
+  const handleOpenLocation = () => {
+    window.open('https://maps.app.goo.gl/23RUxnvSqbNm4wrb8', '_blank');
+  };
+
+  // Animación de color de fondo
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setColorIndex(prev => (prev + 1) % 2);
+    }, 2000); // Cambiar cada 2 segundos
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Colores para la animación
+  const colors = ['#1d2237', '#6db69d'];
 
   // Calcular tiempo restante hasta el 2 de septiembre de 2025
   React.useEffect(() => {
@@ -135,7 +158,7 @@ const LandingPage = ({ onScrollToNext, onSectionChange }) => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="absolute top-6 right-6 md:top-8 md:right-16 lg:right-24 drop-shadow-lg"
+          className="absolute top-6 right-6 md:top-8 md:right-16 lg:right-24 drop-shadow-lg flex flex-col items-end"
           style={{ zIndex: 9998, position: 'absolute' }}
         >
           <SimpleMenu 
@@ -146,6 +169,59 @@ const LandingPage = ({ onScrollToNext, onSectionChange }) => {
             mobileMenuBg="bg-black/95"
             logoUrl="https://i.ibb.co/rfRZVzQH/logo-expokssd-pequeno.webp"
           />
+          
+          {/* Cuadro verde "Evento Presencial" */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="mt-4 md:mt-6"
+          >
+            <motion.button
+              onMouseEnter={() => setIsLocationHovered(true)}
+              onMouseLeave={() => setIsLocationHovered(false)}
+              onClick={handleOpenLocation}
+              className="group relative transition-all duration-300 rounded-lg px-4 md:px-6 shadow-lg hover:shadow-xl cursor-pointer flex items-center justify-center"
+              style={{
+                backgroundColor: colors[colorIndex],
+                height: '48px', // Altura fija más grande
+                minWidth: '160px' // Ancho mínimo más grande
+              }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <AnimatePresence mode="wait">
+                {!isLocationHovered ? (
+                  <motion.div
+                    key="evento-presencial"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center space-x-2"
+                  >
+                    <span className="text-white font-semibold text-base md:text-lg whitespace-nowrap">
+                      Evento Presencial
+                    </span>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="abrir-ubicacion"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center space-x-2"
+                  >
+                    <MapPin className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                    <span className="text-white font-semibold text-base md:text-lg whitespace-nowrap">
+                      Abrir Ubicación
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          </motion.div>
         </motion.div>
 
         {/* Contenido principal centrado */}
