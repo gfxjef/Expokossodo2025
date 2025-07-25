@@ -22,6 +22,7 @@ import { toast } from 'react-hot-toast';
 const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
   const [downloadingImage, setDownloadingImage] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [speechCopied, setSpeechCopied] = useState(false);
 
   if (!evento) return null;
 
@@ -100,9 +101,54 @@ const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
     }
   };
 
-  // Función para obtener speech (placeholder)
-  const handleGetSpeech = () => {
-    toast.info('Función de speech próximamente disponible');
+  // Función para obtener speech personalizado
+  const handleGetSpeech = async () => {
+    if (!evento.slug) {
+      toast.error('No hay link directo disponible para generar el speech');
+      return;
+    }
+
+    // Formatear fecha para el speech
+    const formatFechaSpeech = (fecha) => {
+      const fechaObj = new Date(fecha);
+      return fechaObj.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    };
+
+    // Construir el link directo
+    const baseUrl = window.location.origin;
+    const directLink = `${baseUrl}/charla/${evento.slug}`;
+
+    // Generar el speech personalizado
+    const speech = `Estimado cliente
+
+Lo invitamos a ser parte de *Expokossodo 2025*, un evento para conectar conocimiento y soluciones para su sector. En esta edición podrá acceder a:
+
+- Talleres y conferencias especializadas a cargo de ponentes nacionales e internacionales.
+- Presentaciones en vivo de más de 15 marcas destacadas del rubro.
+- Certificados de participación y sorteo de equipos para su laboratorio.
+
+Sabes que puede interesarle el evento acerca de *${evento.titulo_charla}* a realizarse el ${formatFechaSpeech(evento.fecha)} a las ${evento.hora} dictado por ${evento.expositor} de la empresa ${evento.marca_nombre || 'Kossodo'}
+
+🔗 Regístrese aquí: ${directLink}
+
+No se quede fuera del evento más relevante del año para su Laboratorio!`;
+
+    try {
+      await navigator.clipboard.writeText(speech);
+      setSpeechCopied(true);
+      toast.success('Speech copiado al portapapeles');
+      
+      // Resetear estado después de 2 segundos
+      setTimeout(() => setSpeechCopied(false), 2000);
+    } catch (error) {
+      console.error('Error copiando speech:', error);
+      toast.error('Error al copiar el speech');
+    }
   };
 
   return (
@@ -245,29 +291,7 @@ const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
                     </div>
                   )}
 
-                  {/* Vista previa de imagen del post */}
-                  {evento.post && (
-                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-                        <Download className="w-4 h-4 text-[#6cb79a] mr-2" />
-                        Imagen del Post
-                      </h3>
-                      <div className="relative">
-                        <img 
-                          src={evento.post} 
-                          alt="Imagen del post"
-                          className="w-full h-32 object-cover rounded-lg border border-gray-200"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'block';
-                          }}
-                        />
-                        <div className="hidden w-full h-32 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
-                          <p className="text-gray-500 text-sm">Imagen no disponible</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+
                 </div>
 
                 {/* Columna Lateral - 1 columna */}
@@ -339,36 +363,7 @@ const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
                     </div>
                   </div>
 
-                  {/* Link directo */}
-                  {evento.slug && (
-                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-                        <LinkIcon className="w-4 h-4 text-[#6cb79a] mr-2" />
-                        Link Directo
-                      </h3>
-                      <div className="space-y-2">
-                        <p className="text-xs text-gray-600 break-all">
-                          {`https://expokossodo.grupokossodo.com/charla/${evento.slug}`}
-                        </p>
-                        <button
-                          onClick={handleCopyLink}
-                          className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-[#6cb79a] text-white rounded-lg hover:bg-[#5ca085] transition-colors text-sm"
-                        >
-                          {linkCopied ? (
-                            <>
-                              <Check className="w-4 h-4" />
-                              <span>¡Copiado!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-4 h-4" />
-                              <span>Copiar Link</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               </div>
             </div>
@@ -393,10 +388,24 @@ const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
                 
                 <button 
                   onClick={handleGetSpeech}
-                  className="flex items-center justify-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm text-sm"
+                  disabled={!evento.slug}
+                  className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors shadow-sm text-sm ${
+                    evento.slug
+                      ? 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-700'
+                      : 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
                 >
-                  <MessageSquare className="w-4 h-4 text-gray-600" />
-                  <span className="font-medium text-gray-700">Obtener Speech</span>
+                  {speechCopied ? (
+                    <>
+                      <Check className="w-4 h-4 text-green-600" />
+                      <span className="font-medium text-green-700">¡Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <MessageSquare className="w-4 h-4" />
+                      <span className="font-medium">Obtener Speech</span>
+                    </>
+                  )}
                 </button>
                 
                 <button 
@@ -423,7 +432,7 @@ const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
               </div>
               
               <p className="text-center text-xs text-gray-500 mt-3">
-                {evento.post ? '✅ Imagen disponible' : '❌ Sin imagen'} • {evento.slug ? '✅ Link directo disponible' : '❌ Sin link directo'}
+                {evento.slug ? '✅ Funciones disponibles' : '❌ Funciones limitadas'}
               </p>
             </div>
           </motion.div>
