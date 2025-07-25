@@ -620,6 +620,19 @@ def init_database():
             else:
                 print(f"Error agregando columna marca_id: {e}")
         
+        # Agregar columna post si no existe (URL DE POST)
+        try:
+            cursor.execute("""
+                ALTER TABLE expokossodo_eventos 
+                ADD COLUMN post VARCHAR(500) AFTER imagen_url
+            """)
+            print("✅ Columna 'post' agregada exitosamente")
+        except Error as e:
+            if "Duplicate column name" in str(e):
+                print("ℹ️ Columna 'post' ya existe")
+            else:
+                print(f"Error agregando columna post: {e}")
+        
         # Tabla de registros de usuarios
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS expokossodo_registros (
@@ -1165,6 +1178,7 @@ def get_eventos():
                 'pais': evento['pais'],
                 'descripcion': evento.get('descripcion', ''),
                 'imagen_url': evento.get('imagen_url', ''),
+                'post': evento.get('post', ''),
                 'slots_disponibles': evento['slots_disponibles'],
                 'slots_ocupados': evento['slots_ocupados'],
                 'disponible': (
@@ -1174,7 +1188,8 @@ def get_eventos():
                 'marca_id': evento.get('marca_id'),
                 'marca_nombre': evento.get('marca_nombre'),
                 'marca_logo': evento.get('marca_logo'),
-                'marca_expositor': evento.get('marca_expositor')
+                'marca_expositor': evento.get('marca_expositor'),
+                'slug': evento.get('slug', '')
             })
         
         return jsonify(eventos_por_fecha)
@@ -1474,8 +1489,8 @@ def get_admin_eventos():
         cursor.execute("""
             SELECT 
                 e.id, e.fecha, e.hora, e.sala, e.titulo_charla, e.expositor, e.pais, 
-                e.descripcion, e.imagen_url, e.slots_disponibles, e.slots_ocupados,
-                e.disponible, e.created_at, e.marca_id, e.rubro,
+                e.descripcion, e.imagen_url, e.post, e.slots_disponibles, e.slots_ocupados,
+                e.disponible, e.created_at, e.marca_id, e.rubro, e.slug,
                 m.marca as marca_nombre, m.logo as marca_logo
             FROM expokossodo_eventos e
             LEFT JOIN expokossodo_marcas m ON e.marca_id = m.id
@@ -1534,11 +1549,11 @@ def update_evento(evento_id):
         if not cursor.fetchone():
             return jsonify({'error': 'Evento no encontrado'}), 404
         
-        # Actualizar evento - AHORA INCLUYE RUBRO, DISPONIBLE Y MARCA_ID
+        # Actualizar evento - AHORA INCLUYE RUBRO, DISPONIBLE, MARCA_ID Y POST
         update_query = """
             UPDATE expokossodo_eventos 
             SET titulo_charla = %s, expositor = %s, pais = %s, 
-                descripcion = %s, imagen_url = %s, disponible = %s, marca_id = %s, rubro = %s
+                descripcion = %s, imagen_url = %s, post = %s, disponible = %s, marca_id = %s, rubro = %s
             WHERE id = %s
         """
         
@@ -1555,6 +1570,7 @@ def update_evento(evento_id):
             data['pais'],
             data.get('descripcion', ''),
             data.get('imagen_url', None),
+            data.get('post', None),
             data.get('disponible', True),
             data.get('marca_id', None),
             rubro_json,

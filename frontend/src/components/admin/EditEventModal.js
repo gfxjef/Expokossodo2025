@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Calendar, Clock, MapPin, Globe, User, FileText, Image, AlertCircle, ToggleRight, Building2, Tag } from 'lucide-react';
+import { X, Save, Calendar, Clock, MapPin, Globe, User, FileText, Image, AlertCircle, ToggleRight, Building2, Tag, Link } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import { adminService, adminValidators } from '../../services/adminService';
@@ -12,6 +12,7 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
     pais: '',
     descripcion: '',
     imagen_url: '',
+    post: '',
     disponible: true,
     marca_id: null,
     rubro: []
@@ -30,6 +31,7 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
         pais: evento.pais || '',
         descripcion: evento.descripcion || '',
         imagen_url: evento.imagen_url || '',
+        post: evento.post || '',
         disponible: evento.disponible !== undefined ? evento.disponible : true,
         marca_id: evento.marca_id || null,
         rubro: evento.rubro || []
@@ -368,6 +370,32 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
                     )}
                   </div>
 
+                  {/* URL del Post */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Link className="h-4 w-4 inline mr-1" />
+                      URL del Post
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.post}
+                      onChange={(e) => handleInputChange('post', e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                        errors.post ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      placeholder="https://ejemplo.com/post-charla"
+                    />
+                    {errors.post && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.post}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      Enlace al post o artículo relacionado con esta charla
+                    </p>
+                  </div>
+
                   {/* Descripción */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -434,6 +462,14 @@ const EditEventModal = ({ evento, onClose, onEventSaved }) => {
                         <p className="text-sm text-indigo-600 font-medium mb-4">
                           <Building2 className="h-4 w-4 inline mr-1" />
                           {marcas.find(m => m.id === formData.marca_id)?.marca || 'Marca'}
+                        </p>
+                      )}
+                      {formData.post && (
+                        <p className="text-sm text-blue-600 font-medium mb-4">
+                          <Link className="h-4 w-4 inline mr-1" />
+                          <a href={formData.post} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                            Ver Post Relacionado
+                          </a>
                         </p>
                       )}
                       {formData.rubro && formData.rubro.length > 0 && (

@@ -240,6 +240,23 @@ export const adminValidators = {
     return null;
   },
   
+  post: (value) => {
+    if (!value || value.trim().length === 0) {
+      return null; // Opcional
+    }
+    
+    const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+    if (!urlPattern.test(value)) {
+      return 'La URL del post no es válida';
+    }
+    
+    if (value.trim().length > 500) {
+      return 'La URL del post no puede exceder 500 caracteres';
+    }
+    
+    return null;
+  },
+  
   // Validar rubro
   rubro: (value) => {
     if (!value || !Array.isArray(value) || value.length === 0) {
@@ -283,6 +300,9 @@ export const adminValidators = {
     
     const imagenError = adminValidators.imagenUrl(eventoData.imagen_url);
     if (imagenError) errors.imagen_url = imagenError;
+    
+    const postError = adminValidators.post(eventoData.post);
+    if (postError) errors.post = postError;
     
     const rubroError = adminValidators.rubro(eventoData.rubro);
     if (rubroError) errors.rubro = rubroError;

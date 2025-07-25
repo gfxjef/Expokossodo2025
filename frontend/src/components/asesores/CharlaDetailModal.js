@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
@@ -13,10 +13,16 @@ import {
   Download, 
   MessageSquare, 
   Link as LinkIcon,
-  Users
+  Users,
+  Check,
+  Copy
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
+  const [downloadingImage, setDownloadingImage] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
   if (!evento) return null;
 
   // Formatear fecha
@@ -38,6 +44,66 @@ const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
   const ocupacionPorcentaje = evento.slots_disponibles > 0 
     ? Math.round((evento.slots_ocupados / evento.slots_disponibles) * 100) 
     : 0;
+
+  // Función para descargar imagen del post
+  const handleDownloadImage = async () => {
+    if (!evento.post) {
+      toast.error('No hay imagen disponible para descargar');
+      return;
+    }
+
+    setDownloadingImage(true);
+    try {
+      // Crear un enlace temporal para descargar
+      const link = document.createElement('a');
+      link.href = evento.post;
+      link.download = `charla-${evento.slug || evento.id}.jpg`;
+      link.target = '_blank';
+      
+      // Simular clic para descargar
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Descarga iniciada');
+    } catch (error) {
+      console.error('Error descargando imagen:', error);
+      toast.error('Error al descargar la imagen');
+    } finally {
+      setDownloadingImage(false);
+    }
+  };
+
+  // Función para copiar link directo
+  const handleCopyLink = async () => {
+    if (!evento.slug) {
+      toast.error('No hay link directo disponible');
+      return;
+    }
+
+    // Construir el link dinámicamente usando el slug
+    let baseUrl = window.location.origin;
+    // Si la ruta base debe ser diferente, puedes ajustarla aquí:
+    // baseUrl = 'https://expokossodo.grupokossodo.com';
+    const directLink = `${baseUrl}/charla/${evento.slug}`;
+    
+    try {
+      await navigator.clipboard.writeText(directLink);
+      setLinkCopied(true);
+      toast.success('Link copiado al portapapeles');
+      
+      // Resetear estado después de 2 segundos
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      console.error('Error copiando link:', error);
+      toast.error('Error al copiar el link');
+    }
+  };
+
+  // Función para obtener speech (placeholder)
+  const handleGetSpeech = () => {
+    toast.info('Función de speech próximamente disponible');
+  };
 
   return (
     <AnimatePresence>
@@ -178,6 +244,30 @@ const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
                       </div>
                     </div>
                   )}
+
+                  {/* Vista previa de imagen del post */}
+                  {evento.post && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                        <Download className="w-4 h-4 text-[#6cb79a] mr-2" />
+                        Imagen del Post
+                      </h3>
+                      <div className="relative">
+                        <img 
+                          src={evento.post} 
+                          alt="Imagen del post"
+                          className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                        <div className="hidden w-full h-32 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+                          <p className="text-gray-500 text-sm">Imagen no disponible</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Columna Lateral - 1 columna */}
@@ -248,6 +338,37 @@ const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Link directo */}
+                  {evento.slug && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                        <LinkIcon className="w-4 h-4 text-[#6cb79a] mr-2" />
+                        Link Directo
+                      </h3>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-600 break-all">
+                          {`https://expokossodo.grupokossodo.com/charla/${evento.slug}`}
+                        </p>
+                        <button
+                          onClick={handleCopyLink}
+                          className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-[#6cb79a] text-white rounded-lg hover:bg-[#5ca085] transition-colors text-sm"
+                        >
+                          {linkCopied ? (
+                            <>
+                              <Check className="w-4 h-4" />
+                              <span>¡Copiado!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-4 h-4" />
+                              <span>Copiar Link</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -255,24 +376,54 @@ const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
             {/* Footer Compacto con Botones */}
             <div className="border-t border-gray-200 bg-gray-50 px-4 sm:px-6 py-4">
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button className="flex items-center justify-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm text-sm">
-                  <Download className="w-4 h-4 text-gray-600" />
-                  <span className="font-medium text-gray-700">Descargar Imagen</span>
+                <button 
+                  onClick={handleDownloadImage}
+                  disabled={!evento.post || downloadingImage}
+                  className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors shadow-sm text-sm ${
+                    evento.post && !downloadingImage
+                      ? 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-700'
+                      : 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="font-medium">
+                    {downloadingImage ? 'Descargando...' : 'Descargar Imagen'}
+                  </span>
                 </button>
                 
-                <button className="flex items-center justify-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm text-sm">
+                <button 
+                  onClick={handleGetSpeech}
+                  className="flex items-center justify-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm text-sm"
+                >
                   <MessageSquare className="w-4 h-4 text-gray-600" />
                   <span className="font-medium text-gray-700">Obtener Speech</span>
                 </button>
                 
-                <button className="flex items-center justify-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm text-sm">
-                  <LinkIcon className="w-4 h-4 text-gray-600" />
-                  <span className="font-medium text-gray-700">Obtener Link</span>
+                <button 
+                  onClick={handleCopyLink}
+                  disabled={!evento.slug}
+                  className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors shadow-sm text-sm ${
+                    evento.slug
+                      ? 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-700'
+                      : 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {linkCopied ? (
+                    <>
+                      <Check className="w-4 h-4 text-green-600" />
+                      <span className="font-medium text-green-700">¡Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <LinkIcon className="w-4 h-4" />
+                      <span className="font-medium">Obtener Link</span>
+                    </>
+                  )}
                 </button>
               </div>
               
               <p className="text-center text-xs text-gray-500 mt-3">
-                Los botones de acción estarán disponibles próximamente
+                {evento.post ? '✅ Imagen disponible' : '❌ Sin imagen'} • {evento.slug ? '✅ Link directo disponible' : '❌ Sin link directo'}
               </p>
             </div>
           </motion.div>
