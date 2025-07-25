@@ -20,7 +20,11 @@ const AsesoresEventGrid = memo(({ eventos, loading, stats }) => {
         evento.titulo_charla.toLowerCase().includes(searchTerm.toLowerCase()) ||
         evento.expositor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         evento.sala.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        evento.pais.toLowerCase().includes(searchTerm.toLowerCase())
+        evento.pais.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        // Agregar búsqueda por rubros
+        (Array.isArray(evento.rubro) && evento.rubro.some(rubro => 
+          rubro.toLowerCase().includes(searchTerm.toLowerCase())
+        ))
       );
     }
 
