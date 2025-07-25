@@ -175,7 +175,7 @@ const LandingPage = ({ onScrollToNext, onSectionChange }) => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.6 }}
-            className="mt-4 md:mt-6"
+            className="mt-4 md:mt-6 hidden md:block"
           >
             <motion.button
               onMouseEnter={() => setIsLocationHovered(true)}

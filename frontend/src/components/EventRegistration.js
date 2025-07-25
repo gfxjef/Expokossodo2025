@@ -363,6 +363,7 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.6, delay: 0.3 }}
+                  className="hidden md:block"
                 >
                   <motion.button
                     onMouseEnter={() => setIsLocationHovered(true)}

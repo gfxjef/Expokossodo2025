@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Home, Info, UserPlus, ChevronRight } from 'lucide-react';
+import { Menu, X, Home, Info, UserPlus, ChevronRight, MapPin } from 'lucide-react';
 
 const SimpleMenu = ({ 
   activeSection = 'inicio', 
@@ -12,6 +12,30 @@ const SimpleMenu = ({
   logoUrl = null
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Estado para el hover del botón de ubicación
+  const [isLocationHovered, setIsLocationHovered] = useState(false);
+
+  // Estado para la animación de color de fondo
+  const [colorIndex, setColorIndex] = useState(0);
+
+  // Colores para la animación
+  const colors = ['#1d2237', '#6db69d'];
+
+  // Función para abrir Google Maps
+  const handleOpenLocation = () => {
+    window.open('https://maps.app.goo.gl/23RUxnvSqbNm4wrb8', '_blank');
+    setIsMobileMenuOpen(false); // Cerrar menú al hacer clic
+  };
+
+  // Animación de color de fondo
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setColorIndex(prev => (prev + 1) % 2);
+    }, 2000); // Cambiar cada 2 segundos
+
+    return () => clearInterval(interval);
+  }, []);
 
   const menuItems = [
     { id: 'inicio', label: 'INICIO', icon: Home },
@@ -223,6 +247,103 @@ const SimpleMenu = ({
                       );
                     })}
                   </div>
+                  
+                  {/* Botón "Evento Presencial" para móvil */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="mt-6"
+                  >
+                    <motion.button
+                      onMouseEnter={() => setIsLocationHovered(true)}
+                      onMouseLeave={() => setIsLocationHovered(false)}
+                      onClick={handleOpenLocation}
+                      className="w-full group relative overflow-hidden rounded-2xl transition-all duration-300 border border-white/20"
+                      style={{
+                        backgroundColor: colors[colorIndex]
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {/* Efecto de brillo */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent transform -skew-x-12 transition-transform duration-700 group-hover:translate-x-full" />
+                      
+                      <div className="relative flex items-center justify-between p-4">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-3 rounded-xl bg-white/20 text-white">
+                            <AnimatePresence mode="wait">
+                              {!isLocationHovered ? (
+                                <motion.div
+                                  key="evento-presencial"
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <span className="text-white font-bold text-sm">📍</span>
+                                </motion.div>
+                              ) : (
+                                <motion.div
+                                  key="abrir-ubicacion"
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <MapPin size={20} />
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                          <div className="text-left">
+                            <AnimatePresence mode="wait">
+                              {!isLocationHovered ? (
+                                <motion.div
+                                  key="evento-presencial-text"
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <div className="font-bold text-sm tracking-wider text-white">
+                                    Evento Presencial
+                                  </div>
+                                  <div className="text-xs text-white/80">
+                                    Ubicación del evento
+                                  </div>
+                                </motion.div>
+                              ) : (
+                                <motion.div
+                                  key="abrir-ubicacion-text"
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <div className="font-bold text-sm tracking-wider text-white">
+                                    Abrir Ubicación
+                                  </div>
+                                  <div className="text-xs text-white/80">
+                                    Ver en Google Maps
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                        
+                        <motion.div
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.5 }}
+                          className="text-white/40 group-hover:text-white"
+                        >
+                          <ChevronRight size={16} />
+                        </motion.div>
+                      </div>
+                    </motion.button>
+                  </motion.div>
                   
                   {/* Footer del menú */}
                   <motion.div
