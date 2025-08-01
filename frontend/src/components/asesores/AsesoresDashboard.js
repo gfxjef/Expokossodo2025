@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { asesoresService } from '../../services/asesoresService';
 import DayNavigation from './DayNavigation';
 import AsesoresEventGrid from './AsesoresEventGrid';
+import RegistrosAsesores from './RegistrosAsesores';
 import LoadingSpinner from '../LoadingSpinner';
 
 const AsesoresDashboard = () => {
@@ -14,6 +15,9 @@ const AsesoresDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
+  
+  // Estado para mostrar sección de registros
+  const [showRegistros, setShowRegistros] = useState(false);
 
   // Configuración de fechas
   const eventDates = asesoresService.getEventDates();
@@ -78,6 +82,16 @@ const AsesoresDashboard = () => {
   // Ir a la página principal
   const goToHome = () => {
     window.location.href = '/';
+  };
+
+  // Manejar cambio a sección de registros
+  const handleShowRegistros = () => {
+    setShowRegistros(true);
+  };
+
+  // Manejar regreso a eventos
+  const handleBackToEventos = () => {
+    setShowRegistros(false);
   };
 
   // Estados de navegación
@@ -149,6 +163,16 @@ const AsesoresDashboard = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={handleShowRegistros}
+                className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <Users className="w-4 h-4" />
+                <span>Registros</span>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={goToHome}
                 className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
@@ -162,56 +186,63 @@ const AsesoresDashboard = () => {
 
       {/* Contenido principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Navegación por días */}
-        <DayNavigation
-          currentDateIndex={currentDateIndex}
-          onDateChange={handleDateChange}
-          eventDates={eventDates}
-          dateNames={dateNames}
-          onPrevious={goToPreviousDate}
-          onNext={goToNextDate}
-          canGoPrevious={canGoPrevious}
-          canGoNext={canGoNext}
-        />
+        {/* Mostrar sección de registros o eventos según el estado */}
+        {showRegistros ? (
+          <RegistrosAsesores onBack={handleBackToEventos} />
+        ) : (
+          <>
+            {/* Navegación por días */}
+            <DayNavigation
+              currentDateIndex={currentDateIndex}
+              onDateChange={handleDateChange}
+              eventDates={eventDates}
+              dateNames={dateNames}
+              onPrevious={goToPreviousDate}
+              onNext={goToNextDate}
+              canGoPrevious={canGoPrevious}
+              canGoNext={canGoNext}
+            />
 
-        {/* Indicador de carga */}
-        {loading && (
-          <div className="flex justify-center py-8">
-            <LoadingSpinner message="Cargando eventos..." />
-          </div>
-        )}
+            {/* Indicador de carga */}
+            {loading && (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner message="Cargando eventos..." />
+              </div>
+            )}
 
-        {/* Grilla de eventos */}
-        <AnimatePresence mode="wait">
-          {!loading && (
-            <motion.div
-              key={currentDateIndex}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <AsesoresEventGrid
-                eventos={eventos}
-                loading={loading}
-                stats={stats}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            {/* Grilla de eventos */}
+            <AnimatePresence mode="wait">
+              {!loading && (
+                <motion.div
+                  key={currentDateIndex}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <AsesoresEventGrid
+                    eventos={eventos}
+                    loading={loading}
+                    stats={stats}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-        {/* Información adicional */}
-        {!loading && eventos.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="mt-8 text-center text-sm text-gray-500"
-          >
-            <p>
-              💡 <strong>Consejo:</strong> Usa los filtros y búsqueda para encontrar eventos específicos rápidamente
-            </p>
-          </motion.div>
+            {/* Información adicional */}
+            {!loading && eventos.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mt-8 text-center text-sm text-gray-500"
+              >
+                <p>
+                  💡 <strong>Consejo:</strong> Usa los filtros y búsqueda para encontrar eventos específicos rápidamente
+                </p>
+              </motion.div>
+            )}
+          </>
         )}
       </div>
     </div>
