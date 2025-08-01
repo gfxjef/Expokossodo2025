@@ -10,7 +10,7 @@ const EventsGridVisualization = ({ eventos, fecha, onEventClick, registrados, on
     { id: 'sala1', name: 'Sala 1' },
     { id: 'sala2', name: 'Sala 2' },
     { id: 'sala3', name: 'Sala 3' },
-    { id: 'sala5', name: 'Sala 4' } // Nota: sala5 en lugar de sala4 (igual que admin)
+    { id: 'sala4', name: 'Sala 4' }
   ];
 
   // Organizar eventos por horario y sala (IGUAL que adminUtils.organizarEventosPorHorario)

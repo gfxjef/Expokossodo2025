@@ -18,7 +18,7 @@ const AdminEventGrid = ({ eventos, fecha, onEventUpdate }) => {
     { id: 'sala1', name: 'Sala 1' },
     { id: 'sala2', name: 'Sala 2' },
     { id: 'sala3', name: 'Sala 3' },
-    { id: 'sala5', name: 'Sala 4' }
+    { id: 'sala4', name: 'Sala 4' }
   ];
 
   const handleEditEvent = (evento) => {

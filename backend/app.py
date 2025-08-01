@@ -775,7 +775,7 @@ def populate_sample_data(cursor, connection):
     try:
         fechas = ['2024-07-22', '2024-07-23', '2024-07-24', '2024-07-25']
         horarios = ['15:00-15:45', '16:00-16:45', '17:00-17:45', '18:00-18:45', '19:00-19:45']
-        salas = ['sala1', 'sala2', 'sala3', 'sala5']
+        salas = ['sala1', 'sala2', 'sala3', 'sala4']
         
         # Datos de ejemplo para las charlas con descripciones
         charlas_data = [

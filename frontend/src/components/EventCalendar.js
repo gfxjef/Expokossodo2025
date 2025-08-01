@@ -23,12 +23,12 @@ const EventCalendar = ({
   const [hoveredEvent, setHoveredEvent] = useState(null);
   
   // Salas fijas (estas no cambiarán)
-  const rooms = ['sala1', 'sala2', 'sala3', 'sala5'];
+  const rooms = ['sala1', 'sala2', 'sala3', 'sala4'];
   const roomNames = {
     'sala1': 'Sala 1',
     'sala2': 'Sala 2',
     'sala3': 'Sala 3',
-    'sala5': 'Sala 4'
+    'sala4': 'Sala 4'
   };
 
   // Obtener eventos para la fecha actual

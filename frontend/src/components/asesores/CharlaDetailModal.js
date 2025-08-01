@@ -18,6 +18,7 @@ import {
   Copy
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatFechaCorta, formatFechaLarga } from '../../utils/dateUtils';
 
 const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
   const [downloadingImage, setDownloadingImage] = useState(false);
@@ -26,15 +27,48 @@ const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
 
   if (!evento) return null;
 
-  // Formatear fecha
-  const formatFecha = (fecha) => {
-    const fechaObj = new Date(fecha);
-    return fechaObj.toLocaleDateString('es-ES', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric'
-    });
+
+
+  // Función de formateo directa - CORREGIDA
+  const formatFechaDirecta = (fecha) => {
+    // Extraer fecha directamente del string GMT sin conversión de zona horaria
+    // Formato: 'Tue, 02 Sep 2025 00:00:00 GMT'
+    const partes = fecha.split(' ');
+    const dia = parseInt(partes[1]); // 02
+    const mesStr = partes[2]; // Sep
+    const año = parseInt(partes[3]); // 2025
+    
+    // Mapear mes de inglés a español
+    const mesesMap = {
+      'Jan': 'ene', 'Feb': 'feb', 'Mar': 'mar', 'Apr': 'abr',
+      'May': 'may', 'Jun': 'jun', 'Jul': 'jul', 'Aug': 'ago',
+      'Sep': 'sep', 'Oct': 'oct', 'Nov': 'nov', 'Dec': 'dic'
+    };
+    
+    // Crear fecha en zona horaria local para obtener el día de la semana correcto
+    const fechaObj = new Date(año, mesesMap[mesStr] === 'ene' ? 0 : 
+                                   mesesMap[mesStr] === 'feb' ? 1 :
+                                   mesesMap[mesStr] === 'mar' ? 2 :
+                                   mesesMap[mesStr] === 'abr' ? 3 :
+                                   mesesMap[mesStr] === 'may' ? 4 :
+                                   mesesMap[mesStr] === 'jun' ? 5 :
+                                   mesesMap[mesStr] === 'jul' ? 6 :
+                                   mesesMap[mesStr] === 'ago' ? 7 :
+                                   mesesMap[mesStr] === 'sep' ? 8 :
+                                   mesesMap[mesStr] === 'oct' ? 9 :
+                                   mesesMap[mesStr] === 'nov' ? 10 : 11, dia);
+    
+    const dias = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+    const diaSemana = dias[fechaObj.getDay()];
+    const mes = mesesMap[mesStr];
+    
+    return `${diaSemana}, ${dia} ${mes}`;
   };
+  
+  // Usar la función directa para debug
+  const formatFecha = formatFechaDirecta;
+  
+
 
   // Formatear hora
   const formatHora = (hora) => {
@@ -101,6 +135,42 @@ const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
     }
   };
 
+  // Función para formatear fecha larga para speech - CORREGIDA
+  const formatFechaSpeechDirecta = (fecha) => {
+    // Extraer fecha directamente del string GMT sin conversión de zona horaria
+    // Formato: 'Tue, 02 Sep 2025 00:00:00 GMT'
+    const partes = fecha.split(' ');
+    const dia = parseInt(partes[1]); // 02
+    const mesStr = partes[2]; // Sep
+    const año = parseInt(partes[3]); // 2025
+    
+    // Mapear mes de inglés a español (nombres completos)
+    const mesesMap = {
+      'Jan': 'enero', 'Feb': 'febrero', 'Mar': 'marzo', 'Apr': 'abril',
+      'May': 'mayo', 'Jun': 'junio', 'Jul': 'julio', 'Aug': 'agosto',
+      'Sep': 'septiembre', 'Oct': 'octubre', 'Nov': 'noviembre', 'Dec': 'diciembre'
+    };
+    
+    // Crear fecha en zona horaria local para obtener el día de la semana correcto
+    const fechaObj = new Date(año, mesesMap[mesStr] === 'enero' ? 0 : 
+                                   mesesMap[mesStr] === 'febrero' ? 1 :
+                                   mesesMap[mesStr] === 'marzo' ? 2 :
+                                   mesesMap[mesStr] === 'abril' ? 3 :
+                                   mesesMap[mesStr] === 'mayo' ? 4 :
+                                   mesesMap[mesStr] === 'junio' ? 5 :
+                                   mesesMap[mesStr] === 'julio' ? 6 :
+                                   mesesMap[mesStr] === 'agosto' ? 7 :
+                                   mesesMap[mesStr] === 'septiembre' ? 8 :
+                                   mesesMap[mesStr] === 'octubre' ? 9 :
+                                   mesesMap[mesStr] === 'noviembre' ? 10 : 11, dia);
+    
+    const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const diaSemana = dias[fechaObj.getDay()];
+    const mes = mesesMap[mesStr];
+    
+    return `${diaSemana} ${dia} de ${mes} de ${año}`;
+  };
+
   // Función para obtener speech personalizado
   const handleGetSpeech = async () => {
     if (!evento.slug) {
@@ -108,20 +178,15 @@ const CharlaDetailModal = ({ evento, isOpen, onClose }) => {
       return;
     }
 
-    // Formatear fecha para el speech
-    const formatFechaSpeech = (fecha) => {
-      const fechaObj = new Date(fecha);
-      return fechaObj.toLocaleDateString('es-ES', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    };
+    // Usar la función directa para formatear fecha del speech
+    const formatFechaSpeech = formatFechaSpeechDirecta;
 
     // Construir el link directo
     const baseUrl = window.location.origin;
     const directLink = `${baseUrl}/charla/${evento.slug}`;
+
+    // Obtener fecha formateada para el speech
+    const fechaSpeech = formatFechaSpeech(evento.fecha);
 
     // Generar el speech personalizado
     const speech = `Estimado cliente
@@ -132,7 +197,7 @@ Lo invitamos a ser parte de *Expokossodo 2025*, un evento para conectar conocimi
 - Presentaciones en vivo de más de 15 marcas destacadas del rubro.
 - Certificados de participación y sorteo de equipos para su laboratorio.
 
-Sabes que puede interesarle el evento acerca de *${evento.titulo_charla}* a realizarse el ${formatFechaSpeech(evento.fecha)} a las ${evento.hora} dictado por ${evento.expositor} de la empresa ${evento.marca_nombre || 'Kossodo'}
+Sabes que puede interesarle el evento acerca de *${evento.titulo_charla}* a realizarse el ${fechaSpeech} a las ${evento.hora} dictado por ${evento.expositor} de la empresa ${evento.marca_nombre || 'Kossodo'}
 
 🔗 Regístrese aquí: ${directLink}
 
