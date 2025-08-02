@@ -8,7 +8,6 @@ import SelectorCharlas from './components/SelectorCharlas';
 import VerificadorSala from './components/VerificadorSala';
 import VisualizacionDashboard from './components/VisualizacionDashboard';
 import AsesoresDashboard from './components/asesores/AsesoresDashboard';
-import ChatWidget from './components/ChatWidget';
 import { analyticsService } from './services/analytics';
 import './index.css';
 
