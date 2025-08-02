@@ -108,8 +108,7 @@ function App() {
           <Route path="*" element={<EventRegistrationWithLanding />} />
         </Routes>
         
-        {/* Chat Widget - Se muestra en todas las páginas */}
-        {/* <ChatWidget /> */}
+        {/* Chat Widget - Ahora se muestra solo en páginas principales */}
       </div>
     </Router>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, MapPin } from 'lucide-react';
 import SimpleMenu from './SimpleMenu';
+import ChatWidget from './ChatWidget';
 
 const LandingPage = ({ onScrollToNext, onSectionChange }) => {
   // Estado para el countdown
@@ -362,6 +363,9 @@ const LandingPage = ({ onScrollToNext, onSectionChange }) => {
           </motion.div>
         </motion.div>
       </div>
+      
+      {/* Chat Widget */}
+      <ChatWidget />
     </div>
   );
 };

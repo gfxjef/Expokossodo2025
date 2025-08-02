@@ -2136,6 +2136,119 @@ def get_asistentes_evento(evento_id):
         cursor.close()
         connection.close()
 
+@app.route('/api/verificar-sala/agregar-asistente', methods=['POST'])
+def agregar_asistente_a_evento():
+    """Agregar un usuario registrado a un evento específico cuando no está inscrito"""
+    data = request.get_json()
+    
+    required_fields = ['qr_code', 'evento_id', 'asesor_verificador']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"error": f"Campo requerido: {field}"}), 400
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Validar QR
+        validacion = validar_formato_qr(data['qr_code'])
+        if not validacion['valid']:
+            return jsonify({"error": "Código QR inválido"}), 400
+        
+        # Buscar usuario
+        cursor.execute("""
+            SELECT id, nombres, empresa, cargo 
+            FROM expokossodo_registros 
+            WHERE qr_code = %s
+        """, (data['qr_code'],))
+        
+        usuario = cursor.fetchone()
+        if not usuario:
+            return jsonify({"error": "Usuario no encontrado"}), 404
+        
+        # Verificar que el evento existe
+        cursor.execute("""
+            SELECT id, titulo_charla, hora, sala, fecha, slots_disponibles, slots_ocupados
+            FROM expokossodo_eventos 
+            WHERE id = %s
+        """, (data['evento_id'],))
+        
+        evento = cursor.fetchone()
+        if not evento:
+            return jsonify({"error": "Evento no encontrado"}), 404
+        
+        # Verificar si ya está registrado en este evento
+        cursor.execute("""
+            SELECT id FROM expokossodo_registro_eventos 
+            WHERE registro_id = %s AND evento_id = %s
+        """, (usuario['id'], data['evento_id']))
+        
+        if cursor.fetchone():
+            return jsonify({
+                "error": "Usuario ya está registrado en este evento",
+                "usuario": usuario['nombres']
+            }), 400
+        
+        # Verificar cupos disponibles
+        cupos_libres = evento['slots_disponibles'] - evento['slots_ocupados']
+        if cupos_libres <= 0:
+            return jsonify({"error": "No hay cupos disponibles en este evento"}), 400
+        
+        # Agregar usuario al evento
+        cursor.execute("""
+            INSERT INTO expokossodo_registro_eventos (registro_id, evento_id)
+            VALUES (%s, %s)
+        """, (usuario['id'], data['evento_id']))
+        
+        # Actualizar slots ocupados
+        cursor.execute("""
+            UPDATE expokossodo_eventos 
+            SET slots_ocupados = slots_ocupados + 1 
+            WHERE id = %s
+        """, (data['evento_id'],))
+        
+        # Registrar inmediatamente la asistencia
+        cursor.execute("""
+            INSERT INTO expokossodo_asistencias_por_sala 
+            (registro_id, evento_id, qr_escaneado, asesor_verificador, ip_verificacion, notas)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            usuario['id'],
+            data['evento_id'],
+            data['qr_code'],
+            data['asesor_verificador'],
+            request.remote_addr,
+            f"Agregado y registrado por {data['asesor_verificador']}"
+        ))
+        
+        connection.commit()
+        
+        return jsonify({
+            "message": "Usuario agregado al evento y asistencia registrada exitosamente",
+            "usuario": {
+                "nombres": usuario['nombres'],
+                "empresa": usuario['empresa'],
+                "cargo": usuario['cargo']
+            },
+            "evento": {
+                "titulo": evento['titulo_charla'],
+                "hora": evento['hora'],
+                "sala": evento['sala']
+            },
+            "agregado_por": data['asesor_verificador'],
+            "autorizado": True
+        })
+        
+    except Error as e:
+        connection.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
 # ===== NUEVOS ENDPOINTS PARA GESTIÓN DE HORARIOS =====
 
 @app.route('/api/admin/horarios', methods=['GET'])

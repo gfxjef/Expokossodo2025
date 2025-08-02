@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, X, ChevronLeft, ChevronRight, ChevronUp, MapPin } from 'lucide-react';
 import { eventService } from '../services/api';
 import SimpleMenu from './SimpleMenu';
+import ChatWidget from './ChatWidget';
 
 // --- Componente ConferenceSlider Extraído ---
 const ConferenceSlider = React.memo(({ conferences, loading, onScrollToNext, totalEvents }) => {
@@ -1598,6 +1599,9 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
         </>,
         document.body
       )}
+      
+      {/* Chat Widget */}
+      <ChatWidget />
     </div>
   );
 };

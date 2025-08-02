@@ -77,6 +77,18 @@ const VerificadorSala = () => {
         if (response.status === 400 && data.error && data.error.includes('ya registró ingreso')) {
           setSuccess(`ℹ️ ${data.usuario} ya ingresó a esta sala anteriormente`);
           await cargarAsistentes(true);
+        } else if (response.status === 403 && data.error && data.error.includes('no registrado en este evento')) {
+          // Usuario no está registrado en este evento - ofrecer agregarlo
+          const confirmar = window.confirm(
+            `${data.usuario} no está registrado en este evento.\n\n` +
+            `¿Deseas agregarlo automáticamente y registrar su asistencia?`
+          );
+          
+          if (confirmar) {
+            await agregarAsistenteAEvento(qrCode);
+          } else {
+            setError(`❌ ${data.usuario} no puede ingresar - no está registrado en este evento`);
+          }
         } else {
           throw new Error(data.error || 'Error verificando asistencia');
         }
@@ -90,6 +102,43 @@ const VerificadorSala = () => {
     } catch (error) {
       console.error('Error:', error);
       setError(error.message);
+    } finally {
+      setScannerLoading(false);
+    }
+  };
+
+  // Nueva función para agregar asistente al evento
+  const agregarAsistenteAEvento = async (qrCode) => {
+    try {
+      setScannerLoading(true);
+      setError(null);
+      
+      const response = await fetch('http://localhost:5000/api/verificar-sala/agregar-asistente', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          qr_code: qrCode,
+          evento_id: parseInt(eventoId),
+          asesor_verificador: 'Staff-Sala'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error agregando asistente');
+      }
+
+      setSuccess(`✅ ¡${data.usuario.nombres} agregado al evento y registrado exitosamente!`);
+      eventService.invalidateAttendeeCache(parseInt(eventoId));
+      eventService.clearVerificationCache();
+      await cargarAsistentes(true);
+
+    } catch (error) {
+      console.error('Error agregando asistente:', error);
+      setError(`Error: ${error.message}`);
     } finally {
       setScannerLoading(false);
     }

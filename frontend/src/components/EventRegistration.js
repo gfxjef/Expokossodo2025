@@ -8,6 +8,7 @@ import { analyticsService } from '../services/analytics';
 import EventCalendar from './EventCalendar';
 import RegistrationForm from './RegistrationForm';
 import LoadingSpinner from './LoadingSpinner';
+import ChatWidget from './ChatWidget';
 import SimpleMenu from './SimpleMenu';
 
 const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventSelect, onClearSelectedEvents, eventsData, loading, onSectionChange }) => {
@@ -867,6 +868,9 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
           )}
         </AnimatePresence>
       </main>
+      
+      {/* Chat Widget */}
+      <ChatWidget />
     </div>
   );
 };
