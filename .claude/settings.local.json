@@ -1,9 +1,22 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "Bash(npm run lint:*)",
       "Bash(cat:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(rm:*)",
+      "Bash(npm install)",
+      "Bash(npm start)",
+      "Bash(npx react-scripts build:*)",
+      "Bash(od:*)",
+      "Bash(true)",
+      "Bash(npm ls:*)",
+      "Bash(grep:*)",
+      "Bash(CI=true npm run build)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }

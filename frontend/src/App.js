@@ -109,7 +109,7 @@ function App() {
         </Routes>
         
         {/* Chat Widget - Se muestra en todas las páginas */}
-        <ChatWidget />
+        {/* <ChatWidget /> */}
       </div>
     </Router>
   );

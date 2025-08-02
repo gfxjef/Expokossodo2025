@@ -29,7 +29,12 @@ const VerificadorGeneral = () => {
         throw new Error(data.error || 'Error buscando usuario');
       }
 
-      setUserData(data);
+      // ✅ CORRECCIÓN: Guardar el QR original para usarlo en confirmación
+      setUserData({
+        ...data,
+        qr_original: qrCode  // Guardar el QR original escaneado
+      });
+      
       setSuccess('✅ Usuario encontrado exitosamente');
       analyticsService.trackQRVerification('General', 'Usuario Encontrado');
 
@@ -57,7 +62,8 @@ const VerificadorGeneral = () => {
         },
         body: JSON.stringify({
           registro_id: userData.usuario.id,
-          qr_code: userData.qr_validado ? Object.values(userData.qr_validado).join('|') : '',
+          // ✅ CORRECCIÓN: Usar el QR original en lugar del reconstruido
+          qr_code: userData.qr_original || (userData.qr_validado ? Object.values(userData.qr_validado).join('|') : ''),
           verificado_por: 'Staff-Recepción'
         }),
       });
