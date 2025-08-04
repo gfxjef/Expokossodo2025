@@ -7,7 +7,7 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
   const [scannerState, setScannerState] = useState('initializing');
   const [isScanning, setIsScanning] = useState(false);
 
-  // Funci�n para limpiar el scanner correctamente
+  // Función para limpiar el scanner correctamente
   const cleanupScanner = useCallback(async () => {
     if (scanner) {
       try {
@@ -21,7 +21,7 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
     }
   }, [scanner]);
 
-  // Funci�n para inicializar el scanner
+  // Función para inicializar el scanner
   const initializeScanner = useCallback(() => {
     if (!isActive || !scannerRef.current || scanner) return;
 
@@ -106,11 +106,11 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
 
   const getStatusMessage = () => {
     switch (scannerState) {
-      case 'initializing': return ' Inicializando c�mara...';
-      case 'active': return ' Enfoca el c�digo QR del asistente';
-      case 'success': return ' �C�digo QR detectado exitosamente!';
-      case 'error': return ' Error con la c�mara. Verifica permisos.';
-      default: return ' Preparando esc�ner...';
+      case 'initializing': return ' Inicializando camara...';
+      case 'active': return ' Enfoca el Codigo QR del asistente';
+      case 'success': return ' Codigo QR detectado exitosamente!';
+      case 'error': return ' Error con la Cámara. Verifica permisos.';
+      default: return ' Preparando escaner...';
     }
   };
 
@@ -127,7 +127,7 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
   if (!isActive) {
     return (
       <div className="bg-gray-100 rounded-lg p-8 text-center">
-        <div className="text-gray-500 text-lg"> Esc�ner QR Desactivado</div>
+        <div className="text-gray-500 text-lg"> Escaner QR Desactivado</div>
       </div>
     );
   }
@@ -136,7 +136,7 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
     <div className="bg-white rounded-lg shadow-lg p-4">
       <div className="mb-4 text-center">
         <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          Esc�ner de C�digo QR
+          Escanear codigo QR
         </h3>
         <div className={`text-sm font-medium ${getStatusColor()}`}>
           {getStatusMessage()}
@@ -147,7 +147,7 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
             onClick={restartScanner}
             className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
           >
-             Reiniciar Esc�ner
+             Reiniciar Escaner
           </button>
         )}
       </div>
@@ -172,7 +172,7 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
             <div className="bg-white rounded-lg p-4 shadow-lg text-center">
               <div className="text-red-600 text-2xl mb-2"></div>
               <p className="text-sm text-gray-600">
-                Error de c�mara.<br/>
+                Error de camara.<br/>
                 Verifica permisos en tu navegador.
               </p>
             </div>
