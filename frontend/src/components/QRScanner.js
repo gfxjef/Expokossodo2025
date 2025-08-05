@@ -6,6 +6,7 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
   const [scanner, setScanner] = useState(null);
   const [scannerState, setScannerState] = useState('initializing');
   const [isScanning, setIsScanning] = useState(false);
+  const isProcessingRef = useRef(false);
 
   // Función para limpiar el scanner correctamente
   const cleanupScanner = useCallback(async () => {
@@ -15,6 +16,7 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
         setScanner(null);
         setScannerState('initializing');
         setIsScanning(false);
+        isProcessingRef.current = false;
       } catch (error) {
         console.error('Error limpiando scanner:', error);
       }
@@ -25,6 +27,8 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
   const initializeScanner = useCallback(() => {
     if (!isActive || !scannerRef.current || scanner) return;
 
+    isProcessingRef.current = false; // Resetear para permitir nuevos escaneos
+    
     const config = {
       fps: 10,
       qrbox: { width: 250, height: 250 },
@@ -39,6 +43,13 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
     );
 
     const handleScanSuccess = (decodedText, decodedResult) => {
+      // Evitar múltiples llamadas mientras se procesa
+      if (isProcessingRef.current) {
+        console.log('QR Scanner: Ya procesando, ignorando lectura duplicada');
+        return;
+      }
+      
+      isProcessingRef.current = true;
       console.log('QR Escaneado exitosamente:', decodedText);
       setScannerState('success');
       setIsScanning(false);
@@ -47,9 +58,18 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
         onScanSuccess(decodedText, decodedResult);
       }
       
+      // Pausar el scanner inmediatamente
+      if (scanner && scanner.pause) {
+        scanner.pause();
+      }
+      
       setTimeout(() => {
-        cleanupScanner();
-      }, 2000);
+        setScannerState('initializing'); // Quitar overlay verde antes de limpiar
+        setTimeout(() => {
+          cleanupScanner();
+          isProcessingRef.current = false;
+        }, 100);
+      }, 1500); // Reducir tiempo para que sea más rápido
     };
 
     const handleScanError = (error) => {
@@ -97,6 +117,7 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
   }, [cleanupScanner]);
 
   const restartScanner = () => {
+    setScannerState('initializing'); // Resetear estado para quitar overlay verde
     cleanupScanner().then(() => {
       setTimeout(() => {
         initializeScanner();

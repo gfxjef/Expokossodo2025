@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import QRScanner from './QRScanner';
 import { eventService } from '../services/api';
@@ -14,6 +14,10 @@ const VerificadorSala = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [filtroAsistentes, setFiltroAsistentes] = useState('todos');
+  const [lastScannedQR, setLastScannedQR] = useState(null);
+  const [scanCooldown, setScanCooldown] = useState(false);
+  const processingRef = useRef(false);
+  const cooldownTimeoutRef = useRef(null);
 
   // Cargar información del evento y asistentes
   useEffect(() => {
@@ -54,6 +58,35 @@ const VerificadorSala = () => {
   };
 
   const handleQRScan = async (qrCode) => {
+    // Verificar si ya estamos procesando algo
+    if (processingRef.current) {
+      console.log('Ya hay un procesamiento en curso, ignorando lectura');
+      return;
+    }
+
+    // Verificar si el mismo QR está en cooldown
+    if (scanCooldown && qrCode === lastScannedQR) {
+      console.log('QR en cooldown, ignorando lectura repetida');
+      return;
+    }
+
+    // Marcar inmediatamente que estamos procesando
+    processingRef.current = true;
+    setLastScannedQR(qrCode);
+    setScanCooldown(true);
+    
+    // Limpiar timeout anterior si existe
+    if (cooldownTimeoutRef.current) {
+      clearTimeout(cooldownTimeoutRef.current);
+    }
+    
+    // Configurar nuevo timeout para resetear después de 3 segundos
+    cooldownTimeoutRef.current = setTimeout(() => {
+      setScanCooldown(false);
+      setLastScannedQR(null);
+      processingRef.current = false;
+    }, 3000);
+
     setScannerLoading(true);
     setError(null);
     setSuccess(null);
@@ -102,6 +135,10 @@ const VerificadorSala = () => {
     } catch (error) {
       console.error('Error:', error);
       setError(error.message);
+      // En caso de error, permitir nuevo escaneo después de 1 segundo
+      setTimeout(() => {
+        processingRef.current = false;
+      }, 1000);
     } finally {
       setScannerLoading(false);
     }
@@ -264,6 +301,15 @@ const VerificadorSala = () => {
             <div className="flex items-center">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
               <span className="text-blue-800">Verificando acceso a la sala...</span>
+            </div>
+          </div>
+        )}
+
+        {scanCooldown && !scannerLoading && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center">
+              <span className="text-yellow-800 text-xl mr-3">⏳</span>
+              <span className="text-yellow-800">Esperando 3 segundos antes del próximo escaneo...</span>
             </div>
           </div>
         )}
