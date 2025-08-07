@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: expokossodo2025-backend
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash start.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: FLASK_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+    healthCheckPath: /health
+    autoDeploy: true

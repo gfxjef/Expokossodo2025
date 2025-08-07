@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 
 const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
   const scannerRef = useRef(null);
@@ -29,11 +29,33 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
 
     isProcessingRef.current = false; // Resetear para permitir nuevos escaneos
     
+    // Detectar si es móvil o desktop
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
     const config = {
-      fps: 10,
-      qrbox: { width: 250, height: 250 },
+      fps: isMobile ? 10 : 5, // Menor FPS en desktop para mejor precisión
+      qrbox: function(viewfinderWidth, viewfinderHeight) {
+        // Área más pequeña en desktop para mejor enfoque
+        const minEdgePercentage = isMobile ? 0.7 : 0.5;
+        const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+        const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+        return {
+          width: qrboxSize,
+          height: qrboxSize,
+        };
+      },
       rememberLastUsedCamera: true,
       showTorchButtonIfSupported: true,
+      // Configuraciones adicionales para mejorar detección en desktop
+      aspectRatio: 1.0,
+      disableFlip: false,
+      // Múltiples formatos para mejor compatibilidad
+      formatsToSupport: [
+        Html5QrcodeScanType.SCAN_TYPE_CAMERA
+      ],
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true
+      }
     };
 
     const html5QrcodeScanner = new Html5QrcodeScanner(
@@ -75,10 +97,32 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
     const handleScanError = (error) => {
       const errorMessage = error.toString();
       
-      if (!errorMessage.includes('No MultiFormat Readers were able') && 
-          !errorMessage.includes('IndexSizeError') &&
-          !errorMessage.includes('source width is 0')) {
+      // Filtrar errores normales que no necesitan reportarse
+      const normalErrors = [
+        'No MultiFormat Readers were able',
+        'IndexSizeError',
+        'source width is 0',
+        'NotFoundError', // Típico cuando no encuentra QR
+        'NotReadableError' // Cámara ocupada temporalmente
+      ];
+      
+      const isNormalError = normalErrors.some(err => errorMessage.includes(err));
+      
+      if (!isNormalError) {
         console.error('Error de escaneo QR:', error);
+        
+        // Mensajes específicos para desktop
+        if (errorMessage.includes('NotAllowedError')) {
+          console.error('❌ Permisos de cámara denegados');
+          setScannerState('error');
+        } else if (errorMessage.includes('NotSupportedError')) {
+          console.error('❌ Cámara no soportada en este navegador');
+          setScannerState('error');
+        } else if (errorMessage.includes('OverconstrainedError')) {
+          console.error('❌ Configuración de cámara no compatible');
+          setScannerState('error');
+        }
+        
         if (onScanError) {
           onScanError(error);
         }
@@ -126,12 +170,17 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
   };
 
   const getStatusMessage = () => {
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
     switch (scannerState) {
-      case 'initializing': return ' Inicializando camara...';
-      case 'active': return ' Enfoca el Codigo QR del asistente';
-      case 'success': return ' Codigo QR detectado exitosamente!';
-      case 'error': return ' Error con la Cámara. Verifica permisos.';
-      default: return ' Preparando escaner...';
+      case 'initializing': return '📷 Inicializando cámara...';
+      case 'active': 
+        return isMobile 
+          ? '📱 Enfoca el código QR del asistente' 
+          : '💻 Acerca el QR a la cámara (10-15cm)';
+      case 'success': return '✅ ¡Código QR detectado exitosamente!';
+      case 'error': return '❌ Error con la cámara. Verifica permisos.';
+      default: return '⏳ Preparando escáner...';
     }
   };
 

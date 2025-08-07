@@ -8,6 +8,7 @@ import SelectorCharlas from './components/SelectorCharlas';
 import VerificadorSala from './components/VerificadorSala';
 import VisualizacionDashboard from './components/VisualizacionDashboard';
 import AsesoresDashboard from './components/asesores/AsesoresDashboard';
+import LeadsCapture from './components/LeadsCapture';
 import { analyticsService } from './services/analytics';
 import './index.css';
 
@@ -32,6 +33,7 @@ function RouteTracker() {
     if (path === '/admin') return 'Panel Administración';
     if (path === '/visualizacion') return 'Dashboard Visualización';
     if (path === '/asesores') return 'Panel Asesores';
+    if (path === '/leads') return 'Captura de Leads';
     if (path.startsWith('/verificar')) return 'Verificación QR';
     if (path.startsWith('/charla/')) return 'Charlas Específicas';
     if (path === '/registrate') return 'Registro Directo';
@@ -91,6 +93,9 @@ function App() {
           
           {/* Ruta de asesores */}
           <Route path="/asesores" element={<AsesoresDashboard />} />
+          
+          {/* Sistema de captura de leads */}
+          <Route path="/leads" element={<LeadsCapture />} />
           
           {/* Rutas de verificación QR */}
           <Route path="/verificar" element={<VerificadorGeneral />} />

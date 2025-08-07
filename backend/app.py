@@ -1,9 +1,12 @@
 from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 import mysql.connector
-from mysql.connector import Error
+from mysql.connector import Error, pooling
 import os
 from dotenv import load_dotenv
+from datetime import datetime
+from functools import wraps
+import traceback
 import qrcode
 from PIL import Image
 import io
@@ -16,6 +19,48 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from openai import OpenAI
+import threading
+import queue
+from threading import Lock
+import logging
+import sys
+
+# Agregar path del proyecto de transcripción
+transcripcion_path = os.path.join(os.path.dirname(__file__), '../../transcripcion_expokossodo')
+if os.path.exists(transcripcion_path):
+    sys.path.append(transcripcion_path)
+    try:
+        from services.batch_processor import BatchProcessor
+        from services.gemini_service import GeminiService
+        TRANSCRIPCION_DISPONIBLE = True
+        print("✅ Sistema de transcripción importado correctamente")
+    except ImportError as e:
+        print(f"⚠️ No se pudo importar el sistema de transcripción: {e}")
+        TRANSCRIPCION_DISPONIBLE = False
+    except Exception as e:
+        print(f"⚠️ Error inesperado importando transcripción: {e}")
+        TRANSCRIPCION_DISPONIBLE = False
+else:
+    print(f"⚠️ Proyecto de transcripción no encontrado en: {transcripcion_path}")
+    TRANSCRIPCION_DISPONIBLE = False
+
+# Configuración de logging mejorada
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Sistema de cola para transcripciones
+transcripcion_queue = queue.Queue()
+transcripcion_lock = Lock()
+transcripcion_stats = {
+    'procesadas': 0,
+    'errores': 0,
+    'en_cola': 0,
+    'ultima_procesada': None,
+    'worker_activo': False
+}
 
 # Cargar variables de entorno desde .env
 load_dotenv()
@@ -49,14 +94,30 @@ CORS(app,
          }
      })
 
-# Configuración de la base de datos
+# Configuración de la base de datos con timeouts
 DB_CONFIG = {
     'host': os.getenv('DB_HOST'),
     'database': os.getenv('DB_NAME'),
     'user': os.getenv('DB_USER'),
     'password': os.getenv('DB_PASSWORD'),
-    'port': int(os.getenv('DB_PORT', 3306))
+    'port': int(os.getenv('DB_PORT', 3306)),
+    'connection_timeout': 10,
+    'autocommit': True,
+    'pool_reset_session': True
 }
+
+# Crear pool de conexiones
+try:
+    connection_pool = pooling.MySQLConnectionPool(
+        pool_name="expokossodo_pool",
+        pool_size=10,
+        pool_reset_session=True,
+        **DB_CONFIG
+    )
+    print("✅ Pool de conexiones creado exitosamente")
+except Error as e:
+    print(f"❌ Error creando pool de conexiones: {e}")
+    connection_pool = None
 
 # Configuración de OpenAI
 # Asegúrate de tener estas variables en tu archivo .env
@@ -122,13 +183,50 @@ def after_request(response):
 
 # --- CONEXIÓN A LA BASE DE DATOS ---
 def get_db_connection():
-    """Crear conexión a la base de datos"""
+    """Obtener conexión del pool"""
     try:
-        connection = mysql.connector.connect(**DB_CONFIG)
-        return connection
+        if connection_pool:
+            connection = connection_pool.get_connection()
+            if connection.is_connected():
+                return connection
+            else:
+                print("❌ Conexión no está activa")
+                return None
+        else:
+            # Fallback a conexión directa si no hay pool
+            print("⚠️ Usando conexión directa (sin pool)")
+            connection = mysql.connector.connect(**DB_CONFIG)
+            return connection
     except Error as e:
-        print(f"Error conectando a la base de datos: {e}")
+        print(f"❌ Error obteniendo conexión: {e}")
         return None
+
+# Decorador para medir tiempo de ejecución
+def log_execution_time(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        endpoint = request.endpoint if request else func.__name__
+        method = request.method if request else 'N/A'
+        
+        try:
+            print(f"🔵 [{datetime.now().strftime('%H:%M:%S')}] Iniciando {method} {endpoint}")
+            result = func(*args, **kwargs)
+            execution_time = time.time() - start_time
+            
+            if execution_time > 5:
+                print(f"⚠️ SLOW QUERY: {endpoint} tomó {execution_time:.2f}s")
+            else:
+                print(f"✅ [{datetime.now().strftime('%H:%M:%S')}] Completado {endpoint} en {execution_time:.2f}s")
+            
+            return result
+        except Exception as e:
+            execution_time = time.time() - start_time
+            print(f"❌ Error en {endpoint} después de {execution_time:.2f}s: {str(e)}")
+            print(f"Traceback: {traceback.format_exc()}")
+            raise
+    
+    return wrapper
 
 # ===== FUNCIONES DE GENERACIÓN QR =====
 
@@ -698,7 +796,35 @@ def init_database():
                 INDEX idx_qr_escaneado (qr_escaneado)
             )
         """)
+
+        # Tabla de consultas/leads de asesores
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS expokossodo_consultas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                registro_id INT NOT NULL,
+                asesor_nombre VARCHAR(100) NOT NULL,
+                consulta TEXT NOT NULL,
+                uso_transcripcion BOOLEAN DEFAULT FALSE,
+                fecha_consulta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (registro_id) REFERENCES expokossodo_registros(id) ON DELETE CASCADE,
+                INDEX idx_registro_fecha (registro_id, fecha_consulta),
+                INDEX idx_asesor (asesor_nombre)
+            )
+        """)
         
+        # Agregar columna uso_transcripcion a tabla existente si no existe
+        try:
+            cursor.execute("""
+                ALTER TABLE expokossodo_consultas 
+                ADD COLUMN uso_transcripcion BOOLEAN DEFAULT FALSE
+            """)
+            print("✅ Columna 'uso_transcripcion' agregada a tabla expokossodo_consultas")
+        except Error as e:
+            if "Duplicate column name" not in str(e):
+                print(f"⚠️ Error agregando columna uso_transcripcion: {e}")
+            else:
+                print("✅ Columna 'uso_transcripcion' ya existe")
+
         # Agregar nuevas columnas a tabla expokossodo_registros para QR
         try:
             cursor.execute("""
@@ -1134,20 +1260,64 @@ def send_confirmation_email(user_data, selected_events, qr_text=None):
         return False
 
 # Rutas de la API
+# --- ENDPOINTS DE HEALTH CHECK ---
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint para monitoreo"""
+    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()}), 200
+
+@app.route('/api/health/db', methods=['GET'])
+def db_health_check():
+    """Health check de la base de datos"""
+    try:
+        connection = get_db_connection()
+        if connection and connection.is_connected():
+            cursor = connection.cursor()
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+            cursor.close()
+            connection.close()
+            return jsonify({
+                "status": "healthy",
+                "database": "connected",
+                "timestamp": datetime.now().isoformat()
+            }), 200
+        else:
+            return jsonify({
+                "status": "unhealthy",
+                "database": "disconnected",
+                "timestamp": datetime.now().isoformat()
+            }), 503
+    except Exception as e:
+        logger.error(f"Database health check failed: {str(e)}")
+        return jsonify({
+            "status": "unhealthy",
+            "database": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 503
+
 @app.route('/api/eventos', methods=['GET'])
+@log_execution_time
 def get_eventos():
     """Obtener todos los eventos organizados por fecha (solo horarios activos)"""
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({"error": "Error de conexión a la base de datos"}), 500
-    
-    cursor = connection.cursor(dictionary=True)
+    connection = None
+    cursor = None
     
     try:
-        # Obtener eventos solo para horarios activos Y disponibles
+        connection = get_db_connection()
+        if not connection:
+            print("❌ No se pudo obtener conexión para /api/eventos")
+            return jsonify({"error": "Error de conexión a la base de datos"}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # Optimización: usar índices y limitar campos
+        query_start = time.time()
         cursor.execute("""
             SELECT 
-                e.*,
+                e.id, e.titulo, e.ponente, e.sala, e.hora, e.fecha,
+                e.capacidad, e.registrados, e.disponible,
                 m.marca as marca_nombre,
                 m.logo as marca_logo,
                 m.expositor as marca_expositor
@@ -1158,6 +1328,8 @@ def get_eventos():
             ORDER BY e.fecha, e.hora, e.sala
         """)
         eventos = cursor.fetchall()
+        query_time = time.time() - query_start
+        print(f"🔍 Query /api/eventos tomó {query_time:.3f}s, {len(eventos)} eventos encontrados")
         
         # Organizar por fecha
         eventos_por_fecha = {}
@@ -2324,21 +2496,29 @@ def toggle_horario(horario):
         connection.close()
 
 @app.route('/api/admin/horarios/activos', methods=['GET'])
+@log_execution_time
 def get_horarios_activos():
     """Obtener solo los horarios activos (para uso en frontend)"""
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({"error": "Error de conexión a la base de datos"}), 500
-    
-    cursor = connection.cursor()
+    connection = None
+    cursor = None
     
     try:
+        connection = get_db_connection()
+        if not connection:
+            print("❌ No se pudo obtener conexión para /api/admin/horarios/activos")
+            return jsonify({"error": "Error de conexión a la base de datos"}), 500
+        
+        cursor = connection.cursor()
+        
+        query_start = time.time()
         cursor.execute("""
             SELECT horario FROM expokossodo_horarios 
             WHERE activo = TRUE 
             ORDER BY horario
         """)
         horarios = [row[0] for row in cursor.fetchall()]
+        query_time = time.time() - query_start
+        print(f"🔍 Query /api/admin/horarios/activos tomó {query_time:.3f}s, {len(horarios)} horarios encontrados")
         
         return jsonify(horarios)
         
@@ -2399,14 +2579,21 @@ def get_fechas_info():
             connection.close()
 
 @app.route('/api/fechas-info/activas', methods=['GET'])
+@log_execution_time
 def get_fechas_info_activas():
     """Obtener información de fechas activas (para público)"""
+    connection = None
+    cursor = None
+    
     try:
         connection = get_db_connection()
         if not connection:
+            print("❌ No se pudo obtener conexión para /api/fechas-info/activas")
             return jsonify({"error": "Error de conexión a la base de datos"}), 500
         
         cursor = connection.cursor()
+        
+        query_start = time.time()
         cursor.execute("""
             SELECT 
                 fecha, rubro, titulo_dia, descripcion, 
@@ -2416,6 +2603,8 @@ def get_fechas_info_activas():
             WHERE activo = TRUE
             ORDER BY fecha ASC
         """)
+        query_time = time.time() - query_start
+        print(f"🔍 Query /api/fechas-info/activas tomó {query_time:.3f}s")
         
         fechas_info = []
         for row in cursor.fetchall():
@@ -2655,15 +2844,357 @@ def get_marcas():
         cursor.close()
         connection.close()
 
+# ===== ENDPOINTS PARA SISTEMA DE LEADS =====
+
+@app.route('/api/leads/cliente-por-qr', methods=['POST'])
+def obtener_cliente_por_qr():
+    """Obtener información del cliente por código QR para sistema de leads"""
+    data = request.get_json()
+    
+    if not data or 'qr_code' not in data:
+        return jsonify({"error": "Código QR requerido"}), 400
+    
+    qr_code = data['qr_code']
+    
+    # Validar formato QR
+    validacion = validar_formato_qr(qr_code)
+    if not validacion['valid']:
+        return jsonify({"error": "Código QR inválido"}), 400
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Buscar cliente por código QR
+        cursor.execute("""
+            SELECT id, nombres, correo, empresa, cargo, numero
+            FROM expokossodo_registros 
+            WHERE qr_code = %s
+        """, (qr_code,))
+        
+        cliente = cursor.fetchone()
+        if not cliente:
+            return jsonify({"error": "Cliente no encontrado"}), 404
+        
+        # Obtener consultas anteriores del cliente
+        cursor.execute("""
+            SELECT asesor_nombre, consulta, fecha_consulta
+            FROM expokossodo_consultas 
+            WHERE registro_id = %s
+            ORDER BY fecha_consulta DESC
+            LIMIT 5
+        """, (cliente['id'],))
+        
+        consultas_anteriores = cursor.fetchall()
+        
+        return jsonify({
+            "cliente": cliente,
+            "consultas_anteriores": consultas_anteriores
+        })
+        
+    except Error as e:
+        print(f"Error obteniendo cliente: {e}")
+        return jsonify({"error": "Error del servidor"}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.route('/api/leads/guardar-consulta', methods=['POST'])
+def guardar_consulta():
+    """Guardar consulta del asesor sobre el cliente"""
+    data = request.get_json()
+    
+    required_fields = ['registro_id', 'asesor_nombre', 'consulta']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"error": f"Campo requerido: {field}"}), 400
+    
+    if not data['consulta'].strip():
+        return jsonify({"error": "La consulta no puede estar vacía"}), 400
+    
+    # Campo opcional para indicar si se usó transcripción
+    uso_transcripcion = data.get('uso_transcripcion', False)
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Verificar que el registro existe
+        cursor.execute("""
+            SELECT id, nombres FROM expokossodo_registros WHERE id = %s
+        """, (data['registro_id'],))
+        
+        cliente = cursor.fetchone()
+        if not cliente:
+            return jsonify({"error": "Cliente no encontrado"}), 404
+        
+        # Insertar consulta
+        cursor.execute("""
+            INSERT INTO expokossodo_consultas 
+            (registro_id, asesor_nombre, consulta, uso_transcripcion, fecha_consulta)
+            VALUES (%s, %s, %s, %s, NOW())
+        """, (
+            data['registro_id'],
+            data['asesor_nombre'],
+            data['consulta'].strip(),
+            uso_transcripcion
+        ))
+        
+        # Obtener el ID de la consulta recién insertada
+        consulta_id = cursor.lastrowid
+        
+        connection.commit()
+        
+        # Si se usó transcripción, agregar a la cola para procesamiento
+        if uso_transcripcion and TRANSCRIPCION_DISPONIBLE:
+            try:
+                tarea = {
+                    'consulta_id': consulta_id,
+                    'consulta_texto': data['consulta'].strip()
+                }
+                transcripcion_queue.put(tarea)
+                
+                with transcripcion_lock:
+                    transcripcion_stats['en_cola'] = transcripcion_queue.qsize()
+                
+                print(f"📝 Consulta ID {consulta_id} agregada a cola de transcripción")
+                
+            except Exception as e:
+                print(f"⚠️ Error agregando consulta {consulta_id} a cola de transcripción: {e}")
+        
+        return jsonify({
+            "message": "Consulta guardada exitosamente",
+            "cliente": cliente['nombres'],
+            "asesor": data['asesor_nombre'],
+            "transcripcion_programada": uso_transcripcion and TRANSCRIPCION_DISPONIBLE
+        })
+        
+    except Error as e:
+        print(f"Error guardando consulta: {e}")
+        connection.rollback()
+        return jsonify({"error": "Error del servidor"}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.route('/api/leads/asesores', methods=['GET'])
+def obtener_asesores():
+    """Obtener lista de asesores disponibles"""
+    print("📋 Endpoint /api/leads/asesores solicitado")
+    
+    asesores = [
+        "Abigail Alvarez del Villar",
+        "Jaqueline",
+        "Azucena", 
+        "Cynthia",
+        "Fernando"
+    ]
+    
+    print(f"📋 Devolviendo {len(asesores)} asesores")
+    return jsonify({"asesores": asesores})
+
+# --- ENDPOINTS DE MONITOREO DE TRANSCRIPCIÓN ---
+
+@app.route('/api/transcripcion/stats', methods=['GET'])
+def transcripcion_stats_endpoint():
+    """Estadísticas del sistema de transcripción"""
+    with transcripcion_lock:
+        stats = transcripcion_stats.copy()
+        stats['cola_actual'] = transcripcion_queue.qsize()
+        stats['sistema_disponible'] = TRANSCRIPCION_DISPONIBLE
+    
+    return jsonify(stats)
+
+@app.route('/api/transcripcion/health', methods=['GET'])
+def transcripcion_health():
+    """Estado de salud del sistema de transcripción"""
+    status = {
+        'sistema_disponible': TRANSCRIPCION_DISPONIBLE,
+        'worker_activo': transcripcion_stats.get('worker_activo', False),
+        'en_cola': transcripcion_queue.qsize(),
+        'timestamp': time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    return jsonify(status)
+
+@app.route('/api/transcripcion/procesar-pendientes', methods=['POST'])
+def procesar_transcripciones_pendientes():
+    """Procesar todas las consultas pendientes de transcripción manualmente"""
+    if not TRANSCRIPCION_DISPONIBLE:
+        return jsonify({"error": "Sistema de transcripción no disponible"}), 503
+    
+    try:
+        # Buscar consultas con uso_transcripcion=1 pero sin resumen
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "Error de conexión a la base de datos"}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT id, consulta 
+            FROM expokossodo_consultas 
+            WHERE uso_transcripcion = 1 AND (resumen IS NULL OR resumen = '')
+        """)
+        
+        consultas_pendientes = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        
+        # Agregar todas a la cola
+        agregadas = 0
+        for consulta in consultas_pendientes:
+            try:
+                tarea = {
+                    'consulta_id': consulta['id'],
+                    'consulta_texto': consulta['consulta']
+                }
+                transcripcion_queue.put(tarea)
+                agregadas += 1
+            except Exception as e:
+                print(f"Error agregando consulta {consulta['id']} a cola: {e}")
+        
+        with transcripcion_lock:
+            transcripcion_stats['en_cola'] = transcripcion_queue.qsize()
+        
+        return jsonify({
+            "message": f"Se agregaron {agregadas} consultas a la cola de procesamiento",
+            "consultas_encontradas": len(consultas_pendientes),
+            "consultas_agregadas": agregadas,
+            "cola_actual": transcripcion_queue.qsize()
+        })
+        
+    except Exception as e:
+        print(f"Error procesando consultas pendientes: {e}")
+        return jsonify({"error": "Error interno del servidor"}), 500
+
+def transcripcion_worker():
+    """Worker thread para procesar cola de transcripciones en background"""
+    global transcripcion_stats
+    
+    print("🤖 Worker de transcripción iniciado")
+    
+    with transcripcion_lock:
+        transcripcion_stats['worker_activo'] = True
+    
+    while True:
+        try:
+            # Esperar por nueva tarea en la cola (bloquea hasta que haya algo)
+            tarea = transcripcion_queue.get(timeout=30)
+            
+            if tarea is None:  # Señal de parada
+                print("🛑 Worker de transcripción detenido")
+                break
+                
+            with transcripcion_lock:
+                transcripcion_stats['en_cola'] = transcripcion_queue.qsize()
+            
+            consulta_id = tarea['consulta_id']
+            consulta_texto = tarea['consulta_texto']
+            
+            print(f"🔄 Procesando transcripción para consulta ID: {consulta_id}")
+            
+            if TRANSCRIPCION_DISPONIBLE:
+                try:
+                    # Crear instancia del procesador
+                    gemini_service = GeminiService()
+                    
+                    # Generar resumen usando Gemini
+                    resumen = gemini_service.generar_resumen(consulta_texto, consulta_id)
+                    
+                    if resumen:
+                        # Actualizar resumen en base de datos
+                        connection = get_db_connection()
+                        if connection:
+                            cursor = connection.cursor()
+                            try:
+                                cursor.execute("""
+                                    UPDATE expokossodo_consultas 
+                                    SET resumen = %s 
+                                    WHERE id = %s
+                                """, (resumen, consulta_id))
+                                connection.commit()
+                                
+                                with transcripcion_lock:
+                                    transcripcion_stats['procesadas'] += 1
+                                    transcripcion_stats['ultima_procesada'] = time.strftime("%Y-%m-%d %H:%M:%S")
+                                
+                                print(f"✅ Transcripción completada para consulta ID: {consulta_id}")
+                                
+                            except Exception as e:
+                                print(f"❌ Error actualizando resumen en BD: {e}")
+                                with transcripcion_lock:
+                                    transcripcion_stats['errores'] += 1
+                            finally:
+                                cursor.close()
+                                connection.close()
+                        else:
+                            print(f"❌ Error conectando a BD para consulta ID: {consulta_id}")
+                            with transcripcion_lock:
+                                transcripcion_stats['errores'] += 1
+                    else:
+                        print(f"❌ No se pudo generar resumen para consulta ID: {consulta_id}")
+                        with transcripcion_lock:
+                            transcripcion_stats['errores'] += 1
+                            
+                except Exception as e:
+                    print(f"❌ Error procesando transcripción ID {consulta_id}: {e}")
+                    with transcripcion_lock:
+                        transcripcion_stats['errores'] += 1
+            else:
+                print(f"⚠️ Sistema de transcripción no disponible para consulta ID: {consulta_id}")
+                with transcripcion_lock:
+                    transcripcion_stats['errores'] += 1
+            
+            # Marcar tarea como completada
+            transcripcion_queue.task_done()
+            
+            # Pequeña pausa entre procesamiento
+            time.sleep(2)
+            
+        except queue.Empty:
+            # Timeout - continuar esperando
+            continue
+        except Exception as e:
+            print(f"❌ Error crítico en worker de transcripción: {e}")
+            with transcripcion_lock:
+                transcripcion_stats['errores'] += 1
+            time.sleep(5)
+    
+    with transcripcion_lock:
+        transcripcion_stats['worker_activo'] = False
+
 if __name__ == '__main__':
     print("🚀 Iniciando ExpoKossodo Backend...")
+    print(f"🔧 Modo: {'Producción' if os.getenv('FLASK_ENV') == 'production' else 'Desarrollo'}")
+    print(f"🔌 Pool de conexiones: {'Activado' if connection_pool else 'Desactivado'}")
     
     # Inicializar base de datos
     if init_database():
         print("✅ Base de datos inicializada correctamente")
     else:
         print("❌ Error inicializando base de datos")
-        exit(1)
+        # En producción, continuar aunque falle la inicialización
+        if os.getenv('FLASK_ENV') == 'production':
+            print("⚠️ Continuando en modo producción sin inicialización de DB")
+        else:
+            exit(1)
+    
+    # Inicializar worker de transcripción si está disponible
+    if TRANSCRIPCION_DISPONIBLE:
+        try:
+            worker_thread = threading.Thread(target=transcripcion_worker, daemon=True)
+            worker_thread.start()
+            print("✅ Worker de transcripción iniciado en background")
+        except Exception as e:
+            print(f"⚠️ Error iniciando worker de transcripción: {e}")
+    else:
+        print("⚠️ Sistema de transcripción no disponible - worker no iniciado")
     
     # Configuración del servidor
     port = int(os.getenv('FLASK_PORT', 5000))
