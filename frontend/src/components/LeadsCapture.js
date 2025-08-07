@@ -21,6 +21,7 @@ const LeadsCapture = () => {
   const [scanCooldown, setScanCooldown] = useState(false);
   const isRecordingRef = useRef(false);
   const [usoTranscripcion, setUsoTranscripcion] = useState(false);
+  const [historialLoading, setHistorialLoading] = useState(false);
 
   // Cargar lista de asesores y configurar reconocimiento de voz al montar el componente
   useEffect(() => {
@@ -221,7 +222,8 @@ const LeadsCapture = () => {
     setSuccess(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/leads/cliente-por-qr', {
+      // ETAPA 1: Cargar solo datos básicos del cliente (RÁPIDO)
+      const response = await fetch('http://localhost:5000/api/leads/cliente-info', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -237,19 +239,44 @@ const LeadsCapture = () => {
         throw new Error(data.error || 'Error obteniendo datos del cliente');
       }
 
+      // Mostrar cliente INMEDIATAMENTE y cambiar a modo formulario
       setCliente(data.cliente);
-      setConsultasAnteriores(data.consultas_anteriores || []);
       setModoScanner(false);
+      setScannerLoading(false); // Quitar loading inmediatamente
+      
+      // ETAPA 2: Cargar historial en background (PUEDE DEMORAR)
+      // No bloqueamos la UI mientras carga el historial
+      setHistorialLoading(true); // Mostrar indicador de carga
+      fetch('http://localhost:5000/api/leads/cliente-historial', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          registro_id: data.cliente.id
+        }),
+      })
+      .then(response => response.json())
+      .then(historialData => {
+        if (historialData.consultas_anteriores) {
+          setConsultasAnteriores(historialData.consultas_anteriores);
+        }
+        setHistorialLoading(false);
+      })
+      .catch(error => {
+        console.error('Error cargando historial:', error);
+        setHistorialLoading(false);
+        // No mostramos error al usuario porque el historial es secundario
+      });
 
     } catch (error) {
       console.error('Error:', error);
       setError(error.message);
+      setScannerLoading(false);
       // En caso de error, permitir nuevo escaneo después de 1 segundo
       setTimeout(() => {
         processingRef.current = false;
       }, 1000);
-    } finally {
-      setScannerLoading(false);
     }
   };
 
@@ -600,14 +627,34 @@ const LeadsCapture = () => {
         </div>
 
         {/* Consultas Anteriores */}
-        {consultasAnteriores.length > 0 && (
+        {(historialLoading || consultasAnteriores.length > 0) && (
           <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
             <h2 className="text-white font-medium text-sm mb-3 flex items-center">
-              📝 <span className="ml-2">Historial ({consultasAnteriores.length})</span>
+              📝 <span className="ml-2">
+                Historial 
+                {historialLoading ? (
+                  <span className="ml-2 text-xs text-white/60">(cargando...)</span>
+                ) : (
+                  ` (${consultasAnteriores.length})`
+                )}
+              </span>
             </h2>
             
             <div className="space-y-2 max-h-32 overflow-y-auto">
-              {consultasAnteriores.map((consultaAnterior, index) => (
+              {historialLoading ? (
+                // Skeleton loader mientras carga
+                <>
+                  <div className="bg-white/5 rounded-lg p-3 border border-white/10 animate-pulse">
+                    <div className="h-3 bg-white/20 rounded w-1/3 mb-2"></div>
+                    <div className="h-2 bg-white/10 rounded w-full"></div>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-3 border border-white/10 animate-pulse">
+                    <div className="h-3 bg-white/20 rounded w-1/3 mb-2"></div>
+                    <div className="h-2 bg-white/10 rounded w-full"></div>
+                  </div>
+                </>
+              ) : consultasAnteriores.length > 0 ? (
+                consultasAnteriores.map((consultaAnterior, index) => (
                 <div 
                   key={index}
                   className="bg-white/5 rounded-lg p-3 border border-white/10"
@@ -624,7 +671,10 @@ const LeadsCapture = () => {
                     {consultaAnterior.consulta}
                   </p>
                 </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-white/50 text-xs text-center">No hay consultas anteriores</p>
+              )}
             </div>
           </div>
         )}

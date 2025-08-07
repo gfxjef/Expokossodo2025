@@ -2853,6 +2853,113 @@ def get_marcas():
 
 # ===== ENDPOINTS PARA SISTEMA DE LEADS =====
 
+@app.route('/api/leads/cliente-info', methods=['POST'])
+def obtener_cliente_info():
+    """Obtener SOLO información básica del cliente (RÁPIDO)"""
+    data = request.get_json()
+    
+    if not data or 'qr_code' not in data:
+        return jsonify({"error": "Código QR requerido"}), 400
+    
+    qr_code = data['qr_code']
+    
+    # Validar formato QR
+    validacion = validar_formato_qr(qr_code)
+    if not validacion['valid']:
+        return jsonify({"error": "Código QR inválido"}), 400
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Buscar SOLO datos básicos del cliente (query ligera y rápida)
+        cursor.execute("""
+            SELECT id, nombres, correo, empresa, cargo, numero
+            FROM expokossodo_registros 
+            WHERE qr_code = %s
+        """, (qr_code,))
+        
+        cliente = cursor.fetchone()
+        if not cliente:
+            return jsonify({"error": "Cliente no encontrado"}), 404
+        
+        return jsonify({"cliente": cliente})
+        
+    except Error as e:
+        print(f"[ERROR] Error obteniendo cliente info: {e}")
+        return jsonify({"error": "Error del servidor"}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.route('/api/leads/cliente-historial', methods=['POST'])
+def obtener_cliente_historial():
+    """Obtener SOLO el historial de consultas (puede demorar más)"""
+    data = request.get_json()
+    
+    if not data or 'registro_id' not in data:
+        return jsonify({"error": "ID de registro requerido"}), 400
+    
+    registro_id = data['registro_id']
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Obtener historial con resúmenes (puede ser más lento por el parsing de JSON)
+        cursor.execute("""
+            SELECT 
+                asesor_nombre, 
+                consulta, 
+                fecha_consulta,
+                uso_transcripcion,
+                resumen
+            FROM expokossodo_consultas 
+            WHERE registro_id = %s
+            ORDER BY fecha_consulta DESC
+            LIMIT 5
+        """, (registro_id,))
+        
+        consultas_raw = cursor.fetchall()
+        
+        # Procesar consultas para mostrar resúmenes cuando hay transcripción
+        consultas_anteriores = []
+        for consulta_raw in consultas_raw:
+            consulta_final = {
+                'asesor_nombre': consulta_raw['asesor_nombre'],
+                'fecha_consulta': consulta_raw['fecha_consulta'],
+                'consulta': consulta_raw['consulta']
+            }
+            
+            # Si usó transcripción y hay resumen, mostrar el resumen_general
+            if consulta_raw['uso_transcripcion'] == 1 and consulta_raw['resumen']:
+                try:
+                    import json
+                    resumen_data = json.loads(consulta_raw['resumen'])
+                    if 'resumen_general' in resumen_data and resumen_data['resumen_general'].strip():
+                        consulta_final['consulta'] = resumen_data['resumen_general']
+                        print(f"[LOG] Resumen encontrado para historial")
+                except (json.JSONDecodeError, KeyError, TypeError) as e:
+                    print(f"[WARN] Error parseando resumen: {e}")
+            
+            consultas_anteriores.append(consulta_final)
+        
+        return jsonify({"consultas_anteriores": consultas_anteriores})
+        
+    except Error as e:
+        print(f"[ERROR] Error obteniendo historial: {e}")
+        return jsonify({"error": "Error del servidor"}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+# MANTENER el endpoint original para compatibilidad
 @app.route('/api/leads/cliente-por-qr', methods=['POST'])
 def obtener_cliente_por_qr():
     """Obtener información del cliente por código QR para sistema de leads"""
