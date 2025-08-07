@@ -3,8 +3,8 @@ import multiprocessing
 
 # Configuración del servidor
 bind = f"0.0.0.0:{os.getenv('PORT', '5000')}"
-workers = min(multiprocessing.cpu_count() * 2 + 1, 4)  # Limitar a 4 workers máximo
-worker_class = 'sync'
+workers = min(multiprocessing.cpu_count() * 2 + 1, 3)  # Limitar a 3 workers máximo para free tier
+worker_class = 'sync'  # Usar sync worker class (no gevent/eventlet)
 worker_connections = 1000
 
 # Timeouts
