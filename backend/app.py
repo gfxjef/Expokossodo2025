@@ -102,8 +102,7 @@ DB_CONFIG = {
     'password': os.getenv('DB_PASSWORD'),
     'port': int(os.getenv('DB_PORT', 3306)),
     'connection_timeout': 10,
-    'autocommit': True,
-    'pool_reset_session': True
+    'autocommit': True
 }
 
 # Crear pool de conexiones
