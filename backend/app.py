@@ -999,7 +999,7 @@ def send_confirmation_email(user_data, selected_events, qr_text=None):
         email_password = os.getenv('EMAIL_PASSWORD')
         
         msg = MIMEMultipart()
-        msg['From'] = email_user
+        msg['From'] = f"Kossodo <{email_user}>"
         msg['To'] = user_data['correo']
         msg['Subject'] = "Confirmación de Registro - ExpoKossodo 2025"
         
