@@ -2886,16 +2886,45 @@ def obtener_cliente_por_qr():
         if not cliente:
             return jsonify({"error": "Cliente no encontrado"}), 404
         
-        # Obtener consultas anteriores del cliente
+        # Obtener consultas anteriores del cliente con resúmenes de transcripción
         cursor.execute("""
-            SELECT asesor_nombre, consulta, fecha_consulta
+            SELECT 
+                asesor_nombre, 
+                consulta, 
+                fecha_consulta,
+                uso_transcripcion,
+                resumen
             FROM expokossodo_consultas 
             WHERE registro_id = %s
             ORDER BY fecha_consulta DESC
             LIMIT 5
         """, (cliente['id'],))
         
-        consultas_anteriores = cursor.fetchall()
+        consultas_raw = cursor.fetchall()
+        
+        # Procesar consultas para mostrar resúmenes cuando hay transcripción
+        consultas_anteriores = []
+        for consulta_raw in consultas_raw:
+            consulta_final = {
+                'asesor_nombre': consulta_raw['asesor_nombre'],
+                'fecha_consulta': consulta_raw['fecha_consulta'],
+                'consulta': consulta_raw['consulta']  # Por defecto usar la consulta original
+            }
+            
+            # Si usó transcripción y hay resumen, mostrar el resumen_general
+            if consulta_raw['uso_transcripcion'] == 1 and consulta_raw['resumen']:
+                try:
+                    import json
+                    resumen_data = json.loads(consulta_raw['resumen'])
+                    if 'resumen_general' in resumen_data and resumen_data['resumen_general'].strip():
+                        consulta_final['consulta'] = resumen_data['resumen_general']
+                        print(f"[LOG] Mostrando resumen de transcripción para consulta ID")
+                except (json.JSONDecodeError, KeyError, TypeError) as e:
+                    # Si hay error parseando JSON, mantener consulta original
+                    print(f"[WARN] Error parseando resumen JSON: {e}")
+                    pass
+            
+            consultas_anteriores.append(consulta_final)
         
         return jsonify({
             "cliente": cliente,
