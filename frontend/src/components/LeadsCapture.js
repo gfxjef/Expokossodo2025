@@ -418,14 +418,21 @@ const LeadsCapture = () => {
           </div>
         </div>
 
-        {/* Scanner */}
+        {/* Scanner - Responsive con tamaño controlado en desktop */}
         <div className="p-4">
-          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 mb-4 border border-white/10">
-            <QRScanner 
-              onScanSuccess={handleQRScan}
-              onScanError={(error) => setError(`Error de escáner: ${error.message}`)}
-              isActive={true}
-            />
+          <div className="flex justify-center">
+            <div className="w-full md:w-3/4 lg:w-1/2 xl:w-1/2 2xl:w-1/3">
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                {/* Contenedor del scanner con altura controlada */}
+                <div className="scanner-wrapper">
+                  <QRScanner 
+                    onScanSuccess={handleQRScan}
+                    onScanError={(error) => setError(`Error de escáner: ${error.message}`)}
+                    isActive={true}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Mensajes de Estado */}

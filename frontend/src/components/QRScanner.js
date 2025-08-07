@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
+import './QRScanner.css';
 
 const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
   const scannerRef = useRef(null);
@@ -226,7 +227,11 @@ const QRScanner = ({ onScanSuccess, onScanError, isActive = true }) => {
         <div
           id={`qr-scanner-${Date.now()}`}
           ref={scannerRef}
-          className="w-full"
+          className="w-full qr-scanner-container"
+          style={{
+            maxHeight: window.innerWidth > 1024 ? '400px' : 'none',
+            overflow: 'hidden'
+          }}
         />
         
         {scannerState === 'success' && (

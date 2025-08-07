@@ -1,0 +1,50 @@
+/* Estilos para el QR Scanner responsive */
+
+/* Mobile - Pantalla completa */
+@media (max-width: 1023px) {
+  .qr-scanner-container video {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 60vh !important;
+  }
+  
+  .qr-scanner-container {
+    width: 100% !important;
+  }
+}
+
+/* Desktop - Tamaño limitado */
+@media (min-width: 1024px) {
+  .qr-scanner-container {
+    max-width: 500px !important;
+    margin: 0 auto !important;
+  }
+  
+  .qr-scanner-container video {
+    max-height: 400px !important;
+    width: 100% !important;
+    height: auto !important;
+    object-fit: cover !important;
+  }
+  
+  /* Limitar el canvas del scanner */
+  .qr-scanner-container canvas {
+    max-height: 400px !important;
+  }
+  
+  /* Ajustar el contenedor del viewfinder */
+  #qr-shaded-region {
+    max-height: 400px !important;
+  }
+}
+
+/* Ultra wide screens */
+@media (min-width: 1920px) {
+  .qr-scanner-container {
+    max-width: 600px !important;
+  }
+  
+  .qr-scanner-container video {
+    max-height: 450px !important;
+  }
+}
