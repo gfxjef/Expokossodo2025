@@ -33,15 +33,15 @@ if os.path.exists(transcripcion_path):
         from services.batch_processor import BatchProcessor
         from services.gemini_service import GeminiService
         TRANSCRIPCION_DISPONIBLE = True
-        print("✅ Sistema de transcripción importado correctamente")
+        print("[OK] Sistema de transcripción importado correctamente")
     except ImportError as e:
-        print(f"⚠️ No se pudo importar el sistema de transcripción: {e}")
+        print(f"[WARN] No se pudo importar el sistema de transcripción: {e}")
         TRANSCRIPCION_DISPONIBLE = False
     except Exception as e:
-        print(f"⚠️ Error inesperado importando transcripción: {e}")
+        print(f"[WARN] Error inesperado importando transcripción: {e}")
         TRANSCRIPCION_DISPONIBLE = False
 else:
-    print(f"⚠️ Proyecto de transcripción no encontrado en: {transcripcion_path}")
+    print(f"[WARN] Proyecto de transcripción no encontrado en: {transcripcion_path}")
     TRANSCRIPCION_DISPONIBLE = False
 
 # Configuración de logging mejorada
@@ -63,7 +63,11 @@ transcripcion_stats = {
 }
 
 # Cargar variables de entorno desde .env
-load_dotenv()
+from dotenv import load_dotenv
+load_dotenv(override=True)  # Forzar recarga de variables
+
+# Imprimir configuración de DB para debug
+print(f"[INFO] Conectando a DB_HOST: {os.getenv('DB_HOST')}")
 
 # --- CONFIGURACIÓN ---
 app = Flask(__name__, static_folder='../frontend/build', static_url_path='/')
@@ -113,9 +117,9 @@ try:
         pool_reset_session=True,
         **DB_CONFIG
     )
-    print("✅ Pool de conexiones creado exitosamente")
+    print("[OK] Pool de conexiones creado exitosamente")
 except Error as e:
-    print(f"❌ Error creando pool de conexiones: {e}")
+    print(f"[ERROR] Error creando pool de conexiones: {e}")
     connection_pool = None
 
 # Configuración de OpenAI
@@ -148,7 +152,7 @@ def handle_preflight():
 # Middleware para logging de solicitudes
 @app.before_request
 def log_request_info():
-    print(f"🔍 {request.method} {request.path} from {request.remote_addr}")
+    print(f"[REQ] {request.method} {request.path} from {request.remote_addr}")
     print(f"   Origin: {request.headers.get('Origin', 'No origin')}")
     if request.method in ['POST', 'PUT'] and request.is_json:
         print(f"   Body preview: {str(request.get_json())[:100]}...")
@@ -189,15 +193,15 @@ def get_db_connection():
             if connection.is_connected():
                 return connection
             else:
-                print("❌ Conexión no está activa")
+                print("[ERROR] Conexión no está activa")
                 return None
         else:
             # Fallback a conexión directa si no hay pool
-            print("⚠️ Usando conexión directa (sin pool)")
+            print("[WARN] Usando conexión directa (sin pool)")
             connection = mysql.connector.connect(**DB_CONFIG)
             return connection
     except Error as e:
-        print(f"❌ Error obteniendo conexión: {e}")
+        print(f"[ERROR] Error obteniendo conexión: {e}")
         return None
 
 # Decorador para medir tiempo de ejecución
@@ -209,19 +213,19 @@ def log_execution_time(func):
         method = request.method if request else 'N/A'
         
         try:
-            print(f"🔵 [{datetime.now().strftime('%H:%M:%S')}] Iniciando {method} {endpoint}")
+            print(f"[START] [{datetime.now().strftime('%H:%M:%S')}] Iniciando {method} {endpoint}")
             result = func(*args, **kwargs)
             execution_time = time.time() - start_time
             
             if execution_time > 5:
-                print(f"⚠️ SLOW QUERY: {endpoint} tomó {execution_time:.2f}s")
+                print(f"[WARN] SLOW QUERY: {endpoint} tomó {execution_time:.2f}s")
             else:
-                print(f"✅ [{datetime.now().strftime('%H:%M:%S')}] Completado {endpoint} en {execution_time:.2f}s")
+                print(f"[OK] [{datetime.now().strftime('%H:%M:%S')}] Completado {endpoint} en {execution_time:.2f}s")
             
             return result
         except Exception as e:
             execution_time = time.time() - start_time
-            print(f"❌ Error en {endpoint} después de {execution_time:.2f}s: {str(e)}")
+            print(f"[ERROR] Error en {endpoint} después de {execution_time:.2f}s: {str(e)}")
             print(f"Traceback: {traceback.format_exc()}")
             raise
     
@@ -432,7 +436,7 @@ def populate_existing_slugs():
         cursor.execute("SELECT id, titulo_charla FROM expokossodo_eventos WHERE slug IS NULL OR slug = ''")
         eventos_sin_slug = cursor.fetchall()
         
-        print(f"📝 Procesando {len(eventos_sin_slug)} eventos sin slug...")
+        print(f"[LOG] Procesando {len(eventos_sin_slug)} eventos sin slug...")
         
         for evento in eventos_sin_slug:
             # Acceso por índice (id=0, titulo_charla=1)
@@ -454,14 +458,14 @@ def populate_existing_slugs():
                 (final_slug, evento_id)
             )
             
-            print(f"✅ Evento {evento_id}: '{titulo_charla}' → '{final_slug}'")
+            print(f"[OK] Evento {evento_id}: '{titulo_charla}' → '{final_slug}'")
         
         connection.commit()
         print(f"🎯 {len(eventos_sin_slug)} slugs generados exitosamente")
         return True
         
     except Error as e:
-        print(f"❌ Error poblando slugs: {e}")
+        print(f"[ERROR] Error poblando slugs: {e}")
         return False
     finally:
         cursor.close()
@@ -645,10 +649,10 @@ def init_database():
                 ALTER TABLE expokossodo_eventos 
                 ADD COLUMN descripcion TEXT AFTER pais
             """)
-            print("✅ Columna 'descripcion' agregada exitosamente")
+            print("[OK] Columna 'descripcion' agregada exitosamente")
         except Error as e:
             if "Duplicate column name" in str(e):
-                print("ℹ️ Columna 'descripcion' ya existe")
+                print("[INFO] Columna 'descripcion' ya existe")
             else:
                 print(f"Error agregando columna descripcion: {e}")
         
@@ -658,10 +662,10 @@ def init_database():
                 ALTER TABLE expokossodo_eventos 
                 ADD COLUMN imagen_url VARCHAR(500) AFTER descripcion
             """)
-            print("✅ Columna 'imagen_url' agregada exitosamente")
+            print("[OK] Columna 'imagen_url' agregada exitosamente")
         except Error as e:
             if "Duplicate column name" in str(e):
-                print("ℹ️ Columna 'imagen_url' ya existe")
+                print("[INFO] Columna 'imagen_url' ya existe")
             else:
                 print(f"Error agregando columna imagen_url: {e}")
         
@@ -671,10 +675,10 @@ def init_database():
                 ALTER TABLE expokossodo_eventos 
                 ADD COLUMN disponible BOOLEAN DEFAULT TRUE AFTER slots_ocupados
             """)
-            print("✅ Columna 'disponible' agregada exitosamente")
+            print("[OK] Columna 'disponible' agregada exitosamente")
         except Error as e:
             if "Duplicate column name" in str(e):
-                print("ℹ️ Columna 'disponible' ya existe")
+                print("[INFO] Columna 'disponible' ya existe")
             else:
                 print(f"Error agregando columna disponible: {e}")
         
@@ -684,20 +688,20 @@ def init_database():
                 ALTER TABLE expokossodo_eventos 
                 ADD COLUMN slug VARCHAR(255) UNIQUE AFTER titulo_charla
             """)
-            print("✅ Columna 'slug' agregada exitosamente")
+            print("[OK] Columna 'slug' agregada exitosamente")
         except Error as e:
             if "Duplicate column name" in str(e):
-                print("ℹ️ Columna 'slug' ya existe")
+                print("[INFO] Columna 'slug' ya existe")
             else:
                 print(f"Error agregando columna slug: {e}")
         
         # Crear índice para slug si no existe
         try:
             cursor.execute("CREATE INDEX idx_slug ON expokossodo_eventos(slug)")
-            print("✅ Índice 'idx_slug' creado exitosamente")
+            print("[OK] Índice 'idx_slug' creado exitosamente")
         except Error as e:
             if "Duplicate key name" in str(e):
-                print("ℹ️ Índice 'idx_slug' ya existe")
+                print("[INFO] Índice 'idx_slug' ya existe")
             else:
                 print(f"Error creando índice slug: {e}")
         
@@ -710,10 +714,10 @@ def init_database():
                 FOREIGN KEY (marca_id) REFERENCES expokossodo_marcas(id) 
                 ON DELETE SET NULL
             """)
-            print("✅ Columna 'marca_id' agregada exitosamente")
+            print("[OK] Columna 'marca_id' agregada exitosamente")
         except Error as e:
             if "Duplicate column name" in str(e):
-                print("ℹ️ Columna 'marca_id' ya existe")
+                print("[INFO] Columna 'marca_id' ya existe")
             else:
                 print(f"Error agregando columna marca_id: {e}")
         
@@ -723,10 +727,10 @@ def init_database():
                 ALTER TABLE expokossodo_eventos 
                 ADD COLUMN post VARCHAR(500) AFTER imagen_url
             """)
-            print("✅ Columna 'post' agregada exitosamente")
+            print("[OK] Columna 'post' agregada exitosamente")
         except Error as e:
             if "Duplicate column name" in str(e):
-                print("ℹ️ Columna 'post' ya existe")
+                print("[INFO] Columna 'post' ya existe")
             else:
                 print(f"Error agregando columna post: {e}")
         
@@ -817,12 +821,12 @@ def init_database():
                 ALTER TABLE expokossodo_consultas 
                 ADD COLUMN uso_transcripcion BOOLEAN DEFAULT FALSE
             """)
-            print("✅ Columna 'uso_transcripcion' agregada a tabla expokossodo_consultas")
+            print("[OK] Columna 'uso_transcripcion' agregada a tabla expokossodo_consultas")
         except Error as e:
             if "Duplicate column name" not in str(e):
-                print(f"⚠️ Error agregando columna uso_transcripcion: {e}")
+                print(f"[WARN] Error agregando columna uso_transcripcion: {e}")
             else:
-                print("✅ Columna 'uso_transcripcion' ya existe")
+                print("[OK] Columna 'uso_transcripcion' ya existe")
 
         # Agregar nuevas columnas a tabla expokossodo_registros para QR
         try:
@@ -830,10 +834,10 @@ def init_database():
                 ALTER TABLE expokossodo_registros 
                 ADD COLUMN qr_code VARCHAR(500) AFTER eventos_seleccionados
             """)
-            print("✅ Columna 'qr_code' agregada exitosamente")
+            print("[OK] Columna 'qr_code' agregada exitosamente")
         except Error as e:
             if "Duplicate column name" in str(e):
-                print("ℹ️ Columna 'qr_code' ya existe")
+                print("[INFO] Columna 'qr_code' ya existe")
             else:
                 print(f"Error agregando columna qr_code: {e}")
         
@@ -842,10 +846,10 @@ def init_database():
                 ALTER TABLE expokossodo_registros 
                 ADD COLUMN qr_generado_at TIMESTAMP NULL AFTER qr_code
             """)
-            print("✅ Columna 'qr_generado_at' agregada exitosamente")
+            print("[OK] Columna 'qr_generado_at' agregada exitosamente")
         except Error as e:
             if "Duplicate column name" in str(e):
-                print("ℹ️ Columna 'qr_generado_at' ya existe")
+                print("[INFO] Columna 'qr_generado_at' ya existe")
             else:
                 print(f"Error agregando columna qr_generado_at: {e}")
         
@@ -854,10 +858,10 @@ def init_database():
                 ALTER TABLE expokossodo_registros 
                 ADD COLUMN asistencia_general_confirmada BOOLEAN DEFAULT FALSE AFTER qr_generado_at
             """)
-            print("✅ Columna 'asistencia_general_confirmada' agregada exitosamente")
+            print("[OK] Columna 'asistencia_general_confirmada' agregada exitosamente")
         except Error as e:
             if "Duplicate column name" in str(e):
-                print("ℹ️ Columna 'asistencia_general_confirmada' ya existe")
+                print("[INFO] Columna 'asistencia_general_confirmada' ya existe")
             else:
                 print(f"Error agregando columna asistencia_general_confirmada: {e}")
         
@@ -866,15 +870,15 @@ def init_database():
                 ALTER TABLE expokossodo_registros 
                 ADD COLUMN fecha_asistencia_general TIMESTAMP NULL AFTER asistencia_general_confirmada
             """)
-            print("✅ Columna 'fecha_asistencia_general' agregada exitosamente")
+            print("[OK] Columna 'fecha_asistencia_general' agregada exitosamente")
         except Error as e:
             if "Duplicate column name" in str(e):
-                print("ℹ️ Columna 'fecha_asistencia_general' ya existe")
+                print("[INFO] Columna 'fecha_asistencia_general' ya existe")
             else:
                 print(f"Error agregando columna fecha_asistencia_general: {e}")
         
         connection.commit()
-        print("✅ Tablas y columnas QR creadas exitosamente")
+        print("[OK] Tablas y columnas QR creadas exitosamente")
         
         # Verificar si ya hay datos de ejemplo
         cursor.execute("SELECT COUNT(*) FROM expokossodo_eventos")
@@ -908,7 +912,7 @@ def populate_sample_data(cursor, connection):
                 "titulo": "Inteligencia Artificial en la Medicina", 
                 "expositor": "Dr. María González", 
                 "pais": "España",
-                "descripcion": "## Revolucionando el Diagnóstico Médico\n\nExplora cómo la **inteligencia artificial** está transformando la medicina moderna. Esta presentación aborda:\n\n### Tecnologías Emergentes\n- **Machine Learning** en diagnóstico por imagen\n- Algoritmos de **análisis predictivo**\n- **Redes neuronales** para detección temprana\n\n### Casos de Éxito\n✅ Detección de cáncer con **95% de precisión**\n✅ Diagnóstico de enfermedades cardíacas\n✅ Análisis automatizado de radiografías\n\n### Impacto en el Futuro\nConoce cómo la IA reducirá tiempos de diagnóstico y mejorará la precisión médica en los próximos años.",
+                "descripcion": "## Revolucionando el Diagnóstico Médico\n\nExplora cómo la **inteligencia artificial** está transformando la medicina moderna. Esta presentación aborda:\n\n### Tecnologías Emergentes\n- **Machine Learning** en diagnóstico por imagen\n- Algoritmos de **análisis predictivo**\n- **Redes neuronales** para detección temprana\n\n### Casos de Éxito\n[OK] Detección de cáncer con **95% de precisión**\n[OK] Diagnóstico de enfermedades cardíacas\n[OK] Análisis automatizado de radiografías\n\n### Impacto en el Futuro\nConoce cómo la IA reducirá tiempos de diagnóstico y mejorará la precisión médica en los próximos años.",
                 "imagen_url": "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
             },
             {
@@ -922,7 +926,7 @@ def populate_sample_data(cursor, connection):
                 "titulo": "Telemedicina y Futuro", 
                 "expositor": "Dra. Ana Rodríguez", 
                 "pais": "México",
-                "descripcion": "## Transformación Digital en Salud\n\nDescubre cómo la **telemedicina** está revolucionando la atención médica:\n\n### Tecnologías Actuales\n- Consultas virtuales en tiempo real\n- Monitoreo remoto de pacientes\n- **IoT médico** y wearables\n\n### Beneficios Clave\n✅ **Accesibilidad** universal a la atención médica\n✅ Reducción de costos operativos\n✅ Atención 24/7 desde cualquier lugar\n\n### Casos de Implementación\n📱 Apps móviles de diagnóstico\n🏥 Hospitales virtuales\n📊 Plataformas de seguimiento de pacientes",
+                "descripcion": "## Transformación Digital en Salud\n\nDescubre cómo la **telemedicina** está revolucionando la atención médica:\n\n### Tecnologías Actuales\n- Consultas virtuales en tiempo real\n- Monitoreo remoto de pacientes\n- **IoT médico** y wearables\n\n### Beneficios Clave\n[OK] **Accesibilidad** universal a la atención médica\n[OK] Reducción de costos operativos\n[OK] Atención 24/7 desde cualquier lugar\n\n### Casos de Implementación\n📱 Apps móviles de diagnóstico\n🏥 Hospitales virtuales\n📊 Plataformas de seguimiento de pacientes",
                 "imagen_url": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
             },
             {
@@ -936,10 +940,10 @@ def populate_sample_data(cursor, connection):
                 "titulo": "Genómica Personalizada", 
                 "expositor": "Dr. Pierre Dubois", 
                 "pais": "Francia",
-                "descripcion": "## Medicina de Precisión Genética\n\nDescubre cómo la **genómica personalizada** está revolucionando los tratamientos médicos:\n\n### Secuenciación del ADN\n- **Análisis genómico completo**\n- Identificación de mutaciones\n- Predisposición a enfermedades\n\n### Tratamientos Personalizados\n💊 Farmacogenómica y dosificación precisa\n🧬 Terapias génicas específicas\n📊 Medicina predictiva y preventiva\n\n### Aplicaciones Clínicas\n✅ Oncología personalizada\n✅ Enfermedades hereditarias\n✅ Medicina preventiva basada en genes",
+                "descripcion": "## Medicina de Precisión Genética\n\nDescubre cómo la **genómica personalizada** está revolucionando los tratamientos médicos:\n\n### Secuenciación del ADN\n- **Análisis genómico completo**\n- Identificación de mutaciones\n- Predisposición a enfermedades\n\n### Tratamientos Personalizados\n💊 Farmacogenómica y dosificación precisa\n🧬 Terapias génicas específicas\n📊 Medicina predictiva y preventiva\n\n### Aplicaciones Clínicas\n[OK] Oncología personalizada\n[OK] Enfermedades hereditarias\n[OK] Medicina preventiva basada en genes",
                 "imagen_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
             },
-            {"titulo": "Cirugía Mínimamente Invasiva", "expositor": "Dr. Giuseppe Rossi", "pais": "Italia", "descripcion": "## Técnicas Quirúrgicas Avanzadas\n\nDescubre las últimas innovaciones en **cirugía mínimamente invasiva**:\n\n- Laparoscopía avanzada\n- Técnicas endoscópicas\n- Recuperación acelerada\n\n✅ Menor dolor postoperatorio\n✅ Cicatrices mínimas\n✅ Hospitalización reducida", "imagen_url": "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"},
+            {"titulo": "Cirugía Mínimamente Invasiva", "expositor": "Dr. Giuseppe Rossi", "pais": "Italia", "descripcion": "## Técnicas Quirúrgicas Avanzadas\n\nDescubre las últimas innovaciones en **cirugía mínimamente invasiva**:\n\n- Laparoscopía avanzada\n- Técnicas endoscópicas\n- Recuperación acelerada\n\n[OK] Menor dolor postoperatorio\n[OK] Cicatrices mínimas\n[OK] Hospitalización reducida", "imagen_url": "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"},
             {"titulo": "Diagnóstico por Imagen IA", "expositor": "Dr. Hiroshi Tanaka", "pais": "Japón", "descripcion": "## Radiología Inteligente\n\n**Inteligencia artificial** aplicada al diagnóstico por imagen:\n\n- Detección automática de anomalías\n- Análisis de resonancias magnéticas\n- Interpretación de tomografías\n\n🎯 **Precisión diagnóstica del 98%**", "imagen_url": "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"},
             {"titulo": "Medicina Regenerativa", "expositor": "Dr. Sarah Johnson", "pais": "Reino Unido", "descripcion": "## Regeneración de Tejidos\n\nExplora el futuro de la **medicina regenerativa**:\n\n- Terapia con células madre\n- Ingeniería de tejidos\n- Bioimpresión 3D\n\n🔬 Casos de éxito en regeneración ósea y cartilaginosa", "imagen_url": "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"},
             {"titulo": "Farmacología Digital", "expositor": "Dr. Hans Mueller", "pais": "Alemania", "descripcion": "## Medicamentos Inteligentes\n\n**Farmacología digital** y medicina personalizada:\n\n- Dosificación precisa por IA\n- Monitoreo de adherencia\n- Efectos secundarios predictivos\n\n💊 Optimización de tratamientos farmacológicos", "imagen_url": "https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"},
@@ -981,7 +985,7 @@ def populate_sample_data(cursor, connection):
         """, eventos)
         
         connection.commit()
-        print("✅ Datos de ejemplo insertados exitosamente")
+        print("[OK] Datos de ejemplo insertados exitosamente")
         
     except Error as e:
         print(f"Error insertando datos de ejemplo: {e}")
@@ -1240,11 +1244,11 @@ def send_confirmation_email(user_data, selected_events, qr_text=None):
                                            f'attachment; filename="QR_ExpoKossodo_{user_data["nombres"].replace(" ", "_")}.png"')
                     qr_attachment.add_header('Content-ID', '<qr_code>')
                     msg.attach(qr_attachment)
-                    print("✅ Código QR adjuntado al email exitosamente")
+                    print("[OK] Código QR adjuntado al email exitosamente")
                 else:
-                    print("⚠️ No se pudo generar la imagen QR para adjuntar")
+                    print("[WARN] No se pudo generar la imagen QR para adjuntar")
             except Exception as e:
-                print(f"⚠️ Error adjuntando QR al email: {e}")
+                print(f"[WARN] Error adjuntando QR al email: {e}")
         
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
@@ -1306,29 +1310,26 @@ def get_eventos():
     try:
         connection = get_db_connection()
         if not connection:
-            print("❌ No se pudo obtener conexión para /api/eventos")
+            print("[ERROR] No se pudo obtener conexión para /api/eventos")
             return jsonify({"error": "Error de conexión a la base de datos"}), 500
         
         cursor = connection.cursor(dictionary=True)
         
         # Optimización: usar índices y limitar campos
         query_start = time.time()
+        # Consulta simplificada sin joins complejos  
         cursor.execute("""
             SELECT 
-                e.id, e.titulo, e.ponente, e.sala, e.hora, e.fecha,
-                e.capacidad, e.registrados, e.disponible,
-                m.marca as marca_nombre,
-                m.logo as marca_logo,
-                m.expositor as marca_expositor
+                e.id, e.titulo_charla, e.expositor, e.sala, e.hora, e.fecha,
+                e.disponible, e.pais, e.descripcion, e.imagen_url, e.post,
+                e.slots_disponibles, e.slots_ocupados
             FROM expokossodo_eventos e
-            LEFT JOIN expokossodo_marcas m ON e.marca_id = m.id
-            INNER JOIN expokossodo_horarios h ON e.hora = h.horario
-            WHERE h.activo = TRUE AND e.disponible = TRUE
+            WHERE e.disponible = TRUE
             ORDER BY e.fecha, e.hora, e.sala
         """)
         eventos = cursor.fetchall()
         query_time = time.time() - query_start
-        print(f"🔍 Query /api/eventos tomó {query_time:.3f}s, {len(eventos)} eventos encontrados")
+        print(f"[SEARCH] Query /api/eventos tomó {query_time:.3f}s, {len(eventos)} eventos encontrados")
         
         # Organizar por fecha
         eventos_por_fecha = {}
@@ -1344,9 +1345,9 @@ def get_eventos():
             eventos_por_fecha[fecha_str][hora].append({
                 'id': evento['id'],
                 'sala': evento['sala'],
-                'titulo_charla': evento['titulo_charla'],
-                'expositor': evento['expositor'],
-                'pais': evento['pais'],
+                'titulo_charla': evento.get('titulo_charla', ''),
+                'expositor': evento.get('expositor', ''),
+                'pais': evento.get('pais', ''),
                 'descripcion': evento.get('descripcion', ''),
                 'imagen_url': evento.get('imagen_url', ''),
                 'post': evento.get('post', ''),
@@ -1365,11 +1366,18 @@ def get_eventos():
         
         return jsonify(eventos_por_fecha)
         
-    except Error as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        print(f"[ERROR] Error en /api/eventos: {str(e)}")
+        print(f"[ERROR] Tipo de error: {type(e).__name__}")
+        import traceback
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
+        return jsonify({"error": "Error interno del servidor"}), 500
     finally:
-        cursor.close()
-        connection.close()
+        if cursor:
+            cursor.close()
+        if connection and connection.is_connected():
+            connection.close()
+            print("[LOCK] Conexión cerrada para /api/eventos")
 
 @app.route('/api/evento/<slug>', methods=['GET'])
 def get_evento_by_slug(slug):
@@ -1752,7 +1760,7 @@ def update_evento(evento_id):
         
         # Log del cambio
         estado_disponible = "disponible" if data.get('disponible', True) else "no disponible"
-        print(f"✅ Evento {evento_id} actualizado por admin: {data['titulo_charla']} - {estado_disponible}")
+        print(f"[OK] Evento {evento_id} actualizado por admin: {data['titulo_charla']} - {estado_disponible}")
         
         return jsonify({'message': 'Evento actualizado exitosamente'})
         
@@ -1794,7 +1802,7 @@ def toggle_evento_disponibilidad(evento_id):
         
         # Log del cambio
         estado_texto = "activado" if nuevo_estado else "desactivado"
-        print(f"✅ Evento {evento_id} ({evento['titulo_charla']}) {estado_texto} por admin")
+        print(f"[OK] Evento {evento_id} ({evento['titulo_charla']}) {estado_texto} por admin")
         
         return jsonify({
             'message': f'Evento {estado_texto} exitosamente',
@@ -2038,7 +2046,7 @@ def get_eventos_verificacion():
         for evento in eventos:
             # Debug log solo para eventos con datos
             if evento['registrados'] > 0 or evento['presentes'] > 0:
-                print(f"✅ Evento {evento['id']} ({evento['titulo_charla']}): {evento['registrados']} registrados, {evento['presentes']} presentes")
+                print(f"[OK] Evento {evento['id']} ({evento['titulo_charla']}): {evento['registrados']} registrados, {evento['presentes']} presentes")
             
             eventos_optimizados.append({
                 'id': evento['id'],
@@ -2504,7 +2512,7 @@ def get_horarios_activos():
     try:
         connection = get_db_connection()
         if not connection:
-            print("❌ No se pudo obtener conexión para /api/admin/horarios/activos")
+            print("[ERROR] No se pudo obtener conexión para /api/admin/horarios/activos")
             return jsonify({"error": "Error de conexión a la base de datos"}), 500
         
         cursor = connection.cursor()
@@ -2517,7 +2525,7 @@ def get_horarios_activos():
         """)
         horarios = [row[0] for row in cursor.fetchall()]
         query_time = time.time() - query_start
-        print(f"🔍 Query /api/admin/horarios/activos tomó {query_time:.3f}s, {len(horarios)} horarios encontrados")
+        print(f"[SEARCH] Query /api/admin/horarios/activos tomó {query_time:.3f}s, {len(horarios)} horarios encontrados")
         
         return jsonify(horarios)
         
@@ -2587,7 +2595,7 @@ def get_fechas_info_activas():
     try:
         connection = get_db_connection()
         if not connection:
-            print("❌ No se pudo obtener conexión para /api/fechas-info/activas")
+            print("[ERROR] No se pudo obtener conexión para /api/fechas-info/activas")
             return jsonify({"error": "Error de conexión a la base de datos"}), 500
         
         cursor = connection.cursor()
@@ -2603,7 +2611,7 @@ def get_fechas_info_activas():
             ORDER BY fecha ASC
         """)
         query_time = time.time() - query_start
-        print(f"🔍 Query /api/fechas-info/activas tomó {query_time:.3f}s")
+        print(f"[SEARCH] Query /api/fechas-info/activas tomó {query_time:.3f}s")
         
         fechas_info = []
         for row in cursor.fetchall():
@@ -2962,10 +2970,10 @@ def guardar_consulta():
                 with transcripcion_lock:
                     transcripcion_stats['en_cola'] = transcripcion_queue.qsize()
                 
-                print(f"📝 Consulta ID {consulta_id} agregada a cola de transcripción")
+                print(f"[LOG] Consulta ID {consulta_id} agregada a cola de transcripción")
                 
             except Exception as e:
-                print(f"⚠️ Error agregando consulta {consulta_id} a cola de transcripción: {e}")
+                print(f"[WARN] Error agregando consulta {consulta_id} a cola de transcripción: {e}")
         
         return jsonify({
             "message": "Consulta guardada exitosamente",
@@ -3076,7 +3084,7 @@ def transcripcion_worker():
     """Worker thread para procesar cola de transcripciones en background"""
     global transcripcion_stats
     
-    print("🤖 Worker de transcripción iniciado")
+    print("[BOT] Worker de transcripción iniciado")
     
     with transcripcion_lock:
         transcripcion_stats['worker_activo'] = True
@@ -3123,30 +3131,30 @@ def transcripcion_worker():
                                     transcripcion_stats['procesadas'] += 1
                                     transcripcion_stats['ultima_procesada'] = time.strftime("%Y-%m-%d %H:%M:%S")
                                 
-                                print(f"✅ Transcripción completada para consulta ID: {consulta_id}")
+                                print(f"[OK] Transcripción completada para consulta ID: {consulta_id}")
                                 
                             except Exception as e:
-                                print(f"❌ Error actualizando resumen en BD: {e}")
+                                print(f"[ERROR] Error actualizando resumen en BD: {e}")
                                 with transcripcion_lock:
                                     transcripcion_stats['errores'] += 1
                             finally:
                                 cursor.close()
                                 connection.close()
                         else:
-                            print(f"❌ Error conectando a BD para consulta ID: {consulta_id}")
+                            print(f"[ERROR] Error conectando a BD para consulta ID: {consulta_id}")
                             with transcripcion_lock:
                                 transcripcion_stats['errores'] += 1
                     else:
-                        print(f"❌ No se pudo generar resumen para consulta ID: {consulta_id}")
+                        print(f"[ERROR] No se pudo generar resumen para consulta ID: {consulta_id}")
                         with transcripcion_lock:
                             transcripcion_stats['errores'] += 1
                             
                 except Exception as e:
-                    print(f"❌ Error procesando transcripción ID {consulta_id}: {e}")
+                    print(f"[ERROR] Error procesando transcripción ID {consulta_id}: {e}")
                     with transcripcion_lock:
                         transcripcion_stats['errores'] += 1
             else:
-                print(f"⚠️ Sistema de transcripción no disponible para consulta ID: {consulta_id}")
+                print(f"[WARN] Sistema de transcripción no disponible para consulta ID: {consulta_id}")
                 with transcripcion_lock:
                     transcripcion_stats['errores'] += 1
             
@@ -3160,7 +3168,7 @@ def transcripcion_worker():
             # Timeout - continuar esperando
             continue
         except Exception as e:
-            print(f"❌ Error crítico en worker de transcripción: {e}")
+            print(f"[ERROR] Error crítico en worker de transcripción: {e}")
             with transcripcion_lock:
                 transcripcion_stats['errores'] += 1
             time.sleep(5)
@@ -3169,35 +3177,35 @@ def transcripcion_worker():
         transcripcion_stats['worker_activo'] = False
 
 if __name__ == '__main__':
-    print("🚀 Iniciando ExpoKossodo Backend...")
-    print(f"🔧 Modo: {'Producción' if os.getenv('FLASK_ENV') == 'production' else 'Desarrollo'}")
-    print(f"🔌 Pool de conexiones: {'Activado' if connection_pool else 'Desactivado'}")
+    print("[INIT] Iniciando ExpoKossodo Backend...")
+    print(f"[CONFIG] Modo: {'Producción' if os.getenv('FLASK_ENV') == 'production' else 'Desarrollo'}")
+    print(f"[CONFIG] Pool de conexiones: {'Activado' if connection_pool else 'Desactivado'}")
     
     # Inicializar base de datos
     if init_database():
-        print("✅ Base de datos inicializada correctamente")
+        print("[OK] Base de datos inicializada correctamente")
     else:
-        print("❌ Error inicializando base de datos")
-        # En producción, continuar aunque falle la inicialización
-        if os.getenv('FLASK_ENV') == 'production':
-            print("⚠️ Continuando en modo producción sin inicialización de DB")
-        else:
-            exit(1)
+        print("[WARN] Error inicializando base de datos")
+        print("[INFO] El servidor iniciará de todos modos. Algunos endpoints pueden no funcionar.")
+        print("[INFO] Para desarrollo local, considera usar una base de datos MySQL local.")
+        
+        # No salir, permitir que el servidor inicie sin DB
+        # Esto permite probar otros aspectos del backend
     
     # Inicializar worker de transcripción si está disponible
     if TRANSCRIPCION_DISPONIBLE:
         try:
             worker_thread = threading.Thread(target=transcripcion_worker, daemon=True)
             worker_thread.start()
-            print("✅ Worker de transcripción iniciado en background")
+            print("[OK] Worker de transcripción iniciado en background")
         except Exception as e:
-            print(f"⚠️ Error iniciando worker de transcripción: {e}")
+            print(f"[WARN] Error iniciando worker de transcripción: {e}")
     else:
-        print("⚠️ Sistema de transcripción no disponible - worker no iniciado")
+        print("[WARN] Sistema de transcripción no disponible - worker no iniciado")
     
     # Configuración del servidor
     port = int(os.getenv('FLASK_PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
     
-    print(f"🌐 Servidor corriendo en http://localhost:{port}")
+    print(f"[SERVER] Servidor corriendo en http://localhost:{port}")
     app.run(host='0.0.0.0', port=port, debug=debug) 
