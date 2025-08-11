@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRScanner from './QRScanner';
+import API_CONFIG from '../config/api.config';
 
 const LeadsCapture = () => {
   const [cliente, setCliente] = useState(null);
@@ -128,7 +129,7 @@ const LeadsCapture = () => {
 
   const cargarAsesores = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/leads/asesores');
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/leads/asesores`);
       const data = await response.json();
       setAsesores(data.asesores || []);
     } catch (error) {
@@ -223,7 +224,7 @@ const LeadsCapture = () => {
 
     try {
       // ETAPA 1: Cargar solo datos básicos del cliente (RÁPIDO)
-      const response = await fetch('http://localhost:5000/api/leads/cliente-info', {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/leads/cliente-info`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -247,7 +248,7 @@ const LeadsCapture = () => {
       // ETAPA 2: Cargar historial en background (PUEDE DEMORAR)
       // No bloqueamos la UI mientras carga el historial
       setHistorialLoading(true); // Mostrar indicador de carga
-      fetch('http://localhost:5000/api/leads/cliente-historial', {
+      fetch(`${API_CONFIG.getApiUrl()}/leads/cliente-historial`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -295,7 +296,7 @@ const LeadsCapture = () => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/leads/guardar-consulta', {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/leads/guardar-consulta`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
