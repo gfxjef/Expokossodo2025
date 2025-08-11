@@ -582,7 +582,7 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                                 {/* Sectores/Industrias Presentes */}
                                 {fechaInfo.paises_participantes && fechaInfo.paises_participantes.length > 0 && (
                                   <div>
-                                    <h3 className="text-lg font-semibold mb-2">Sectores/Industrias Presentes</h3>
+                                    <h3 className="text-lg font-semibold mb-2">Sectores Presentes</h3>
                                     <div className="flex flex-wrap gap-2">
                                       {fechaInfo.paises_participantes.map((pais, index) => (
                                         <span key={index} className="inline-flex items-center space-x-1 text-sm">
