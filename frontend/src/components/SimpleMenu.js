@@ -39,8 +39,8 @@ const SimpleMenu = ({
 
   const menuItems = [
     { id: 'inicio', label: 'INICIO', icon: Home },
-    { id: 'informacion', label: 'INFORMACIÓN', icon: Info },
-    { id: 'registro', label: 'REGISTRO', icon: UserPlus }
+    { id: 'registro', label: 'REGISTRO', icon: UserPlus },
+    { id: 'informacion', label: 'INFORMACIÓN', icon: Info }
   ];
 
   // Cerrar menú móvil con tecla Escape

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Calendar, Users, MapPin, Globe, Clock, CheckCircle, AlertTriangle, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Users, MapPin, AlertTriangle, X, Medal } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import ReactMarkdown from 'react-markdown';
 import { eventService, utils } from '../services/api';
 import { analyticsService } from '../services/analytics';
 import EventCalendar from './EventCalendar';
@@ -56,12 +55,9 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const [showEventInfo, setShowEventInfo] = useState(false);
-  const [selectedEventInfo, setSelectedEventInfo] = useState(null);
   // Nuevo estado para fechas info
   const [fechasInfo, setFechasInfo] = useState([]);
   const [imageCache, setImageCache] = useState({});
-  const [dataLoaded, setDataLoaded] = useState(false);
   const [timeSlots, setTimeSlots] = useState([]);
   // const [validationErrors, setValidationErrors] = useState({});
   
@@ -71,19 +67,26 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
   
   // Cargar datos adicionales al montar el componente (eventsData ya viene como prop)
   useEffect(() => {
-    loadFechasInfo();
-    loadTimeSlots();
+    const loadData = async () => {
+      await loadFechasInfo();
+      await loadTimeSlots();
+    };
+    loadData();
   }, []);
 
   const loadFechasInfo = async () => {
     try {
       const fechasData = await eventService.getFechasInfoActivas();
-      console.log('Fechas data received:', fechasData);
+      console.log('📅 Fechas data received from API:', fechasData);
+      console.log('📊 Detalle de cada fecha:', fechasData?.map(f => ({
+        fecha: f.fecha,
+        rubro: f.rubro,
+        tieneFechaEnRubro: f.rubro?.includes('septiembre') || f.rubro?.includes('agosto')
+      })));
       
       // Verificar que sea un array
       if (Array.isArray(fechasData)) {
         setFechasInfo(fechasData);
-        setDataLoaded(true);
         
         // Precargar imágenes en background para transiciones fluidas
         preloadImages(fechasData);
@@ -459,6 +462,23 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                         const currentDate = eventDates[currentDateIndex];
                         const cachedImage = imageCache[currentDate];
                         
+                        // Debug logs
+                        console.log('🔍 DEBUG - Datos de fecha [v2 - timestamp:', new Date().toISOString(), ']:', {
+                          currentDateIndex,
+                          currentDate,
+                          eventDate: eventDates[currentDateIndex],
+                          fechaInfo,
+                          rubroOriginal: fechaInfo?.rubro,
+                          rubroLimpio: fechaInfo?.rubro?.replace(/\s*-\s*\d+\s+\w+$/, ''),
+                          fechaCalculada: (() => {
+                            const [year, month, day] = eventDates[currentDateIndex].split('-').map(Number);
+                            const date = new Date(year, month - 1, day);
+                            return `${date.getDate()} ${date.toLocaleDateString('es', { month: 'long' })}`;
+                          })(),
+                          isMobile: window.innerWidth < 768,
+                          windowWidth: window.innerWidth
+                        });
+                        
                         // Si no hay información específica, mostrar fallback
                         if (!fechaInfo) {
                           return (
@@ -512,13 +532,40 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1, duration: 0.3 }}
                               >
-                                <h1 className="text-2xl md:text-4xl font-bold mb-2">
-                                  <span className="md:hidden">{fechaInfo.rubro || 'Rubro del Día'} - {new Date(eventDates[currentDateIndex]).getDate()} {new Date(eventDates[currentDateIndex]).toLocaleDateString('es', { month: 'long' }).charAt(0).toUpperCase() + new Date(eventDates[currentDateIndex]).toLocaleDateString('es', { month: 'long' }).slice(1)}</span>
-                                  <span className="hidden md:inline">{fechaInfo.rubro || 'Rubro del Día'}</span>
-                                </h1>
-                                <p className="hidden md:block text-xl text-gray-200">
-                                  {dateNames[currentDateIndex]} • {utils.formatDate(eventDates[currentDateIndex])}
-                                </p>
+                                <div className="flex flex-col md:flex-row md:items-start md:justify-between">
+                                  <div className="flex-1">
+                                    <h1 className="text-2xl md:text-4xl font-bold mb-2">
+                                      <span className="md:hidden">{(fechaInfo.rubro || 'Rubro del Día').replace(/\s*-\s*\d+\s+\w+$/, '')} - {(() => {
+                                        const [year, month, day] = eventDates[currentDateIndex].split('-').map(Number);
+                                        const date = new Date(year, month - 1, day);
+                                        return `${date.getDate()} ${date.toLocaleDateString('es', { month: 'long' })}`;
+                                      })()}</span>
+                                      <span className="hidden md:inline">{(fechaInfo.rubro || 'Rubro del Día').replace(/\s*-\s*\d+\s+\w+$/, '')}</span>
+                                    </h1>
+                                    <p className="hidden md:block text-xl text-gray-200">
+                                      {dateNames[currentDateIndex]} • {utils.formatDate(eventDates[currentDateIndex])}
+                                    </p>
+                                  </div>
+                                  
+                                  {/* Badge de Certificación - Desktop */}
+                                  <motion.div 
+                                    className="hidden md:block"
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.2, duration: 0.3 }}
+                                  >
+                                    <div className="flex items-center space-x-2 px-6 py-3 rounded-lg shadow-lg" 
+                                         style={{ 
+                                           backgroundColor: '#c99c20',
+                                           minWidth: '180px'
+                                         }}>
+                                      <Medal className="w-5 h-5 text-white" />
+                                      <span className="text-white font-semibold text-lg whitespace-nowrap">
+                                        Incluye Certificación
+                                      </span>
+                                    </div>
+                                  </motion.div>
+                                </div>
                               </motion.div>
 
                               {/* Descripción */}
@@ -555,6 +602,24 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
                                     return fechaInfo.descripcion;
                                   })()}
                                 </p>
+                                
+                                {/* Badge de Certificación - Móvil */}
+                                <motion.div 
+                                  className="md:hidden mt-3"
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: 0.3, duration: 0.3 }}
+                                >
+                                  <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg shadow-md" 
+                                       style={{ 
+                                         backgroundColor: '#c99c20'
+                                       }}>
+                                    <Medal className="w-4 h-4 text-white" />
+                                    <span className="text-white font-semibold text-sm whitespace-nowrap">
+                                      Incluye Certificación
+                                    </span>
+                                  </div>
+                                </motion.div>
                               </motion.div>
 
                               {/* Info adicional (Marcas y Países) - Oculto en móvil */}

@@ -40,10 +40,10 @@ const EventRegistrationWithLanding = () => {
     if (slug && fullpageRef.current?.fullpageApi) {
       console.log('🎯 Slug detectado en URL:', slug);
       
-      // Auto-navegar a sección de registro (índice 2, que es la tercera sección)
+      // Auto-navegar a sección de registro (página 2 - EventRegistration)
       setTimeout(() => {
         if (fullpageRef.current?.fullpageApi) {
-          fullpageRef.current.fullpageApi.moveTo(3);
+          fullpageRef.current.fullpageApi.moveTo(2);
           console.log('🚀 Auto-navegando a sección de registro');
           
           // Cargar evento específico después de navegar
@@ -60,10 +60,10 @@ const EventRegistrationWithLanding = () => {
     if (location.pathname === '/registrate' && fullpageRef.current?.fullpageApi) {
       console.log('🎯 Ruta /registrate detectada');
       
-      // Auto-navegar a sección de registro (índice 3)
+      // Auto-navegar a sección de registro (página 2 - EventRegistration)
       setTimeout(() => {
         if (fullpageRef.current?.fullpageApi) {
-          fullpageRef.current.fullpageApi.moveTo(3);
+          fullpageRef.current.fullpageApi.moveTo(2);
           console.log('🚀 Auto-navegando a sección de registro desde /registrate');
         }
       }, 20); // Pequeño delay para asegurar que fullpage esté listo
@@ -192,10 +192,10 @@ const EventRegistrationWithLanding = () => {
       case 'inicio':
         fullpageRef.current.fullpageApi.moveTo(1);
         break;
-      case 'informacion':
+      case 'registro':
         fullpageRef.current.fullpageApi.moveTo(2);
         break;
-      case 'registro':
+      case 'informacion':
         fullpageRef.current.fullpageApi.moveTo(3);
         break;
       default:
@@ -212,13 +212,13 @@ const EventRegistrationWithLanding = () => {
         easing="easeInOutCubic"
         scrollOverflow={true}
         onLeave={(origin, destination, direction) => {
-          if (origin.index === 2) {
+          if (origin.index === 1) { // EventRegistration es índice 1 (segunda página)
             setIsRegistrationActive(false);
             handleCloseEventInfo(); // Forzar cierre del panel al salir
           }
         }}
         afterLoad={(origin, destination, direction) => {
-          setIsRegistrationActive(destination.index === 2);
+          setIsRegistrationActive(destination.index === 1); // EventRegistration es índice 1
         }}
         
         render={({ state, fullpageApi }) => {
@@ -231,14 +231,6 @@ const EventRegistrationWithLanding = () => {
               <div className="section">
                 <LandingPage 
                   onScrollToNext={scrollToNext} 
-                  onSectionChange={handleSectionChange}
-                />
-              </div>
-              <div className="section">
-                <InfoEvent1 
-                  onScrollToNext={scrollToNext} 
-                  eventsData={eventsData}
-                  loading={loading}
                   onSectionChange={handleSectionChange}
                 />
               </div>
@@ -255,6 +247,14 @@ const EventRegistrationWithLanding = () => {
                     onSectionChange={handleSectionChange}
                   />
                 </div>
+              </div>
+              <div className="section">
+                <InfoEvent1 
+                  onScrollToNext={scrollToNext} 
+                  eventsData={eventsData}
+                  loading={loading}
+                  onSectionChange={handleSectionChange}
+                />
               </div>
             </ReactFullpage.Wrapper>
           );

@@ -6,14 +6,14 @@ Crea un archivo llamado `.env` en la carpeta `backend/` con el siguiente conteni
 
 ```bash
 # Database Configuration
-DB_HOST=atusaludlicoreria.com
+DB_HOST=to1.fcomet.com
 DB_NAME=atusalud_kossomet
-DB_PASSWORD=kmachin1
+DB_PASSWORD=######
 DB_PORT=3306
 DB_USER=atusalud_atusalud
 
 # Email Configuration
-EMAIL_PASSWORD=kfmklqrzzrengbhk
+EMAIL_PASSWORD=###
 EMAIL_USER=jcamacho@kossodo.com
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587

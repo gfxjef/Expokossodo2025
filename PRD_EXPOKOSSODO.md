@@ -130,9 +130,9 @@ Sistema web con frontend en React y backend en Python/Flask que permita:
 #### **Variables de Entorno (.env)**
 ```bash
 # Database
-DB_HOST=atusaludlicoreria.com
+DB_HOST=to1.fcomet.com
 DB_NAME=atusalud_kossomet
-DB_PASSWORD=kmachin1
+DB_PASSWORD=####
 DB_PORT=3306
 DB_USER=atusalud_atusalud
 

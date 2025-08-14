@@ -225,19 +225,19 @@ const InfoEvent1 = ({ onScrollToNext, eventsData, loading, onSectionChange }) =>
     },
     {
       id: 8,
-      url: "https://atusaludlicoreria.com/expokossodo/olympus_1.webp",
+      url: "https://www.kossomet.com/AppUp/expokossodo/olympus_1.webp",
       title: "Equipos en nuestro laboratorio de Microbiología",
       description: "Tecnología de última generación para análisis"
     },
     {
       id: 9,
-      url: "https://atusaludlicoreria.com/expokossodo/olympus_2.webp",
+      url: "https://www.kossomet.com/AppUp/expokossodo/olympus_2.webp",
       title: "Equipos en nuestro laboratorio de Microbiología",
       description: "Tecnología de última generación para análisis"
     },
     {
       id: 10,
-      url: "https://atusaludlicoreria.com/expokossodo/olympus_3.webp",
+      url: "https://www.kossomet.com/AppUp/expokossodo/olympus_3.webp",
       title: "Equipos en nuestro laboratorio de Microbiología",
       description: "Tecnología de última generación para análisis"
     }

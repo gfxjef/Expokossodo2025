@@ -1067,7 +1067,7 @@ def send_confirmation_email(user_data, selected_events, qr_text=None):
                             <tr>
                                 <td style="background: linear-gradient(135deg, #01295c 0%, #1d2236 100%); padding: 40px 30px; text-align: center;">
                                                                                                               <!-- Logo -->
-                                     <img src="https://atusaludlicoreria.com/expokossodo/EXPOKOSSODO_PNG.png" alt="ExpoKossodo 2025" style="width: 200px; height: auto; margin-bottom: 30px;">
+                                     <img src="https://www.kossomet.com/AppUp/default/Expokossodo_logo_blanco_trans.png" alt="ExpoKossodo 2025" style="width: 200px; height: auto; margin-bottom: 30px;">
                                      
                                      <!-- Title -->
                                      <h1 style="margin: 0; font-size: 32px; font-weight: 700; color: white; margin-bottom: 8px;">
