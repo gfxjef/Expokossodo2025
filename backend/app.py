@@ -1298,14 +1298,15 @@ def send_update_email(user_data, all_events, qr_text, eventos_agregados_ids, eve
         
         msg.attach(MIMEText(html_body, 'html'))
         
-        # Adjuntar QR si existe
+        # Adjuntar QR si existe (usar QR existente del usuario, no generar nuevo)
         if qr_text:
             try:
-                qr_img = generar_qr_image(qr_text)
+                qr_img = generar_imagen_qr(qr_text)
                 if qr_img:
                     qr_attachment = MIMEImage(qr_img)
                     qr_attachment.add_header('Content-Disposition', 'attachment', filename='qr_code_expokossodo.png')
                     msg.attach(qr_attachment)
+                    print(f"[OK] QR existente adjuntado al email de actualización")
             except Exception as e:
                 print(f"[WARN] Error adjuntando QR al email de actualización: {e}")
         
