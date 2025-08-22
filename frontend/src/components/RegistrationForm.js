@@ -113,8 +113,8 @@ const RegistrationForm = ({ selectedEvents, onSubmit, onBack, submitting = false
       return;
     }
     
-    if (selectedEvents.length === 0) {
-      toast.error('Debe seleccionar al menos un evento');
+    if (!selectedEvents || selectedEvents.length === 0) {
+      toast.error('Por favor regresa al calendario y selecciona al menos un evento antes de continuar');
       return;
     }
     

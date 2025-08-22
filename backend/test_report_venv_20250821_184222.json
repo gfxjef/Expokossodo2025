@@ -1,0 +1,30 @@
+[
+  {
+    "test": "Caso 1 - Usuario Nuevo",
+    "success": true,
+    "details": "Agregados: 3, Omitidos: 0",
+    "duration": 5.923649072647095,
+    "timestamp": "2025-08-21T18:41:53.052240"
+  },
+  {
+    "test": "Caso 2 - Usuario Existente Sin Conflictos",
+    "success": false,
+    "details": "Error HTTP 400: {\n  \"eventos_agregados\": [],\n  \"eventos_omitidos\": [\n    {\n      \"fecha\": \"2025-09-02\",\n      \"hora\": \"15:00-15:45\",\n      \"id\": 4,\n      \"motivo\": \"Conflicto de horario: ya tienes un evento registrado a las 15:00-15:45 el 2025-09-02\",\n      \"sala\": \"sala4\",\n      \"titulo_charla\": \"Calibraci\\u00f3n de medidores volum\\u00e9tricos (Lab Gdes. Vol\\u00famenes)\"\n    },\n    {\n      \"fecha\": \"2025-09-02\",\n      \"hora\": \"16:00-16:45\",\n      \"id\": 5,\n      \"motivo\": \"Evento lleno: 70/70 cupos ocupados\",\n      \"sala\": \"sala1\",\n      \"titulo_charla\": \"Buenas Pr\\u00e1cticas de Pipeteo para Resultados Confiables y Reproducibles\"\n    }\n  ],\n  \"message\": \"No se pudo agregar ninguna charla debido a conflictos de horario o eventos llenos.\",\n  \"modo\": \"sin_cambios\",\n  \"success\": false\n}\n",
+    "duration": 3.3321902751922607,
+    "timestamp": "2025-08-21T18:42:02.614404"
+  },
+  {
+    "test": "Caso 3 - Usuario Existente Con Conflictos",
+    "success": false,
+    "details": "Error HTTP 400: {\n  \"eventos_agregados\": [],\n  \"eventos_omitidos\": [\n    {\n      \"fecha\": \"2025-09-02\",\n      \"hora\": \"15:00-15:45\",\n      \"id\": 1,\n      \"motivo\": \"Conflicto de horario: ya tienes un evento registrado a las 15:00-15:45 el 2025-09-02\",\n      \"sala\": \"sala1\",\n      \"titulo_charla\": \"Vac\\u00edo bajo control: eficiencia y calidad para tu laboratorio de hoy\"\n    },\n    {\n      \"fecha\": \"2025-09-02\",\n      \"hora\": \"15:00-15:45\",\n      \"id\": 3,\n      \"motivo\": \"Conflicto de horario: ya tienes un evento registrado a las 15:00-15:45 el 2025-09-02\",\n      \"sala\": \"sala3\",\n      \"titulo_charla\": \"Claves de la fase estacionaria en cromatograf\\u00eda de gases para an\\u00e1lisis en alimentos\"\n    }\n  ],\n  \"message\": \"No se pudo agregar ninguna charla debido a conflictos de horario o eventos llenos.\",\n  \"modo\": \"sin_cambios\",\n  \"success\": false\n}\n",
+    "duration": 3.341430425643921,
+    "timestamp": "2025-08-21T18:42:12.533469"
+  },
+  {
+    "test": "Caso 4 - Todos Conflictos",
+    "success": false,
+    "details": "Error HTTP 400: {\n  \"eventos_agregados\": [],\n  \"eventos_omitidos\": [\n    {\n      \"fecha\": \"2025-09-02\",\n      \"hora\": \"15:00-15:45\",\n      \"id\": 1,\n      \"motivo\": \"Conflicto de horario: ya tienes un evento registrado a las 15:00-15:45 el 2025-09-02\",\n      \"sala\": \"sala1\",\n      \"titulo_charla\": \"Vac\\u00edo bajo control: eficiencia y calidad para tu laboratorio de hoy\"\n    },\n    {\n      \"fecha\": \"2025-09-02\",\n      \"hora\": \"15:00-15:45\",\n      \"id\": 2,\n      \"motivo\": \"Conflicto de horario: ya tienes un evento registrado a las 15:00-15:45 el 2025-09-02\",\n      \"sala\": \"sala2\",\n      \"titulo_charla\": \"Medicion del DBO y su impacto en el medio ambiente\"\n    }\n  ],\n  \"message\": \"No se pudo agregar ninguna charla debido a conflictos de horario o eventos llenos.\",\n  \"modo\": \"sin_cambios\",\n  \"success\": false\n}\n",
+    "duration": 3.3394775390625,
+    "timestamp": "2025-08-21T18:42:22.562836"
+  }
+]

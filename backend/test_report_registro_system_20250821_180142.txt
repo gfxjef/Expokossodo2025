@@ -1,0 +1,38 @@
+======================================================================
+REPORTE DE TESTING - SISTEMA DE REGISTRO EXPOKOSSODO 2025
+======================================================================
+Fecha de ejecución: 2025-08-21T18:01:33.654863
+API URL: http://localhost:5000/api
+Modo de testing: Enabled
+
+[STATS] RESUMEN EJECUTIVO
+--------------------
+Tests ejecutados: 0
+Tests exitosos: 0
+Tests fallidos: 0
+0%
+Performance promedio: 0.00ms
+Estado general: [ERROR] FALLIDO
+
+[DETAILS] DETALLES POR TEST
+--------------------
+
+[INTEGRITY] ANÁLISIS DE INTEGRIDAD DE DATOS
+------------------------------
+[OK] Todos los tests mantuvieron integridad de datos
+
+[PERFORMANCE] ANÁLISIS DE PERFORMANCE
+-------------------------
+
+[ERROR] ERRORES DEL SUITE
+--------------------
+[ERROR] Error en setup de datos de prueba
+
+[RECOMMENDATIONS] RECOMENDACIONES
+---------------
+[ERROR] Se requiere atención en las áreas fallidas
+[FIX] Revisar logs detallados para troubleshooting
+
+======================================================================
+Reporte generado: 2025-08-21T18:01:42.311830
+======================================================================

@@ -1,0 +1,30 @@
+[
+  {
+    "test": "Caso 1 - Usuario Nuevo",
+    "success": false,
+    "details": "Error HTTP 400: {\n  \"error\": \"Campo requerido: nombres\"\n}\n",
+    "duration": 2.051133155822754,
+    "timestamp": "2025-08-21T18:39:59.234814"
+  },
+  {
+    "test": "Caso 2 - Setup Inicial",
+    "success": false,
+    "details": "Setup falló: {\n  \"error\": \"Campo requerido: nombres\"\n}\n",
+    "duration": 0,
+    "timestamp": "2025-08-21T18:40:02.371526"
+  },
+  {
+    "test": "Caso 3 - Setup Inicial",
+    "success": false,
+    "details": "Setup falló: {\n  \"error\": \"Campo requerido: nombres\"\n}\n",
+    "duration": 0,
+    "timestamp": "2025-08-21T18:40:05.567382"
+  },
+  {
+    "test": "Caso 4 - Setup Inicial",
+    "success": false,
+    "details": "Setup falló: {\n  \"error\": \"Campo requerido: nombres\"\n}\n",
+    "duration": 0,
+    "timestamp": "2025-08-21T18:40:08.734114"
+  }
+]

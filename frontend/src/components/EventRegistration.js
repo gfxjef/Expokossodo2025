@@ -223,8 +223,10 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
       setError(null);
       
       // Validar que aún haya eventos seleccionados
-      if (selectedEvents.length === 0) {
-        throw new Error('No hay eventos seleccionados');
+      if (!selectedEvents || selectedEvents.length === 0) {
+        setError('Por favor regresa al calendario y selecciona al menos un evento antes de continuar');
+        setSubmitting(false);
+        return;
       }
       
       const registrationData = {
@@ -232,7 +234,32 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
         eventos_seleccionados: selectedEvents.map(event => event.id)
       };
       
-      await eventService.createRegistration(registrationData);
+      const response = await eventService.createRegistration(registrationData);
+      
+      // Verificar si la respuesta indica conflictos sin eventos agregados
+      if (response && response.success === false && response.modo === 'sin_cambios') {
+        // Usuario existente pero no se agregaron eventos por conflictos
+        const mensaje = response.message || 'No se pudieron agregar los eventos seleccionados';
+        const info = response.info || '';
+        
+        let detallesConflictos = '';
+        if (response.eventos_omitidos && response.eventos_omitidos.length > 0) {
+          detallesConflictos = '\n\nEventos con conflicto:\n' + 
+            response.eventos_omitidos.map(e => `• ${e.titulo_charla}\n  ${e.motivo}`).join('\n');
+        }
+        
+        toast.error(`${mensaje}\n${info}${detallesConflictos}`, {
+          duration: 10000,
+          style: {
+            maxWidth: '600px',
+            whiteSpace: 'pre-line'
+          }
+        });
+        
+        setError(`${mensaje}\n${info}`);
+        setSubmitting(false);
+        return;
+      }
       
       analyticsService.trackRegistration(selectedEvents.length, formData.tipo_usuario || 'general');
       toast.success('¡Registro completado exitosamente! Revisa tu email para la confirmación.');
@@ -248,8 +275,25 @@ const EventRegistration = ({ isActive, onShowEventInfo, selectedEvents, onEventS
     } catch (error) {
       console.error('Registration error:', error);
       analyticsService.trackFormError('Registro', error.message || 'Error desconocido');
-      // Manejar específicamente el error de correo electrónico duplicado
+      
+      // Manejar específicamente diferentes tipos de errores
       let errorMessage = error.message || 'Error en el registro';
+      
+      // Si el mensaje contiene información sobre conflictos de horario
+      if (error.message && error.message.includes('conflictos de horario')) {
+        // El mensaje ya viene formateado del API con los detalles
+        errorMessage = error.message;
+        toast.error(errorMessage, {
+          duration: 8000,
+          style: {
+            maxWidth: '600px',
+            whiteSpace: 'pre-line'
+          }
+        });
+        setError(errorMessage);
+        setSubmitting(false);
+        return;
+      }
       
       // Verificar si es un error de correo duplicado
       if (error.message && (

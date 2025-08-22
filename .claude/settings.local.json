@@ -23,7 +23,12 @@
       "Bash(curl:*)",
       "Bash(python:*)",
       "Bash(npx kill-port:*)",
-      "Bash(wmic process where processid=45552 get name,commandline:*)"
+      "Bash(wmic process where processid=45552 get name,commandline:*)",
+      "Bash(venvScriptsactivate.bat)",
+      "Bash(pip install:*)",
+      "Bash(.venvScriptsactivate)",
+      "Bash(source:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

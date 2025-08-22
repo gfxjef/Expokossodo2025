@@ -1,0 +1,83 @@
+======================================================================
+REPORTE DE TESTING - SISTEMA DE REGISTRO EXPOKOSSODO 2025
+======================================================================
+Fecha de ejecución: 2025-08-21T18:02:35.637114
+API URL: http://localhost:5000/api
+Modo de testing: Enabled
+
+[STATS] RESUMEN EJECUTIVO
+--------------------
+Tests ejecutados: 4
+Tests exitosos: 1
+Tests fallidos: 3
+Tasa de éxito: 25.0%
+Performance promedio: 3876.82ms
+Estado general: [ERROR] FALLIDO
+
+[DETAILS] DETALLES POR TEST
+--------------------
+
+[TEST] Caso 1: Usuario Completamente Nuevo
+Estado: [ERROR] FAILED
+Performance: 4213.25ms
+Validación API: [OK]
+Validación BD: [ERROR]
+Errores:
+  [ERROR] Se esperaban 3 eventos agregados, se obtuvieron 2
+  [ERROR] No se esperaban eventos omitidos, se obtuvieron 1
+  [ERROR] Error en validación de BD: Unknown
+
+[TEST] Caso 2: Usuario Existente - Sin Conflictos
+Estado: [ERROR] FAILED
+Performance: 4111.45ms
+Validación API: [OK]
+Validación BD: [ERROR]
+Errores:
+  [ERROR] Se esperaban 2 eventos agregados, se obtuvieron 1
+  [ERROR] No se esperaban eventos omitidos, se obtuvieron 1
+  [ERROR] Error en validación de BD: Unknown
+
+[TEST] Caso 3: Usuario Existente - Conflictos Parciales
+Estado: [ERROR] FAILED
+Performance: 3573.34ms
+Validación API: [OK]
+Validación BD: [ERROR]
+Errores:
+  [ERROR] Status code incorrecto: 400
+  [ERROR] Response: {"eventos_agregados":[],"eventos_omitidos":[{"fecha":"2025-09-02","hora":"15:00-15:45","id":1,"motivo":"conflicto_horario","sala":"sala1","titulo":"Vac\u00edo bajo control: eficiencia y calidad para tu laboratorio de hoy"},{"fecha":"2025-09-02","hora":"16:00-16:45","id":8,"motivo":"conflicto_horario","sala":"sala4","titulo":"Control de calidad y An\u00e1lisis de cafe\u00edna en producci\u00f3n de caf\u00e9 por HPTLC"}],"message":"No se pudo agregar ninguna charla debido a conflictos de horario o eventos llenos.","modo":"sin_cambios","success":false}
+
+
+[TEST] Caso 4: Usuario Existente - Todos Conflictos
+Estado: [OK] PASSED
+Performance: 3609.25ms
+Validación API: [OK]
+Validación BD: [OK]
+
+[INTEGRITY] ANÁLISIS DE INTEGRIDAD DE DATOS
+------------------------------
+[ERROR] Se encontraron problemas de integridad:
+    * Caso 1: Usuario Completamente Nuevo: Inconsistencia en eventos_seleccionados JSON
+    * Caso 1: Usuario Completamente Nuevo: Inconsistencia en relaciones de BD
+    * Caso 2: Usuario Existente - Sin Conflictos: Inconsistencia en eventos_seleccionados JSON
+    * Caso 2: Usuario Existente - Sin Conflictos: Inconsistencia en relaciones de BD
+
+[PERFORMANCE] ANÁLISIS DE PERFORMANCE
+-------------------------
+Tiempo mínimo: 3573.34ms
+Tiempo máximo: 4213.25ms
+Tiempo promedio: 3876.82ms
+[WARN] Tests lentos (>2s):
+  [SLOW] Caso 1: Usuario Completamente Nuevo: 4213.25ms
+  [SLOW] Caso 2: Usuario Existente - Sin Conflictos: 4111.45ms
+  [SLOW] Caso 3: Usuario Existente - Conflictos Parciales: 3573.34ms
+  [SLOW] Caso 4: Usuario Existente - Todos Conflictos: 3609.25ms
+
+[RECOMMENDATIONS] RECOMENDACIONES
+---------------
+[ERROR] Se requiere atención en las áreas fallidas
+[FIX] Revisar logs detallados para troubleshooting
+[WARN] Considerar optimización de performance
+
+======================================================================
+Reporte generado: 2025-08-21T18:03:05.724573
+======================================================================

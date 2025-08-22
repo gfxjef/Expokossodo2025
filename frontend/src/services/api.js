@@ -20,7 +20,11 @@ const api = axios.create({
 
 // Interceptor para manejar errores globalmente
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Permitir que respuestas 200 con success: false pasen sin ser interceptadas
+    // Esto es importante para el manejo de conflictos en re-registros
+    return response;
+  },
   (error) => {
     console.error('API Error:', error);
     
@@ -35,7 +39,16 @@ api.interceptors.response.use(
       
       switch (status) {
         case 400:
-          throw new Error(data.error || 'Datos inválidos');
+          // Mensaje más específico para el error de eventos no seleccionados
+          if (data.error && data.error.includes('Debe seleccionar')) {
+            throw new Error('Por favor selecciona al menos un evento antes de continuar con el registro');
+          }
+          // Manejar respuesta de conflictos de horario para usuarios nuevos
+          if (data.message && data.eventos_omitidos && data.eventos_omitidos.length > 0) {
+            const conflictos = data.eventos_omitidos.map(e => `• ${e.titulo_charla}: ${e.motivo}`).join('\n');
+            throw new Error(`${data.message}\n\nEventos con conflicto:\n${conflictos}`);
+          }
+          throw new Error(data.error || data.message || 'Datos inválidos');
         case 404:
           throw new Error('Recurso no encontrado');
         case 500:

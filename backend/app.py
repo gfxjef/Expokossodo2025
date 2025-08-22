@@ -888,7 +888,7 @@ def init_database():
             populate_sample_data(cursor, connection)
         
         # Poblar slugs para eventos existentes que no los tengan
-        print("🔄 Verificando slugs de eventos existentes...")
+        print("[INFO] Verificando slugs de eventos existentes...")
         
         return True
         
@@ -989,6 +989,339 @@ def populate_sample_data(cursor, connection):
         
     except Error as e:
         print(f"Error insertando datos de ejemplo: {e}")
+
+def send_confirmation_email_async(email_data):
+    """Versión asíncrona de envío de email - no bloquea la respuesta al usuario"""
+    try:
+        user_email = email_data['user_data']['correo']
+        email_type = "actualización" if email_data['is_update'] else "confirmación"
+        print(f"[EMAIL] Enviando {email_type} a {user_email} en background...")
+        
+        result = send_confirmation_email_enhanced(email_data)
+        print(f"[EMAIL] {'Enviado exitosamente' if result else 'Error en el envío'} a {user_email}")
+    except Exception as e:
+        print(f"[ERROR] Error enviando email en background: {e}")
+
+def send_confirmation_email_enhanced(email_data):
+    """Envía email de confirmación o actualización según el contexto"""
+    user_data = email_data['user_data']
+    selected_events = email_data['eventos_completos']
+    qr_text = email_data['qr_text']
+    is_update = email_data['is_update']
+    eventos_agregados = email_data.get('eventos_agregados', [])
+    eventos_previos = email_data.get('eventos_previos', [])
+    
+    if is_update:
+        return send_update_email(user_data, selected_events, qr_text, eventos_agregados, eventos_previos)
+    else:
+        return send_confirmation_email(user_data, selected_events, qr_text)
+
+def send_update_email(user_data, all_events, qr_text, eventos_agregados_ids, eventos_previos_ids):
+    """Envía email de actualización de registro con charlas anteriores y nuevas"""
+    try:
+        smtp_server = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+        smtp_port = int(os.getenv('EMAIL_PORT', 587))
+        email_user = os.getenv('EMAIL_USER')
+        email_password = os.getenv('EMAIL_PASSWORD')
+        
+        msg = MIMEMultipart()
+        msg['From'] = f"Kossodo <{email_user}>"
+        msg['To'] = user_data['correo']
+        msg['Subject'] = "Actualización de Registro - ExpoKossodo 2025"
+        
+        # Separar eventos en anteriores y nuevos
+        eventos_anteriores = [e for e in all_events if e['id'] in eventos_previos_ids]
+        eventos_nuevos = [e for e in all_events if e['id'] in eventos_agregados_ids]
+        
+        # Crear HTML para TODAS las charlas (anteriores + nuevas) usando el MISMO diseño original
+        eventos_html = ""
+        
+        # Primero agregar las charlas NUEVAS con badge
+        for evento in eventos_nuevos:
+            eventos_html += f"""
+            <tr>
+                <td style="padding: 20px; border-radius: 12px; background: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 15px; display: block;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td style="padding-bottom: 12px;">
+                                <div style="display: inline-block; background: #28a745; color: white; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: bold; margin-bottom: 8px;">
+                                    ✨ NUEVA CHARLA
+                                </div>
+                                <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1f2937; line-height: 1.4;">
+                                    {evento['titulo_charla']}
+                                </h3>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-bottom: 8px;">
+                                <p style="margin: 0; font-size: 14px; color: #6b7280; font-weight: 500;">
+                                    {evento['expositor']} • {evento['pais']}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div style="display: inline-flex; align-items: center; background: #6cb79a; color: white; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+                                    📅 {evento['fecha']} &nbsp;•&nbsp; 🕐 {evento['hora']} &nbsp;•&nbsp; 🏛️ {evento['sala']}
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            """
+        
+        # Luego agregar las charlas ANTERIORES sin badge
+        for evento in eventos_anteriores:
+            eventos_html += f"""
+            <tr>
+                <td style="padding: 20px; border-radius: 12px; background: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 15px; display: block;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td style="padding-bottom: 12px;">
+                                <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1f2937; line-height: 1.4;">
+                                    {evento['titulo_charla']}
+                                </h3>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-bottom: 8px;">
+                                <p style="margin: 0; font-size: 14px; color: #6b7280; font-weight: 500;">
+                                    {evento['expositor']} • {evento['pais']}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div style="display: inline-flex; align-items: center; background: #6cb79a; color: white; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+                                    📅 {evento['fecha']} &nbsp;•&nbsp; 🕐 {evento['hora']} &nbsp;•&nbsp; 🏛️ {evento['sala']}
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            """
+        
+        # Usar la MISMA plantilla HTML que el email original, solo cambiar título y texto
+        html_body = f"""
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Actualización de Registro - ExpoKossodo 2025</title>
+            <!--[if mso]>
+            <noscript>
+                <xml>
+                    <o:OfficeDocumentSettings>
+                        <o:PixelsPerInch>96</o:PixelsPerInch>
+                    </o:OfficeDocumentSettings>
+                </xml>
+            </noscript>
+            <![endif]-->
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); line-height: 1.6;">
+            
+            <!-- Main Container -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); min-height: 100vh;">
+                <tr>
+                    <td align="center" style="padding: 40px 20px;">
+                        
+                        <!-- Email Content Container -->
+                        <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background: white; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden;">
+                            
+                            <!-- Header with Gradient -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #01295c 0%, #1d2236 100%); padding: 40px 30px; text-align: center;">
+                                    <!-- Logo -->
+                                    <img src="https://www.kossomet.com/AppUp/default/Expokossodo_logo_blanco_trans.png" alt="ExpoKossodo 2025" style="width: 200px; height: auto; margin-bottom: 30px;">
+                                     
+                                    <!-- Title - CAMBIO AQUÍ -->
+                                    <h1 style="margin: 0; font-size: 32px; font-weight: 700; color: white; margin-bottom: 8px;">
+                                        🔄 Registro Actualizado
+                                    </h1>
+                                    <p style="margin: 0; font-size: 18px; color: rgba(255, 255, 255, 0.8); font-weight: 400;">
+                                        Nuevas charlas agregadas a tu agenda
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Main Content -->
+                            <tr>
+                                <td style="padding: 40px 30px;">
+                                    
+                                    <!-- Greeting -->
+                                    <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1f2937;">
+                                        Hola {user_data['nombres']},
+                                    </h2>
+                                    <p style="margin: 0 0 30px 0; font-size: 16px; color: #6b7280; line-height: 1.6;">
+                                        Tu registro ha sido <strong>actualizado exitosamente</strong>. Has agregado nuevas charlas a tu agenda personal. Aquí tienes todos los detalles actualizados:
+                                    </p>
+                                    
+                                    <!-- Participant Data Card -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                                        <tr>
+                                            <td style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 25px; border-radius: 12px; border-left: 4px solid #6cb79a;">
+                                                <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600; color: #1f2937;">
+                                                    📋 Datos del Participante
+                                                </h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <td style="padding: 5px 0; font-size: 14px; color: #374151;"><strong>Nombre:</strong> {user_data['nombres']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="padding: 5px 0; font-size: 14px; color: #374151;"><strong>Email:</strong> {user_data['correo']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="padding: 5px 0; font-size: 14px; color: #374151;"><strong>Empresa:</strong> {user_data['empresa']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="padding: 5px 0; font-size: 14px; color: #374151;"><strong>Cargo:</strong> {user_data['cargo']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="padding: 5px 0; font-size: 14px; color: #374151;"><strong>Teléfono:</strong> {user_data['numero']}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <!-- Selected Events Section - CAMBIO AQUÍ EN EL TÍTULO -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                                        <tr>
+                                            <td style="background: linear-gradient(135deg, #01295c 0%, #1d2236 100%); padding: 25px; border-radius: 16px;">
+                                                <h3 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700; color: white;">
+                                                    Tu Agenda Actualizada ({len(all_events)} eventos)
+                                                </h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    {eventos_html}
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <!-- Important Information -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                                        <tr>
+                                            <td style="background: white; padding: 25px; border-radius: 16px; border: 2px solid #6cb79a; box-shadow: 0 4px 6px rgba(108, 183, 154, 0.1);">
+                                                <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                                                    <div style="width: 40px; height: 40px; background: #6cb79a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                                                        <svg width="20" height="20" fill="#ffffff" viewBox="0 0 24 24">
+                                                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                                        </svg>
+                                                    </div>
+                                                    <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1f2937;">
+                                                        Información Importante
+                                                    </h3>
+                                                </div>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr><td style="padding: 8px 0; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6;"><strong>Fechas de tus eventos:</strong> {', '.join(sorted(set([evento['fecha'].strftime('%d/%m/%Y') if hasattr(evento['fecha'], 'strftime') else str(evento['fecha']) for evento in all_events])))}</td></tr>
+                                                    <tr><td style="padding: 8px 0; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+                                                        <strong>Ubicación:</strong> Oficinas de Kossodo Jr. Chota 1161, Cercado de Lima<br>
+                                                        <a href="https://maps.app.goo.gl/nbKHT74Tk3gfquhA6" target="_blank" style="display: inline-block; margin-top: 8px; background: #6cb79a; color: white; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">
+                                                            📍 Ver en Google Maps
+                                                        </a>
+                                                    </td></tr>
+                                                    <tr><td style="padding: 8px 0; font-size: 14px; color: #374151;"><strong>Llegada:</strong> Te recomendamos llegar 30 minutos antes</td></tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                     
+                                    <!-- QR Code Information - Diseño minimalista -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                                        <tr>
+                                            <td style="background: white; padding: 25px; border-radius: 16px; border: 2px solid #6cb79a; box-shadow: 0 4px 6px rgba(108, 183, 154, 0.1);">
+                                                <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                                                    <div style="width: 40px; height: 40px; background: #6cb79a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                                                        <svg width="20" height="20" fill="#ffffff" viewBox="0 0 24 24">
+                                                            <path d="M3 3h18v18H3V3zm16 16V5H5v14h14zM7 7h2v2H7V7zm0 4h2v2H7v-2zm4-4h2v2h-2V7zm0 4h2v2h-2v-2zm4-4h2v2h-2V7zm0 4h2v2h-2v-2zM7 15h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/>
+                                                        </svg>
+                                                    </div>
+                                                    <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1f2937;">
+                                                        Tu Código QR Personal
+                                                    </h3>
+                                                </div>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr><td style="padding: 8px 0; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6;">Hemos adjuntado tu <strong>código QR único</strong> a este email</td></tr>
+                                                    <tr><td style="padding: 8px 0; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6;"><strong>Guárdalo en tu teléfono</strong> - lo necesitarás para ingresar al evento</td></tr>
+                                                    <tr><td style="padding: 8px 0; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6;">Presenta el QR en recepción y en cada charla para registrar tu asistencia</td></tr>
+                                                    <tr><td style="padding: 8px 0; font-size: 14px; color: #374151;"><strong>¡No lo compartas!</strong> Es único e intransferible</td></tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <!-- CTA Button -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="https://expokossodo.com" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #6cb79a 0%, #5aa085 100%); color: white; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-size: 16px; font-weight: 700; box-shadow: 0 4px 15px rgba(108, 183, 154, 0.3); transition: all 0.3s ease;">
+                                                    🌐 Visitar ExpoKossodo.com
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer with Social Links -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #374151 0%, #1f2937 100%); padding: 30px; text-align: center;">
+                                    <h4 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700; color: white;">
+                                        Gracias por actualizar tu registro
+                                    </h4>
+                                    <p style="margin: 0 0 20px 0; font-size: 14px; color: #d1d5db; line-height: 1.6;">
+                                        ¿Tienes alguna pregunta? Contáctanos:<br>
+                                        📧 <a href="mailto:expokossodo@kossomet.com" style="color: #6cb79a;">expokossodo@kossomet.com</a><br>
+                                        📱 WhatsApp: <a href="https://wa.me/51999999999" style="color: #6cb79a;">+51 999 999 999</a>
+                                    </p>
+                                    <div style="margin: 20px 0;">
+                                        <a href="#" style="display: inline-block; margin: 0 10px; color: #6cb79a; text-decoration: none; font-size: 24px;">📘</a>
+                                        <a href="#" style="display: inline-block; margin: 0 10px; color: #6cb79a; text-decoration: none; font-size: 24px;">📷</a>
+                                        <a href="#" style="display: inline-block; margin: 0 10px; color: #6cb79a; text-decoration: none; font-size: 24px;">🐦</a>
+                                    </div>
+                                    <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                        © 2025 ExpoKossodo. Todos los derechos reservados.<br>
+                                        Evento organizado por Kossodo Medical Group
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        # Adjuntar QR si existe
+        if qr_text:
+            try:
+                qr_img = generar_qr_image(qr_text)
+                if qr_img:
+                    qr_attachment = MIMEImage(qr_img)
+                    qr_attachment.add_header('Content-Disposition', 'attachment', filename='qr_code_expokossodo.png')
+                    msg.attach(qr_attachment)
+            except Exception as e:
+                print(f"[WARN] Error adjuntando QR al email de actualización: {e}")
+        
+        # Enviar email
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(email_user, email_password)
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"[OK] Email de actualización enviado a {user_data['correo']}")
+        return True
+        
+    except Exception as e:
+        print(f"[ERROR] Error enviando email de actualización: {e}")
+        return False
 
 def send_confirmation_email(user_data, selected_events, qr_text=None):
     """Enviar email de confirmación con código QR adjunto"""
@@ -1439,9 +1772,122 @@ def get_evento_by_slug(slug):
         cursor.close()
         connection.close()
 
+# ===== FUNCIONES AUXILIARES PARA REGISTRO =====
+
+def validar_conflictos_horario(eventos_inscritos, eventos_nuevos, cursor):
+    """
+    Valida conflictos de horario entre eventos existentes y nuevos
+    
+    Args:
+        eventos_inscritos: Lista de eventos ya inscritos [(id, fecha, hora), ...]
+        eventos_nuevos: Lista de IDs de eventos nuevos a validar
+        cursor: Cursor de base de datos
+    
+    Returns:
+        tuple: (eventos_validos, eventos_conflictivos)
+    """
+    # WHY: Crear mapa de horarios ocupados para optimizar búsquedas
+    horarios_ocupados = {}
+    for evento in eventos_inscritos:
+        evento_id, fecha, hora = evento['id'], evento['fecha'], evento['hora']
+        # Manejar fecha como string si ya viene como string
+        if isinstance(fecha, str):
+            fecha_str = fecha
+        else:
+            fecha_str = fecha.strftime('%Y-%m-%d')
+        if fecha_str not in horarios_ocupados:
+            horarios_ocupados[fecha_str] = set()
+        horarios_ocupados[fecha_str].add(str(hora))  # Asegurar que hora sea string
+    
+    # Validar eventos nuevos
+    eventos_validos = []
+    eventos_conflictivos = []
+    
+    if eventos_nuevos:
+        placeholders = ','.join(['%s'] * len(eventos_nuevos))
+        cursor.execute(f"""
+            SELECT id, fecha, hora, titulo_charla, sala, slots_disponibles, slots_ocupados
+            FROM expokossodo_eventos 
+            WHERE id IN ({placeholders})
+        """, eventos_nuevos)
+        eventos_nuevos_detalles = cursor.fetchall()
+        
+        for evento in eventos_nuevos_detalles:
+            evento_id = evento['id']
+            fecha = evento['fecha']
+            hora = evento['hora']
+            titulo = evento['titulo_charla']
+            sala = evento['sala']
+            slots_disponibles = evento['slots_disponibles']
+            slots_ocupados = evento['slots_ocupados']
+            
+            # Manejar fecha como string si es necesario
+            if isinstance(fecha, str):
+                fecha_str = fecha
+            else:
+                fecha_str = fecha.strftime('%Y-%m-%d')
+            
+            hora_str = str(hora)  # Asegurar que hora sea string
+            
+            # WHY: Verificar múltiples tipos de conflictos
+            # 1. Conflicto de horario
+            if (fecha_str in horarios_ocupados and 
+                hora_str in horarios_ocupados[fecha_str]):
+                eventos_conflictivos.append({
+                    'id': evento_id,
+                    'titulo_charla': titulo,
+                    'sala': sala,
+                    'fecha': fecha_str,
+                    'hora': hora_str,
+                    'motivo': f'Conflicto de horario: ya tienes un evento registrado a las {hora_str} el {fecha_str}'
+                })
+            # 2. Verificar capacidad disponible
+            elif slots_ocupados >= slots_disponibles:
+                eventos_conflictivos.append({
+                    'id': evento_id,
+                    'titulo_charla': titulo,
+                    'sala': sala,
+                    'fecha': fecha_str,
+                    'hora': hora_str,
+                    'motivo': f'Evento lleno: {slots_ocupados}/{slots_disponibles} cupos ocupados'
+                })
+            else:
+                eventos_validos.append(evento_id)
+    
+    return eventos_validos, eventos_conflictivos
+
+def obtener_eventos_usuario(registro_id, cursor):
+    """
+    Obtiene los eventos actuales de un usuario registrado
+    
+    Args:
+        registro_id: ID del registro del usuario
+        cursor: Cursor de base de datos
+    
+    Returns:
+        List: Lista de eventos inscritos con detalles completos
+    """
+    cursor.execute("""
+        SELECT e.id, e.fecha, e.hora, e.titulo_charla, e.sala
+        FROM expokossodo_eventos e
+        INNER JOIN expokossodo_registro_eventos re ON e.id = re.evento_id
+        WHERE re.registro_id = %s
+        ORDER BY e.fecha, e.hora
+    """, (registro_id,))
+    
+    return cursor.fetchall()
+
 @app.route('/api/registro', methods=['POST'])
 def crear_registro():
-    """Crear nuevo registro de usuario"""
+    """
+    Crear nuevo registro de usuario o actualizar registro existente
+    
+    Nueva lógica implementada:
+    - Permite re-registrarse con el mismo correo
+    - Maneja conflictos de horario inteligentemente
+    - Registra solo charlas válidas (sin conflictos)
+    - Mantiene el registro existente si ya existe el correo
+    """
     data = request.get_json()
     
     # Validaciones básicas
@@ -1454,124 +1900,243 @@ def crear_registro():
     if not connection:
         return jsonify({"error": "Error de conexión a la base de datos"}), 500
     
-    cursor = connection.cursor(dictionary=True)
+    cursor = connection.cursor(dictionary=True, buffered=True)
     
     try:
         # Verificar disponibilidad de eventos
-        evento_ids = data['eventos_seleccionados']
-        if not evento_ids:
+        eventos_nuevos = data['eventos_seleccionados']
+        if not eventos_nuevos:
             return jsonify({"error": "Debe seleccionar al menos un evento"}), 400
         
-        # Verificar si el usuario ya está registrado (por correo)
+        # === PASO 1: Verificar si el usuario ya está registrado ===
         cursor.execute("""
-            SELECT id, nombres FROM expokossodo_registros 
+            SELECT id, nombres, eventos_seleccionados FROM expokossodo_registros 
             WHERE correo = %s
         """, (data['correo'],))
         
         usuario_existente = cursor.fetchone()
-        if usuario_existente:
-            return jsonify({
-                "error": f"El correo {data['correo']} ya está registrado a nombre de {usuario_existente['nombres']}"
-            }), 400
-
-        placeholders = ','.join(['%s'] * len(evento_ids))
-        cursor.execute(f"""
-            SELECT id, titulo_charla, slots_disponibles, slots_ocupados, hora, fecha
-            FROM expokossodo_eventos 
-            WHERE id IN ({placeholders})
-        """, evento_ids)
+        modo_actualizacion = usuario_existente is not None
         
-        eventos = cursor.fetchall()
+        if modo_actualizacion:
+            # Usuario existe - flujo de actualización
+            registro_id = usuario_existente['id']
+            eventos_actuales_json = usuario_existente['eventos_seleccionados'] or '[]'
+            eventos_actuales = json.loads(eventos_actuales_json)
+            
+            # WHY: Obtener eventos ya inscritos para validar conflictos
+            eventos_inscritos = obtener_eventos_usuario(registro_id, cursor)
+        else:
+            # Usuario nuevo - flujo de creación
+            eventos_actuales = []
+            eventos_inscritos = []
         
-        if len(eventos) != len(evento_ids):
-            return jsonify({"error": "Algunos eventos seleccionados no existen"}), 400
-        
-        # Verificar capacidad
-        for evento in eventos:
-            if evento['slots_ocupados'] >= evento['slots_disponibles']:
-                return jsonify({
-                    "error": f"El evento '{evento['titulo_charla']}' ya no tiene cupos disponibles"
-                }), 400
-        
-        # Verificar horarios únicos POR DÍA (no más de un evento por hora en el mismo día)
-        eventos_por_fecha = {}
-        for evento in eventos:
-            fecha_str = evento['fecha'].strftime('%Y-%m-%d')
-            if fecha_str not in eventos_por_fecha:
-                eventos_por_fecha[fecha_str] = []
-            eventos_por_fecha[fecha_str].append(evento['hora'])
-        
-        # Verificar que no haya conflictos de horario en el mismo día
-        for fecha, horarios in eventos_por_fecha.items():
-            if len(horarios) != len(set(horarios)):
-                return jsonify({
-                    "error": f"No puede seleccionar múltiples eventos en el mismo horario el día {fecha}"
-                }), 400
-        
-        # ===== GENERAR CÓDIGO QR =====
-        qr_text = generar_texto_qr(
-            data['nombres'], 
-            data['numero'], 
-            data['cargo'], 
-            data['empresa']
+        # === PASO 2: Validar conflictos de horario y capacidad ===
+        eventos_validos, eventos_conflictivos = validar_conflictos_horario(
+            eventos_inscritos, eventos_nuevos, cursor
         )
         
-        if not qr_text:
-            return jsonify({"error": "Error generando código QR"}), 500
-        
-        # Insertar registro con QR
-        cursor.execute("""
-            INSERT INTO expokossodo_registros 
-            (nombres, correo, empresa, cargo, numero, expectativas, eventos_seleccionados, 
-             qr_code, qr_generado_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
-        """, (
-            data['nombres'],
-            data['correo'],
-            data['empresa'],
-            data['cargo'],
-            data['numero'],
-            data.get('expectativas', ''),
-            json.dumps(evento_ids),
-            qr_text
-        ))
-        
-        registro_id = cursor.lastrowid
-        
-        # Insertar relaciones registro-evento y actualizar slots
-        for evento_id in evento_ids:
-            cursor.execute("""
-                INSERT INTO expokossodo_registro_eventos (registro_id, evento_id)
-                VALUES (%s, %s)
-            """, (registro_id, evento_id))
+        # === PASO 3: Verificar que los eventos nuevos existen ===
+        if eventos_nuevos:
+            placeholders = ','.join(['%s'] * len(eventos_nuevos))
+            cursor.execute(f"""
+                SELECT id FROM expokossodo_eventos 
+                WHERE id IN ({placeholders})
+            """, eventos_nuevos)
+            eventos_existentes = [row['id'] for row in cursor.fetchall()]
             
-            cursor.execute("""
-                UPDATE expokossodo_eventos 
-                SET slots_ocupados = slots_ocupados + 1
-                WHERE id = %s
-            """, (evento_id,))
+            # Filtrar eventos que no existen
+            eventos_no_existentes = [eid for eid in eventos_nuevos if eid not in eventos_existentes]
+            if eventos_no_existentes:
+                return jsonify({
+                    "error": f"Los siguientes eventos no existen: {eventos_no_existentes}"
+                }), 400
         
-        connection.commit()
+        # === PASO 4: Verificar si hay eventos válidos para procesar ===
+        if not eventos_validos:
+            # No hay eventos válidos para agregar
+            if modo_actualizacion:
+                # Para usuarios existentes, devolver 200 con información detallada
+                response_data = {
+                    "success": False,
+                    "message": "No se pudieron agregar las charlas seleccionadas debido a conflictos de horario o eventos llenos.",
+                    "eventos_omitidos": eventos_conflictivos,
+                    "eventos_agregados": [],
+                    "modo": "sin_cambios",
+                    "registro_id": registro_id,
+                    "info": "Tu registro anterior se mantiene sin cambios. Puedes seleccionar otros eventos en diferentes horarios."
+                }
+                return jsonify(response_data), 200
+            else:
+                # Para usuarios nuevos, mantener el 400
+                response_data = {
+                    "success": False,
+                    "message": "No se pudo completar el registro. Todas las charlas seleccionadas tienen conflictos o están llenas.",
+                    "eventos_omitidos": eventos_conflictivos,
+                    "eventos_agregados": [],
+                    "modo": "sin_registro"
+                }
+                return jsonify(response_data), 400
         
-        # Obtener datos completos para el email
-        cursor.execute(f"""
-            SELECT e.* FROM expokossodo_eventos e
-            WHERE e.id IN ({placeholders})
-            ORDER BY e.fecha, e.hora
-        """, evento_ids)
+        # === PASO 5: Actualización transaccional de la base de datos ===
+        try:
+            # WHY: Evitar duplicados al combinar eventos actuales con nuevos válidos
+            eventos_finales = list(set(eventos_actuales + eventos_validos))
+            
+            if modo_actualizacion:
+                # Actualizar registro existente
+                cursor.execute("""
+                    UPDATE expokossodo_registros 
+                    SET eventos_seleccionados = %s, fecha_registro = NOW()
+                    WHERE id = %s
+                """, (json.dumps(eventos_finales), registro_id))
+            else:
+                # === GENERAR CÓDIGO QR para usuario nuevo ===
+                qr_text = generar_texto_qr(
+                    data['nombres'], 
+                    data['numero'], 
+                    data['cargo'], 
+                    data['empresa']
+                )
+                
+                if not qr_text:
+                    return jsonify({"error": "Error generando código QR"}), 500
+                
+                # Crear nuevo registro
+                cursor.execute("""
+                    INSERT INTO expokossodo_registros 
+                    (nombres, correo, empresa, cargo, numero, expectativas, eventos_seleccionados, 
+                     qr_code, qr_generado_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                """, (
+                    data['nombres'],
+                    data['correo'],
+                    data['empresa'],
+                    data['cargo'],
+                    data['numero'],
+                    data.get('expectativas', ''),
+                    json.dumps(eventos_finales),
+                    qr_text
+                ))
+                registro_id = cursor.lastrowid
+            
+            # Insertar relaciones evento-registro solo para eventos válidos
+            for evento_id in eventos_validos:
+                # WHY: Verificar si la relación ya existe para evitar duplicados
+                cursor.execute("""
+                    SELECT 1 FROM expokossodo_registro_eventos 
+                    WHERE registro_id = %s AND evento_id = %s
+                    LIMIT 1
+                """, (registro_id, evento_id))
+                
+                existe = cursor.fetchone()
+                if not existe:
+                    cursor.execute("""
+                        INSERT INTO expokossodo_registro_eventos (registro_id, evento_id)
+                        VALUES (%s, %s)
+                    """, (registro_id, evento_id))
+                    
+                    # Actualizar contador de slots ocupados
+                    cursor.execute("""
+                        UPDATE expokossodo_eventos 
+                        SET slots_ocupados = slots_ocupados + 1 
+                        WHERE id = %s
+                    """, (evento_id,))
+            
+            connection.commit()
+            
+        except Exception as e:
+            connection.rollback()
+            raise e
         
-        eventos_completos = cursor.fetchall()
+        # === PASO 6: Preparar respuesta detallada ===
+        # Obtener detalles de eventos agregados
+        eventos_agregados_detalles = []
+        if eventos_validos:
+            placeholders = ','.join(['%s'] * len(eventos_validos))
+            cursor.execute(f"""
+                SELECT id, titulo_charla, sala, fecha, hora
+                FROM expokossodo_eventos 
+                WHERE id IN ({placeholders})
+                ORDER BY fecha, hora
+            """, eventos_validos)
+            
+            for evento in cursor.fetchall():
+                eventos_agregados_detalles.append({
+                    "id": evento['id'],
+                    "titulo_charla": evento['titulo_charla'],
+                    "sala": evento['sala'],
+                    "fecha": evento['fecha'].strftime('%Y-%m-%d'),
+                    "hora": str(evento['hora'])
+                })
         
-        # Enviar email de confirmación con QR
-        email_sent = send_confirmation_email(data, eventos_completos, qr_text)
-        
-        return jsonify({
-            "message": "Registro creado exitosamente",
+        # Preparar respuesta
+        response_data = {
+            "success": True,
             "registro_id": registro_id,
-            "qr_code": qr_text,
-            "qr_generated": True,
-            "email_sent": email_sent
-        })
+            "modo": "actualizado" if modo_actualizacion else "creado",
+            "eventos_agregados": eventos_agregados_detalles,
+            "eventos_omitidos": eventos_conflictivos,
+            "email_sent": False
+        }
+        
+        # Mensaje dinámico basado en resultados
+        if eventos_conflictivos and eventos_validos:
+            response_data["message"] = f"Registro {'actualizado' if modo_actualizacion else 'creado'} exitosamente. {len(eventos_validos)} charla(s) agregada(s), {len(eventos_conflictivos)} omitida(s) por conflictos."
+        elif eventos_validos:
+            response_data["message"] = f"Registro {'actualizado' if modo_actualizacion else 'creado'} exitosamente. {len(eventos_validos)} charla(s) agregada(s)."
+        
+        # === PASO 7: Enviar email de confirmación ===
+        if eventos_validos or modo_actualizacion:
+            # Para actualización: obtener TODOS los eventos (anteriores + nuevos)
+            # Para registro nuevo: solo los eventos nuevos
+            if modo_actualizacion:
+                # Combinar eventos anteriores + nuevos para mostrar agenda completa
+                todos_los_eventos_ids = list(set(eventos_actuales + eventos_validos))
+            else:
+                todos_los_eventos_ids = eventos_validos
+            
+            if todos_los_eventos_ids:
+                # Obtener datos completos de TODOS los eventos para el email
+                placeholders = ','.join(['%s'] * len(todos_los_eventos_ids))
+                cursor.execute(f"""
+                    SELECT e.* FROM expokossodo_eventos e
+                    WHERE e.id IN ({placeholders})
+                    ORDER BY e.fecha, e.hora
+                """, todos_los_eventos_ids)
+                
+                eventos_completos = cursor.fetchall()
+            else:
+                eventos_completos = []
+            
+            # Para usuario existente, usar QR existente; para nuevo, usar el recién generado
+            if modo_actualizacion:
+                cursor.execute("SELECT qr_code FROM expokossodo_registros WHERE id = %s", (registro_id,))
+                qr_existente = cursor.fetchone()
+                qr_text = qr_existente['qr_code'] if qr_existente else None
+            
+            if qr_text:
+                # Preparar información para el email
+                email_data = {
+                    'user_data': data.copy(),
+                    'eventos_completos': eventos_completos.copy(),
+                    'qr_text': qr_text,
+                    'is_update': modo_actualizacion,
+                    'eventos_agregados': eventos_validos if modo_actualizacion else eventos_validos,
+                    'eventos_previos': eventos_actuales if modo_actualizacion else []
+                }
+                
+                # Envío asíncrono del email para acelerar la respuesta al usuario
+                threading.Thread(
+                    target=send_confirmation_email_async,
+                    args=(email_data,),
+                    daemon=True
+                ).start()
+                
+                response_data["email_sent"] = True  # Siempre True - se envía en background
+                response_data["qr_code"] = qr_text
+                response_data["qr_generated"] = True
+        
+        return jsonify(response_data)
         
     except Error as e:
         connection.rollback()
@@ -3240,7 +3805,7 @@ def transcripcion_worker():
             consulta_id = tarea['consulta_id']
             consulta_texto = tarea['consulta_texto']
             
-            print(f"🔄 Procesando transcripción para consulta ID: {consulta_id}")
+            print(f"[INFO] Procesando transcripción para consulta ID: {consulta_id}")
             
             if TRANSCRIPCION_DISPONIBLE:
                 try:
