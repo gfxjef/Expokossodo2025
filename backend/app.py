@@ -3461,6 +3461,94 @@ def obtener_cliente_info():
         cursor.close()
         connection.close()
 
+@app.route('/api/registros/actualizar-datos', methods=['PUT'])
+def actualizar_datos_cliente():
+    """Actualizar datos básicos del cliente (nombre, correo, empresa, cargo, teléfono)"""
+    data = request.get_json()
+    
+    # Validación de campos requeridos
+    required_fields = ['registro_id', 'qr_code', 'nombres', 'correo', 'empresa', 'cargo', 'numero']
+    for field in required_fields:
+        if field not in data or not data[field]:
+            return jsonify({"error": f"Campo requerido: {field}"}), 400
+    
+    # Validación de formato de email
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, data['correo']):
+        return jsonify({"error": "Formato de correo inválido"}), 400
+    
+    # Validación de número de teléfono (solo números y guiones)
+    telefono_pattern = r'^[\d\-\+\(\)\s]+$'
+    if not re.match(telefono_pattern, data['numero']):
+        return jsonify({"error": "Formato de teléfono inválido"}), 400
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Verificar que el registro existe y el QR code coincide
+        cursor.execute("""
+            SELECT id, qr_code 
+            FROM expokossodo_registros 
+            WHERE id = %s AND qr_code = %s
+        """, (data['registro_id'], data['qr_code']))
+        
+        registro = cursor.fetchone()
+        if not registro:
+            return jsonify({"error": "Registro no encontrado o código QR no coincide"}), 404
+        
+        # Actualizar solo los campos permitidos
+        cursor.execute("""
+            UPDATE expokossodo_registros 
+            SET nombres = %s, 
+                correo = %s, 
+                empresa = %s, 
+                cargo = %s, 
+                numero = %s
+            WHERE id = %s AND qr_code = %s
+        """, (
+            data['nombres'].strip(),
+            data['correo'].strip().lower(),
+            data['empresa'].strip(),
+            data['cargo'].strip(),
+            data['numero'].strip(),
+            data['registro_id'],
+            data['qr_code']
+        ))
+        
+        if cursor.rowcount == 0:
+            return jsonify({"error": "No se pudo actualizar el registro"}), 500
+        
+        connection.commit()
+        
+        # Obtener los datos actualizados
+        cursor.execute("""
+            SELECT id, nombres, correo, empresa, cargo, numero
+            FROM expokossodo_registros 
+            WHERE id = %s
+        """, (data['registro_id'],))
+        
+        datos_actualizados = cursor.fetchone()
+        
+        print(f"[OK] Datos actualizados para registro ID: {data['registro_id']}")
+        
+        return jsonify({
+            "success": True,
+            "message": "Datos actualizados correctamente",
+            "datos_actualizados": datos_actualizados
+        })
+        
+    except Error as e:
+        print(f"[ERROR] Error actualizando datos del cliente: {e}")
+        connection.rollback()
+        return jsonify({"error": "Error del servidor al actualizar datos"}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
 @app.route('/api/leads/cliente-historial', methods=['POST'])
 def obtener_cliente_historial():
     """Obtener SOLO el historial de consultas (puede demorar más)"""

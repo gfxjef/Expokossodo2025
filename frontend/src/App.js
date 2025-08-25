@@ -6,6 +6,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import VerificadorGeneral from './components/VerificadorGeneral';
 import SelectorCharlas from './components/SelectorCharlas';
 import VerificadorSala from './components/VerificadorSala';
+import VerificarPrueba from './components/VerificarPrueba';
 import VisualizacionDashboard from './components/VisualizacionDashboard';
 import AsesoresDashboard from './components/asesores/AsesoresDashboard';
 import LeadsCapture from './components/LeadsCapture';
@@ -99,6 +100,7 @@ function App() {
           
           {/* Rutas de verificación QR */}
           <Route path="/verificar" element={<VerificadorGeneral />} />
+          <Route path="/verificar_prueba" element={<VerificarPrueba />} />
           <Route path="/verificarSala" element={<SelectorCharlas />} />
           <Route path="/verificarSala/:eventoId" element={<VerificadorSala />} />
           
