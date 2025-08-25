@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import QRScanner from './QRScanner';
 import { eventService } from '../services/api';
+import API_CONFIG from '../config/api.config';
 
 const VerificadorSala = () => {
   const { eventoId } = useParams();
@@ -92,7 +93,7 @@ const VerificadorSala = () => {
     setSuccess(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/verificar-sala/verificar', {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar-sala/verificar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +151,7 @@ const VerificadorSala = () => {
       setScannerLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:5000/api/verificar-sala/agregar-asistente', {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar-sala/agregar-asistente`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import QRScanner from './QRScanner';
 import { analyticsService } from '../services/analytics';
+import API_CONFIG from '../config/api.config';
 
 const VerificadorGeneral = () => {
   const [userData, setUserData] = useState(null);
@@ -15,7 +16,7 @@ const VerificadorGeneral = () => {
 
     try {
       // Buscar usuario por QR
-      const response = await fetch('http://localhost:5000/api/verificar/buscar-usuario', {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/buscar-usuario`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -55,7 +56,7 @@ const VerificadorGeneral = () => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/verificar/confirmar-asistencia', {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/confirmar-asistencia`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRScanner from './QRScanner';
+import API_CONFIG from '../config/api.config';
 import { 
   CheckCircle, 
   XCircle, 
@@ -54,11 +55,18 @@ const VerificarPrueba = () => {
   const [qrStatus, setQrStatus] = useState('idle'); // 'idle', 'generating', 'ready', 'error'
   const [qrData, setQrData] = useState(null); // {qr_text, qr_image_base64, filename}
   const [qrError, setQrError] = useState(null);
+  
+  // Estados para impresión térmica
+  const [thermalStatus, setThermalStatus] = useState('idle'); // 'idle', 'printing', 'success', 'error'
+  const [thermalError, setThermalError] = useState(null);
+  const [printerStatus, setPrinterStatus] = useState(null);
 
   // Cargar datos al montar el componente con QR fijo
   useEffect(() => {
     // Verificar con QR fijo al inicio para tener datos iniciales
     verificarUsuarioConQR(QR_CODE_PRUEBA);
+    // Verificar estado de impresora térmica
+    verificarEstadoImpresora();
   }, []);
   
   // Cleanup del timeout al desmontar
@@ -127,7 +135,7 @@ const VerificarPrueba = () => {
     setQrData(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/verificar/generar-qr-impresion', {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/generar-qr-impresion`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -171,7 +179,7 @@ const VerificarPrueba = () => {
     setQrError(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/verificar/buscar-usuario', {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/buscar-usuario`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,7 +233,7 @@ const VerificarPrueba = () => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/verificar/confirmar-asistencia', {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/confirmar-asistencia`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -289,7 +297,7 @@ const VerificarPrueba = () => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/registros/actualizar-datos', {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/registros/actualizar-datos`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -329,6 +337,109 @@ const VerificarPrueba = () => {
       setError(error.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Función para verificar estado de impresora térmica
+  const verificarEstadoImpresora = async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/estado-impresora`);
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setPrinterStatus(data);
+        return data;
+      } else {
+        setPrinterStatus(null);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error verificando impresora:', error);
+      setPrinterStatus(null);
+      return null;
+    }
+  };
+
+  // Función para impresión térmica
+  const imprimirTermica = async () => {
+    if (!userData?.usuario || !qrData) return;
+    
+    setThermalStatus('printing');
+    setThermalError(null);
+
+    try {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/imprimir-termica`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          usuario_datos: {
+            nombres: userData.usuario.nombres,
+            empresa: userData.usuario.empresa,
+            cargo: userData.usuario.cargo,
+            numero: userData.usuario.numero
+          },
+          qr_text: qrData.qr_text,
+          mode: 'TSPL'  // Usar comandos TSPL para 4BARCODE
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setThermalStatus('success');
+        setSuccess(`Etiqueta enviada a ${data.printer || 'impresora térmica'}`);
+        
+        // Limpiar estado después de 3 segundos
+        setTimeout(() => {
+          setThermalStatus('idle');
+          setSuccess(null);
+        }, 3000);
+      } else {
+        throw new Error(data.error || 'Error en impresión térmica');
+      }
+
+    } catch (error) {
+      console.error('Error imprimiendo en térmica:', error);
+      setThermalError(error.message);
+      setThermalStatus('error');
+      setError(`Error térmica: ${error.message}`);
+    }
+  };
+
+  // Función para imprimir etiqueta de prueba
+  const imprimirPruebaTermica = async () => {
+    setThermalStatus('printing');
+    setThermalError(null);
+
+    try {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/test-impresora`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setThermalStatus('success');
+        setSuccess('Etiqueta de prueba enviada correctamente');
+        
+        setTimeout(() => {
+          setThermalStatus('idle');
+          setSuccess(null);
+        }, 3000);
+      } else {
+        throw new Error(data.error || 'Error en impresión de prueba');
+      }
+
+    } catch (error) {
+      console.error('Error en prueba térmica:', error);
+      setThermalError(error.message);
+      setThermalStatus('error');
+      setError(`Error prueba: ${error.message}`);
     }
   };
 
@@ -878,6 +989,9 @@ const VerificarPrueba = () => {
                       setQrStatus('idle');
                       setQrData(null);
                       setQrError(null);
+                      // Limpiar estados de impresión térmica
+                      setThermalStatus('idle');
+                      setThermalError(null);
                     }}
                     className="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
                   >
@@ -885,7 +999,46 @@ const VerificarPrueba = () => {
                     Siguiente Asistente
                   </button>
                   
-                  {/* Botón para imprimir QR */}
+                  {/* Botón de impresión térmica */}
+                  <button
+                    onClick={imprimirTermica}
+                    disabled={!userData || !qrData || thermalStatus === 'printing'}
+                    className={`w-full font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center text-sm mb-2 ${
+                      thermalStatus === 'success' 
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : thermalStatus === 'printing'
+                        ? 'bg-yellow-500 text-white cursor-not-allowed animate-pulse'
+                        : thermalStatus === 'error'
+                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                        : qrData
+                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                        : 'bg-gray-400 text-white cursor-not-allowed'
+                    }`}
+                  >
+                    {thermalStatus === 'printing' ? (
+                      <>
+                        <RefreshCw size={18} className="mr-2 animate-spin" />
+                        Imprimiendo Etiqueta...
+                      </>
+                    ) : thermalStatus === 'success' ? (
+                      <>
+                        <CheckCircle size={18} className="mr-2" />
+                        Etiqueta Impresa
+                      </>
+                    ) : thermalStatus === 'error' ? (
+                      <>
+                        <XCircle size={18} className="mr-2" />
+                        Error Impresión
+                      </>
+                    ) : (
+                      <>
+                        <Activity size={18} className="mr-2" />
+                        🖨️ Impresión Térmica (50x50mm)
+                      </>
+                    )}
+                  </button>
+
+                  {/* Botón para imprimir QR normal */}
                   <button
                     onClick={imprimirQR}
                     disabled={!userData || qrStatus !== 'ready'}
@@ -1044,11 +1197,60 @@ const VerificarPrueba = () => {
                 </div>
               </motion.div>
 
-              {/* Panel de ayuda rápida */}
+              {/* Estado de impresora térmica */}
               <motion.div 
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
+                className={`rounded-xl p-4 border ${
+                  printerStatus?.success ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'
+                }`}
+              >
+                <h4 className={`font-semibold mb-2 flex items-center ${
+                  printerStatus?.success ? 'text-green-800' : 'text-orange-800'
+                }`}>
+                  <Activity size={16} className="mr-2" />
+                  Impresora Térmica 4BARCODE
+                </h4>
+                <div className="text-sm space-y-1">
+                  {printerStatus ? (
+                    <>
+                      <div className={printerStatus.success ? 'text-green-700' : 'text-orange-700'}>
+                        📍 {printerStatus.printer || 'No detectada'}
+                      </div>
+                      <div className={printerStatus.success ? 'text-green-700' : 'text-orange-700'}>
+                        {printerStatus.success ? '✅' : '⚠️'} Estado: {printerStatus.status_text || 'Desconocido'}
+                      </div>
+                      <div className={printerStatus.success ? 'text-green-700' : 'text-orange-700'}>
+                        📄 Trabajos en cola: {printerStatus.jobs || 0}
+                      </div>
+                      <button
+                        onClick={imprimirPruebaTermica}
+                        className="mt-2 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg transition-colors"
+                        disabled={!printerStatus.success || thermalStatus === 'printing'}
+                      >
+                        🧪 Imprimir Test
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-orange-700">
+                      ⚠️ No se pudo detectar impresora térmica
+                      <button
+                        onClick={verificarEstadoImpresora}
+                        className="mt-2 text-xs bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded-lg transition-colors block"
+                      >
+                        🔄 Reintentar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+
+              {/* Panel de ayuda rápida */}
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
                 className="bg-blue-50 rounded-xl p-4 border border-blue-200"
               >
                 <h4 className="font-semibold text-blue-800 mb-2 flex items-center">
@@ -1060,6 +1262,7 @@ const VerificarPrueba = () => {
                   <li>• Modo de verificación: Manual</li>
                   <li>• Punto de acceso: Entrada Principal</li>
                   <li>• Staff: Recepción</li>
+                  <li>• Etiquetas: 50x50mm / 203 DPI</li>
                 </ul>
               </motion.div>
             </div>
