@@ -2502,6 +2502,55 @@ def buscar_usuario_por_qr():
         cursor.close()
         connection.close()
 
+@app.route('/api/verificar/generar-qr-impresion', methods=['POST'])
+def generar_qr_para_impresion():
+    """Generar código QR para impresión basado en datos del usuario"""
+    data = request.get_json()
+    
+    if not data or 'usuario_datos' not in data:
+        return jsonify({"error": "Datos del usuario requeridos"}), 400
+    
+    usuario_datos = data['usuario_datos']
+    
+    # Validar campos requeridos
+    required_fields = ['nombres', 'numero', 'cargo', 'empresa']
+    for field in required_fields:
+        if field not in usuario_datos:
+            return jsonify({"error": f"Campo requerido en usuario_datos: {field}"}), 400
+    
+    try:
+        # Generar texto QR usando los datos actuales del usuario
+        qr_text = generar_texto_qr(
+            usuario_datos['nombres'],
+            usuario_datos['numero'], 
+            usuario_datos['cargo'],
+            usuario_datos['empresa']
+        )
+        
+        if not qr_text:
+            return jsonify({"error": "Error generando texto QR"}), 500
+        
+        # Generar imagen QR
+        qr_image_bytes = generar_imagen_qr(qr_text)
+        
+        if not qr_image_bytes:
+            return jsonify({"error": "Error generando imagen QR"}), 500
+        
+        # Convertir a base64 para envío
+        import base64
+        qr_base64 = base64.b64encode(qr_image_bytes).decode('utf-8')
+        
+        return jsonify({
+            "success": True,
+            "qr_text": qr_text,
+            "qr_image_base64": qr_base64,
+            "filename": f"QR_{usuario_datos['nombres'].replace(' ', '_')}_Reimpresion.png"
+        })
+        
+    except Exception as e:
+        print(f"Error generando QR para impresión: {e}")
+        return jsonify({"error": "Error interno generando QR"}), 500
+
 @app.route('/api/verificar/confirmar-asistencia', methods=['POST'])
 def confirmar_asistencia_general():
     """Confirmar asistencia general del usuario"""

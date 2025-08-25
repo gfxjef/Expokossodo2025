@@ -49,6 +49,11 @@ const VerificarPrueba = () => {
   const [lastScannedQR, setLastScannedQR] = useState(null);
   const [scanCooldown, setScanCooldown] = useState(false);
   const [currentQR, setCurrentQR] = useState(null); // QR actualmente procesado
+  
+  // Estados para generación de QR para impresión
+  const [qrStatus, setQrStatus] = useState('idle'); // 'idle', 'generating', 'ready', 'error'
+  const [qrData, setQrData] = useState(null); // {qr_text, qr_image_base64, filename}
+  const [qrError, setQrError] = useState(null);
 
   // Cargar datos al montar el componente con QR fijo
   useEffect(() => {
@@ -113,12 +118,57 @@ const VerificarPrueba = () => {
     await verificarUsuarioConQR(qrCode);
   };
 
+  // Función para generar QR en background
+  const generarQRParaImpresion = async (usuarioData) => {
+    if (!usuarioData || qrStatus === 'generating') return;
+    
+    setQrStatus('generating');
+    setQrError(null);
+    setQrData(null);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/verificar/generar-qr-impresion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          usuario_datos: {
+            nombres: usuarioData.nombres,
+            numero: usuarioData.numero,
+            cargo: usuarioData.cargo,
+            empresa: usuarioData.empresa
+          }
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error generando QR');
+      }
+
+      setQrData(data);
+      setQrStatus('ready');
+
+    } catch (error) {
+      console.error('Error generando QR:', error);
+      setQrError(error.message);
+      setQrStatus('error');
+    }
+  };
+
   // Función mejorada para verificar usuario con QR dinámico
   const verificarUsuarioConQR = async (qrCode) => {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    setCurrentQR(qrCode); // Guardar el QR actual
+    setCurrentQR(qrCode);
+    
+    // Limpiar QR anterior
+    setQrStatus('idle');
+    setQrData(null);
+    setQrError(null);
 
     try {
       const response = await fetch('http://localhost:5000/api/verificar/buscar-usuario', {
@@ -135,10 +185,12 @@ const VerificarPrueba = () => {
         throw new Error(data.error || 'Error buscando usuario');
       }
 
-      setUserData({
+      const newUserData = {
         ...data,
         qr_original: qrCode
-      });
+      };
+
+      setUserData(newUserData);
       
       // Inicializar datos para edición
       if (data.usuario) {
@@ -149,6 +201,12 @@ const VerificarPrueba = () => {
           cargo: data.usuario.cargo,
           numero: data.usuario.numero
         });
+
+        // *** GENERAR QR EN BACKGROUND ***
+        // Ejecutar inmediatamente después de cargar datos del usuario
+        setTimeout(() => {
+          generarQRParaImpresion(data.usuario);
+        }, 100); // Pequeño delay para que se renderice la UI primero
       }
 
     } catch (error) {
@@ -274,6 +332,97 @@ const VerificarPrueba = () => {
     }
   };
 
+  // Función para imprimir QR
+  const imprimirQR = () => {
+    if (!qrData || qrStatus !== 'ready') return;
+
+    try {
+      // Crear una nueva ventana para impresión
+      const printWindow = window.open('', '_blank');
+      
+      // Crear contenido HTML para impresión
+      const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${qrData.filename}</title>
+          <style>
+            body { 
+              margin: 0; 
+              padding: 20px; 
+              text-align: center; 
+              font-family: Arial, sans-serif; 
+            }
+            .qr-container { 
+              border: 2px solid #333; 
+              display: inline-block; 
+              padding: 20px; 
+              margin: 20px;
+              background: white;
+            }
+            .qr-title { 
+              font-size: 18px; 
+              font-weight: bold; 
+              margin-bottom: 15px;
+              color: #333;
+            }
+            .qr-image { 
+              display: block; 
+              margin: 15px auto;
+              max-width: 300px;
+            }
+            .qr-info {
+              font-size: 12px;
+              color: #666;
+              margin-top: 10px;
+            }
+            .user-info {
+              font-size: 14px;
+              margin-bottom: 15px;
+              color: #444;
+            }
+            @media print {
+              body { margin: 0; }
+              .qr-container { border: 2px solid #000; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="qr-container">
+            <div class="qr-title">ExpoKossodo 2025 - Código QR</div>
+            <div class="user-info">
+              <strong>${userData?.usuario?.nombres || 'Usuario'}</strong><br>
+              ${userData?.usuario?.empresa || ''} - ${userData?.usuario?.cargo || ''}
+            </div>
+            <img src="data:image/png;base64,${qrData.qr_image_base64}" 
+                 class="qr-image" alt="Código QR" />
+            <div class="qr-info">
+              Código único e intransferible<br>
+              ${qrData.qr_text}
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      
+      // Esperar a que cargue y luego imprimir
+      printWindow.onload = () => {
+        printWindow.print();
+        printWindow.close();
+      };
+
+      // Actualizar estadísticas
+      setSuccess('QR enviado a impresión correctamente');
+      
+    } catch (error) {
+      console.error('Error imprimiendo QR:', error);
+      setError('Error al imprimir el código QR');
+    }
+  };
+
   const getEstadoBadge = (estado) => {
     const badges = {
       confirmada: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle, label: 'CONFIRMADO' },
@@ -335,6 +484,38 @@ const VerificarPrueba = () => {
                 {currentQR && (
                   <span className="text-xs text-gray-500 font-mono">
                     QR: {currentQR.substring(0, 8)}...
+                  </span>
+                )}
+              </div>
+
+              {/* Indicador de estado del QR para impresión */}
+              <div className="flex items-center space-x-3 bg-white border rounded-lg px-4 py-2">
+                <div className="flex items-center space-x-2">
+                  <div className={`w-3 h-3 rounded-full ${
+                    qrStatus === 'ready' ? 'bg-green-500' :
+                    qrStatus === 'generating' ? 'bg-blue-500 animate-pulse' :
+                    qrStatus === 'error' ? 'bg-red-500' :
+                    'bg-gray-400'
+                  }`} />
+                  {qrStatus === 'ready' ? (
+                    <CheckCircle size={16} className="text-green-600" />
+                  ) : qrStatus === 'generating' ? (
+                    <RefreshCw size={16} className="text-blue-600 animate-spin" />
+                  ) : qrStatus === 'error' ? (
+                    <XCircle size={16} className="text-red-600" />
+                  ) : (
+                    <AlertCircle size={16} className="text-gray-600" />
+                  )}
+                  <span className="text-sm font-medium text-gray-700">
+                    {qrStatus === 'ready' ? 'QR Listo' :
+                     qrStatus === 'generating' ? 'Generando...' :
+                     qrStatus === 'error' ? 'Error QR' :
+                     'QR Inactivo'}
+                  </span>
+                </div>
+                {qrData && (
+                  <span className="text-xs text-gray-500 font-mono">
+                    {qrData.qr_text?.substring(0, 8)}...
                   </span>
                 )}
               </div>
@@ -693,6 +874,10 @@ const VerificarPrueba = () => {
                       setScanCooldown(false);
                       setLastScannedQR(null);
                       setScannerLoading(false);
+                      // Limpiar estados del QR
+                      setQrStatus('idle');
+                      setQrData(null);
+                      setQrError(null);
                     }}
                     className="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
                   >
@@ -702,12 +887,39 @@ const VerificarPrueba = () => {
                   
                   {/* Botón para imprimir QR */}
                   <button
-                    onClick={() => setError('Función de impresión en desarrollo')}
-                    disabled={!userData}
-                    className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center text-sm disabled:bg-gray-400"
+                    onClick={imprimirQR}
+                    disabled={!userData || qrStatus !== 'ready'}
+                    className={`w-full font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center text-sm ${
+                      qrStatus === 'ready' 
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                        : qrStatus === 'generating'
+                        ? 'bg-blue-500 text-white cursor-not-allowed'
+                        : qrStatus === 'error'
+                        ? 'bg-red-500 text-white cursor-not-allowed'
+                        : 'bg-gray-400 text-white cursor-not-allowed'
+                    }`}
                   >
-                    <AlertCircle size={16} className="mr-2" />
-                    Imprimir QR
+                    {qrStatus === 'generating' ? (
+                      <>
+                        <RefreshCw size={16} className="mr-2 animate-spin" />
+                        Generando QR...
+                      </>
+                    ) : qrStatus === 'ready' ? (
+                      <>
+                        <CheckCircle size={16} className="mr-2" />
+                        Imprimir QR
+                      </>
+                    ) : qrStatus === 'error' ? (
+                      <>
+                        <XCircle size={16} className="mr-2" />
+                        Error en QR
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle size={16} className="mr-2" />
+                        QR No Disponible
+                      </>
+                    )}
                   </button>
                 </div>
               </motion.div>
@@ -749,11 +961,94 @@ const VerificarPrueba = () => {
                 </div>
               </motion.div>
 
-              {/* Panel de ayuda rápida */}
+              {/* Estado del QR */}
               <motion.div 
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
+                className={`rounded-xl p-4 border ${
+                  qrStatus === 'ready' ? 'bg-green-50 border-green-200' :
+                  qrStatus === 'generating' ? 'bg-blue-50 border-blue-200' :
+                  qrStatus === 'error' ? 'bg-red-50 border-red-200' :
+                  'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <h4 className={`font-semibold mb-2 flex items-center ${
+                  qrStatus === 'ready' ? 'text-green-800' :
+                  qrStatus === 'generating' ? 'text-blue-800' :
+                  qrStatus === 'error' ? 'text-red-800' :
+                  'text-gray-800'
+                }`}>
+                  {qrStatus === 'ready' ? (
+                    <>
+                      <CheckCircle size={16} className="mr-2" />
+                      QR Listo para Imprimir
+                    </>
+                  ) : qrStatus === 'generating' ? (
+                    <>
+                      <RefreshCw size={16} className="mr-2 animate-spin" />
+                      Generando QR...
+                    </>
+                  ) : qrStatus === 'error' ? (
+                    <>
+                      <XCircle size={16} className="mr-2" />
+                      Error en QR
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle size={16} className="mr-2" />
+                      Estado del QR
+                    </>
+                  )}
+                </h4>
+                <div className={`text-sm space-y-1 ${
+                  qrStatus === 'ready' ? 'text-green-700' :
+                  qrStatus === 'generating' ? 'text-blue-700' :
+                  qrStatus === 'error' ? 'text-red-700' :
+                  'text-gray-700'
+                }`}>
+                  {qrStatus === 'ready' && (
+                    <>
+                      <div>✅ QR generado exitosamente</div>
+                      <div>📄 Formato: {qrData?.filename?.split('_')[1] || 'PNG'}</div>
+                      <div>🔒 Código: {qrData?.qr_text?.substring(0, 20) || ''}...</div>
+                    </>
+                  )}
+                  {qrStatus === 'generating' && (
+                    <>
+                      <div>⏳ Procesando datos del usuario</div>
+                      <div>🔄 Generando imagen QR</div>
+                      <div>📋 Preparando para impresión</div>
+                    </>
+                  )}
+                  {qrStatus === 'error' && (
+                    <>
+                      <div>❌ {qrError || 'Error desconocido'}</div>
+                      <div className="mt-2">
+                        <button
+                          onClick={() => userData?.usuario && generarQRParaImpresion(userData.usuario)}
+                          className="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg transition-colors"
+                        >
+                          🔄 Reintentar QR
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {qrStatus === 'idle' && (
+                    <>
+                      <div>• Esperando datos del usuario</div>
+                      <div>• QR se genera automáticamente</div>
+                      <div>• Sistema listo para impresión</div>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+
+              {/* Panel de ayuda rápida */}
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
                 className="bg-blue-50 rounded-xl p-4 border border-blue-200"
               >
                 <h4 className="font-semibold text-blue-800 mb-2 flex items-center">
