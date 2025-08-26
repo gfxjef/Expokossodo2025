@@ -21,7 +21,11 @@ import {
   Users,
   Activity,
   Camera,
-  Wifi
+  Wifi,
+  Keyboard,
+  ToggleLeft,
+  ToggleRight,
+  Scan
 } from 'lucide-react';
 
 const VerificarPrueba = () => {
@@ -46,13 +50,19 @@ const VerificarPrueba = () => {
   });
   
   // Estados y refs para el scanner QR
-  const [scannerActive, setScannerActive] = useState(true); // Scanner activo por defecto
+  const [scannerActive, setScannerActive] = useState(false); // Cámara desactivada por defecto
   const [scannerLoading, setScannerLoading] = useState(false);
   const processingRef = useRef(false);
   const cooldownTimeoutRef = useRef(null);
   const [lastScannedQR, setLastScannedQR] = useState(null);
   const [scanCooldown, setScanCooldown] = useState(false);
   const [currentQR, setCurrentQR] = useState(null); // QR actualmente procesado
+  
+  // Estados para lector físico de QR
+  const [scannerMode, setScannerMode] = useState('physical'); // 'physical' o 'camera'
+  const [physicalScannerInput, setPhysicalScannerInput] = useState('');
+  const physicalScannerInputRef = useRef(null);
+  const [isPhysicalScannerReady, setIsPhysicalScannerReady] = useState(true);
   
   // Estados para carga de eventos bajo demanda
   const [eventosLoading, setEventosLoading] = useState(false);
@@ -64,11 +74,43 @@ const VerificarPrueba = () => {
 
   // Cargar configuración inicial al montar el componente
   useEffect(() => {
-    // Cargar cache de registros
+    // Cargar cache de registros SOLO UNA VEZ
     cargarCacheRegistros();
-    // Verificar estado de impresora térmica
+    // Verificar estado de impresora térmica SOLO UNA VEZ
     verificarEstadoImpresora();
-  }, []);
+    
+    // Si está en modo lector físico, hacer focus en el input
+    if (scannerMode === 'physical' && physicalScannerInputRef.current) {
+      physicalScannerInputRef.current.focus();
+    }
+  }, []); // Array vacío = solo se ejecuta al montar
+
+  // Effect separado para la función de prueba del cache
+  useEffect(() => {
+    // Función de prueba del cache (se ejecutará en consola)
+    window.testCache = (qrCode) => {
+      console.log('=== TEST DE CACHE ===');
+      console.log('Código a buscar:', qrCode);
+      console.log('Código normalizado:', normalizeQRCode(qrCode));
+      console.log('Registros en cache:', registrosCache.length);
+      
+      const resultado = buscarEnCache(qrCode);
+      if (resultado) {
+        console.log('✅ ENCONTRADO EN CACHE:', resultado);
+      } else {
+        console.log('❌ NO ENCONTRADO EN CACHE');
+        console.log('Primeros 10 QRs en cache:');
+        registrosCache.slice(0, 10).forEach((r, i) => {
+          console.log(`${i + 1}. QR_TEXT: ${r.qr_text || 'N/A'} | QR_CODE: ${r.qr_code || 'N/A'}`);
+        });
+      }
+      return resultado;
+    };
+    
+    if (registrosCache.length > 0) {
+      console.log('💡 TIP: Usa window.testCache("CODIGO_QR") en la consola para probar búsquedas');
+    }
+  }, [registrosCache]); // Este sí puede depender de registrosCache porque no lo modifica
   
   // Cleanup del timeout al desmontar
   useEffect(() => {
@@ -90,6 +132,110 @@ const VerificarPrueba = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Effect para mantener focus en el input cuando está en modo lector físico
+  useEffect(() => {
+    if (scannerMode === 'physical') {
+      const handleFocus = () => {
+        if (physicalScannerInputRef.current && document.activeElement !== physicalScannerInputRef.current) {
+          physicalScannerInputRef.current.focus();
+        }
+      };
+
+      // Establecer focus inicial
+      handleFocus();
+
+      // Re-establecer focus cuando se pierde (por ejemplo, al hacer clic en otro lugar)
+      const interval = setInterval(handleFocus, 500);
+      
+      // También escuchar clicks en el documento
+      document.addEventListener('click', handleFocus);
+
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('click', handleFocus);
+      };
+    }
+  }, [scannerMode, userData]);
+
+  // Función para normalizar el código QR del lector físico
+  const normalizeQRCode = (code) => {
+    // Algunos lectores interpretan el pipe | como ]
+    // También manejar otros caracteres problemáticos comunes
+    let normalized = code
+      .replace(/\]/g, '|')  // Reemplazar ] con |
+      .replace(/¡/g, '+')   // Algunos lectores convierten + en ¡
+      .trim();
+    
+    console.log('[NORMALIZACIÓN] Original:', code);
+    console.log('[NORMALIZACIÓN] Normalizado:', normalized);
+    
+    return normalized;
+  };
+
+  // Handler para el input del lector físico cuando presiona Enter
+  const handlePhysicalScannerKeyPress = (e) => {
+    // Detectar cuando se presiona Enter
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      let qrCode = physicalScannerInput.trim();
+      
+      if (qrCode && qrCode.length > 0) {
+        // Normalizar el código antes de procesarlo
+        qrCode = normalizeQRCode(qrCode);
+        
+        console.log('[LECTOR FÍSICO] QR escaneado y normalizado:', qrCode);
+        handleQRScan(qrCode);
+        // Limpiar el input después de procesar
+        setTimeout(() => {
+          setPhysicalScannerInput('');
+          // Re-enfocar el input
+          if (physicalScannerInputRef.current) {
+            physicalScannerInputRef.current.focus();
+          }
+        }, 100);
+      }
+    }
+  };
+
+  // Handler para cambio de texto en el input
+  const handlePhysicalScannerChange = (e) => {
+    const value = e.target.value;
+    setPhysicalScannerInput(value);
+    
+    // Algunos lectores no envían Enter, pero sí el texto completo de una vez
+    // Si detectamos un patrón de QR válido completo, procesarlo automáticamente
+    // Buscar tanto | como ] ya que algunos lectores convierten el pipe
+    if (value.length > 10 && (value.includes('|') || value.includes(']') || value.match(/^[A-Z0-9]+$/))) {
+      // Dar un pequeño delay para asegurar que el lector terminó
+      setTimeout(() => {
+        if (physicalScannerInput === value && value.length > 0) {
+          // Normalizar antes de procesar
+          const normalizedQR = normalizeQRCode(value);
+          console.log('[LECTOR FÍSICO] QR detectado automáticamente:', normalizedQR);
+          handleQRScan(normalizedQR);
+          setPhysicalScannerInput('');
+          if (physicalScannerInputRef.current) {
+            physicalScannerInputRef.current.focus();
+          }
+        }
+      }, 500);
+    }
+  };
+
+  // Función para cambiar entre modos
+  const toggleScannerMode = () => {
+    const newMode = scannerMode === 'physical' ? 'camera' : 'physical';
+    setScannerMode(newMode);
+    
+    if (newMode === 'physical') {
+      setScannerActive(false); // Desactivar cámara
+      setPhysicalScannerInput('');
+      // Focus automático se maneja en el effect
+    } else {
+      setScannerActive(true); // Activar cámara
+    }
+  };
+
   // Función para cargar cache de registros
   const cargarCacheRegistros = async () => {
     setCacheLoading(true);
@@ -102,8 +248,8 @@ const VerificarPrueba = () => {
         setLastCacheUpdate(Date.now());
         
         // Actualizar estadísticas reales
-        const confirmados = data.registros.filter(r => r.asistencia_confirmada).length;
-        const pendientes = data.registros.filter(r => !r.asistencia_confirmada).length;
+        const confirmados = data.registros.filter(r => r.asistencia_general_confirmada).length;
+        const pendientes = data.registros.filter(r => !r.asistencia_general_confirmada).length;
         
         setStats(prev => ({
           ...prev,
@@ -113,6 +259,14 @@ const VerificarPrueba = () => {
         }));
         
         console.log(`[CACHE] ${data.total} registros cargados en cache`);
+        console.log('[CACHE] Muestra de datos (primeros 3 registros):');
+        data.registros.slice(0, 3).forEach((r, i) => {
+          console.log(`  ${i + 1}. Nombre: ${r.nombres}`);
+          console.log(`     QR_TEXT: ${r.qr_text || 'N/A'}`);
+          console.log(`     QR_CODE: ${r.qr_code || 'N/A'}`);
+          console.log(`     Asistencia: ${r.asistencia_general_confirmada ? 'Confirmada' : 'Pendiente'}`);
+          console.log(`     Total Eventos: ${r.total_eventos || 0}`);
+        });
       } else {
         console.error('Error cargando cache:', data.error);
       }
@@ -125,22 +279,64 @@ const VerificarPrueba = () => {
   
   // Función para buscar en cache primero
   const buscarEnCache = (qrCode) => {
-    // Buscar por QR exacto
-    const registro = registrosCache.find(r => 
-      r.qr_text === qrCode || 
-      r.qr_code === qrCode
-    );
+    // Normalizar el código QR para la búsqueda
+    const normalizedQR = normalizeQRCode(qrCode);
+    
+    console.log('[CACHE] 🔍 Buscando QR:', qrCode);
+    console.log('[CACHE] 🔍 QR normalizado:', normalizedQR);
+    console.log('[CACHE] 📦 Total registros en cache:', registrosCache.length);
+    
+    // Buscar por QR exacto (tanto el original como el normalizado)
+    const registro = registrosCache.find(r => {
+      // Comparar con QR normalizado
+      const cacheQRText = r.qr_text ? normalizeQRCode(r.qr_text) : null;
+      const cacheQRCode = r.qr_code ? normalizeQRCode(r.qr_code) : null;
+      
+      const matchText = cacheQRText === normalizedQR;
+      const matchCode = cacheQRCode === normalizedQR;
+      const matchOrigText = r.qr_text === qrCode;
+      const matchOrigCode = r.qr_code === qrCode;
+      
+      // Log para debugging
+      if (r.id === 872 || r.id === 858) { // IDs que sabemos que existen
+        console.log(`[CACHE] 🔍 Comparando con Usuario ${r.id} (${r.nombres})`);
+        console.log(`  QR_TEXT: "${r.qr_text}" → normalizado: "${cacheQRText}"`);
+        console.log(`  QR_CODE: "${r.qr_code}" → normalizado: "${cacheQRCode}"`);
+        console.log(`  Matches - Text: ${matchText}, Code: ${matchCode}, OrigText: ${matchOrigText}, OrigCode: ${matchOrigCode}`);
+      }
+      
+      return matchText || matchCode || matchOrigText || matchOrigCode;
+    });
     
     if (registro) {
       console.log('[CACHE HIT] Usuario encontrado en cache:', registro.nombres);
+      console.log('[CACHE HIT] Datos completos:', registro);
+      
+      // Mapear correctamente los campos del cache
       return {
-        usuario: registro,
+        usuario: {
+          id: registro.id,
+          nombres: registro.nombres,
+          correo: registro.correo,
+          empresa: registro.empresa,
+          cargo: registro.cargo,
+          numero: registro.numero,
+          qr_code: registro.qr_code || registro.qr_text,
+          asistencia_confirmada: registro.asistencia_general_confirmada || false,
+          estado_asistencia: registro.estado_asistencia || 'pendiente',
+          fecha_registro: registro.fecha_registro,
+          fecha_asistencia_general: registro.fecha_asistencia_general,
+          total_eventos: registro.total_eventos || 0 // Número de eventos desde el cache
+        },
         eventos: registro.eventos || [],
         qr_validado: true
       };
     }
     
     console.log('[CACHE MISS] Usuario no encontrado en cache, consultando servidor...');
+    console.log('[CACHE MISS] QRs en cache (primeros 5):', 
+      registrosCache.slice(0, 5).map(r => ({ qr_text: r.qr_text, qr_code: r.qr_code }))
+    );
     return null;
   };
 
@@ -181,20 +377,17 @@ const VerificarPrueba = () => {
     const cachedData = buscarEnCache(qrCode);
     
     if (cachedData) {
-      // Usuario encontrado en cache - respuesta instantánea
+      // ✅ MOSTRAR DATOS INMEDIATAMENTE DESDE EL CACHE
       setCurrentQR(qrCode);
-      
-      // Cargar eventos bajo demanda
-      const eventos = await cargarEventosUsuario(cachedData.usuario.id);
       
       const newUserData = {
         ...cachedData,
         qr_original: qrCode,
-        eventos: eventos
+        eventos: [] // Vacío inicialmente, se cargarán después
       };
-      setUserData(newUserData);
+      setUserData(newUserData); // ✅ MOSTRAR INMEDIATAMENTE
       
-      // Inicializar datos para edición
+      // Inicializar datos para edición inmediatamente
       if (cachedData.usuario) {
         setEditData({
           nombres: cachedData.usuario.nombres,
@@ -205,13 +398,33 @@ const VerificarPrueba = () => {
         });
       }
       
-      // Resetear estados de procesamiento más rápido
+      // ✅ RESETEAR LOADING INMEDIATAMENTE
       setTimeout(() => {
         setScanCooldown(false);
         setLastScannedQR(null);
         processingRef.current = false;
         setScannerLoading(false);
-      }, 1000); // Más rápido porque fue desde cache
+      }, 500); // Mucho más rápido
+      
+      // 🔄 CARGAR EVENTOS EN SEGUNDO PLANO (NO BLOQUEA LA UI)
+      console.log('[CACHE] Mostrando datos inmediatamente, cargando eventos en segundo plano...');
+      cargarEventosUsuario(cachedData.usuario.id).then(eventos => {
+        if (eventos) {
+          console.log('[CACHE] Eventos cargados, actualizando UI...');
+          // Solo actualizar si todavía estamos mostrando este usuario
+          setUserData(prevData => {
+            if (prevData && prevData.usuario.id === cachedData.usuario.id) {
+              return {
+                ...prevData,
+                eventos: eventos
+              };
+            }
+            return prevData;
+          });
+        }
+      }).catch(error => {
+        console.error('[CACHE] Error cargando eventos:', error);
+      });
     } else {
       // No está en cache, hacer consulta al servidor
       await verificarUsuarioConQR(qrCode);
@@ -544,14 +757,51 @@ const VerificarPrueba = () => {
 
             {/* Indicador de Scanner y Estadísticas */}
             <div className="flex items-center space-x-6">
+              {/* Toggle de modo de scanner */}
+              <div className="flex items-center space-x-2 bg-white border rounded-lg px-4 py-2">
+                <button
+                  onClick={toggleScannerMode}
+                  className="flex items-center space-x-2 hover:bg-gray-50 rounded px-2 py-1 transition-colors"
+                >
+                  {scannerMode === 'physical' ? (
+                    <>
+                      <Keyboard size={18} className="text-blue-600" />
+                      <span className="text-sm font-medium text-gray-700">Lector Físico</span>
+                      <ToggleLeft size={24} className="text-blue-600" />
+                    </>
+                  ) : (
+                    <>
+                      <Camera size={18} className="text-green-600" />
+                      <span className="text-sm font-medium text-gray-700">Cámara</span>
+                      <ToggleRight size={24} className="text-green-600" />
+                    </>
+                  )}
+                </button>
+              </div>
+
               {/* Indicador de estado del scanner */}
               <div className="flex items-center space-x-3 bg-white border rounded-lg px-4 py-2">
                 <div className="flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${scannerActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
-                  <Camera size={16} className={scannerActive ? 'text-green-600' : 'text-gray-400'} />
-                  <span className="text-sm font-medium text-gray-700">
-                    {scannerActive ? 'Scanner Activo' : 'Scanner Inactivo'}
-                  </span>
+                  <div className={`w-3 h-3 rounded-full ${
+                    scannerMode === 'physical' ? 
+                      (isPhysicalScannerReady ? 'bg-green-500 animate-pulse' : 'bg-gray-400') :
+                      (scannerActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400')
+                  }`} />
+                  {scannerMode === 'physical' ? (
+                    <>
+                      <Keyboard size={16} className={isPhysicalScannerReady ? 'text-green-600' : 'text-gray-400'} />
+                      <span className="text-sm font-medium text-gray-700">
+                        {isPhysicalScannerReady ? 'Lector Listo' : 'Lector Inactivo'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera size={16} className={scannerActive ? 'text-green-600' : 'text-gray-400'} />
+                      <span className="text-sm font-medium text-gray-700">
+                        {scannerActive ? 'Cámara Activa' : 'Cámara Inactiva'}
+                      </span>
+                    </>
+                  )}
                 </div>
                 {scanCooldown && (
                   <div className="flex items-center space-x-1">
@@ -649,15 +899,51 @@ const VerificarPrueba = () => {
           )}
         </AnimatePresence>
 
+
         {loading ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Verificando información...</p>
           </div>
         ) : userData ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Columna principal - Información del asistente */}
-            <div className="lg:col-span-2 space-y-6">
+          <>
+            {/* Input para lector físico - Siempre visible en modo físico incluso con userData */}
+            {scannerMode === 'physical' && (
+              <div className="mb-4 bg-white rounded-lg shadow p-4">
+                <div className="flex items-center space-x-4">
+                  <Keyboard className="text-blue-600" size={20} />
+                  <input
+                    ref={physicalScannerInputRef}
+                    type="text"
+                    value={physicalScannerInput}
+                    onChange={handlePhysicalScannerChange}
+                    onKeyPress={handlePhysicalScannerKeyPress}
+                    className="flex-1 px-3 py-2 text-lg font-mono border-2 border-blue-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="Escanear nuevo QR..."
+                    autoComplete="off"
+                  />
+                  <button
+                    onClick={() => {
+                      let qrCode = physicalScannerInput.trim();
+                      if (qrCode) {
+                        // Normalizar antes de procesar
+                        qrCode = normalizeQRCode(qrCode);
+                        handleQRScan(qrCode);
+                        setPhysicalScannerInput('');
+                      }
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    disabled={!physicalScannerInput}
+                  >
+                    Procesar
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Columna principal - Información del asistente */}
+              <div className="lg:col-span-2 space-y-6">
               {/* Tarjeta de información principal */}
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -838,10 +1124,32 @@ const VerificarPrueba = () => {
               >
                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
                   <Calendar className="mr-2" size={20} />
-                  Eventos Registrados ({userData.eventos?.length || 0})
+                  Eventos Registrados ({userData.eventos?.length || 0}
+                  {userData.usuario?.total_eventos && userData.usuario.total_eventos > 0 && 
+                   (!userData.eventos || userData.eventos.length === 0) && 
+                   ` de ${userData.usuario.total_eventos}`})
+                  {eventosLoading && (
+                    <div className="ml-2 flex items-center">
+                      <RefreshCw size={16} className="text-blue-500 animate-spin mr-1" />
+                      <span className="text-sm text-blue-600">
+                        {userData.usuario?.total_eventos && userData.usuario.total_eventos > 0 
+                          ? `Cargando ${userData.usuario.total_eventos} eventos...` 
+                          : 'Cargando...'}
+                      </span>
+                    </div>
+                  )}
                 </h3>
                 
-                {userData.eventos && userData.eventos.length > 0 ? (
+                {eventosLoading && (!userData.eventos || userData.eventos.length === 0) ? (
+                  <div className="flex items-center justify-center py-8 text-gray-500">
+                    <RefreshCw size={24} className="animate-spin mr-3" />
+                    <span>
+                      {userData.usuario?.total_eventos && userData.usuario.total_eventos > 0 
+                        ? `Cargando ${userData.usuario.total_eventos} eventos registrados...` 
+                        : 'Cargando eventos del asistente...'}
+                    </span>
+                  </div>
+                ) : userData.eventos && userData.eventos.length > 0 ? (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {userData.eventos.map((evento, index) => (
                       <motion.div 
@@ -1019,7 +1327,12 @@ const VerificarPrueba = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-2 border-b">
                     <span className="text-gray-600">Total Eventos</span>
-                    <span className="font-bold text-blue-600">{userData.eventos?.length || 0}</span>
+                    <span className="font-bold text-blue-600">
+                      {userData.eventos?.length || 0}
+                      {userData.usuario?.total_eventos && userData.usuario.total_eventos > 0 && 
+                       userData.eventos?.length !== userData.usuario.total_eventos && 
+                       ` de ${userData.usuario.total_eventos}`}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b">
                     <span className="text-gray-600">Asistencias</span>
@@ -1086,56 +1399,183 @@ const VerificarPrueba = () => {
               </motion.div>
             </div>
           </div>
+          </>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Columna izquierda - Scanner QR */}
             <div className="space-y-6">
-              {/* Scanner QR visible */}
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-white rounded-xl shadow-lg p-6"
-              >
-                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                  <Camera className="mr-2" size={24} />
-                  Escanear Código QR
-                </h3>
-                <div className="w-full">
-                  <QRScanner 
-                    onScanSuccess={handleQRScan}
-                    onScanError={(error) => setError(`Error de escáner: ${error.message}`)}
-                    isActive={scannerActive}
-                  />
-                </div>
-                
-                {/* Indicadores de estado del scanner */}
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-3 h-3 rounded-full ${
-                        scannerActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
-                      }`} />
-                      <span className={scannerActive ? 'text-green-700' : 'text-gray-500'}>
-                        {scannerActive ? 'Cámara activa' : 'Cámara inactiva'}
-                      </span>
+              {/* Mostrar scanner según el modo */}
+              {scannerMode === 'physical' ? (
+                /* Modo Lector Físico */
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-white rounded-xl shadow-lg p-6"
+                >
+                  <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <Keyboard className="mr-2" size={24} />
+                    Lector Físico de QR / Código de Barras
+                  </h3>
+                  
+                  {/* Input de texto VISIBLE para el lector */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Código QR del Asistente
+                    </label>
+                    <div className="relative">
+                      <input
+                        ref={physicalScannerInputRef}
+                        type="text"
+                        value={physicalScannerInput}
+                        onChange={handlePhysicalScannerChange}
+                        onKeyPress={handlePhysicalScannerKeyPress}
+                        className="w-full px-4 py-3 pr-12 text-lg font-mono border-2 border-blue-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                        placeholder="Esperando lectura del scanner..."
+                        autoComplete="off"
+                        autoFocus={true}
+                      />
+                      {physicalScannerInput && (
+                        <button
+                          onClick={() => {
+                            setPhysicalScannerInput('');
+                            if (physicalScannerInputRef.current) {
+                              physicalScannerInputRef.current.focus();
+                            }
+                          }}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 rounded transition-colors"
+                        >
+                          <X size={20} className="text-gray-500" />
+                        </button>
+                      )}
                     </div>
-                    
-                    {scanCooldown && (
-                      <div className="flex items-center space-x-1 text-orange-600">
-                        <Wifi size={14} className="animate-pulse" />
-                        <span>Cooldown 3s</span>
-                      </div>
-                    )}
-                    
-                    {scannerLoading && (
-                      <div className="flex items-center space-x-1 text-blue-600">
-                        <RefreshCw size={14} className="animate-spin" />
-                        <span>Procesando...</span>
+                    <p className="mt-1 text-xs text-gray-500">
+                      El scanner enviará el código automáticamente • Presiona Enter para procesar manualmente
+                    </p>
+                    {/* Mostrar normalización si hay diferencias */}
+                    {physicalScannerInput && physicalScannerInput.includes(']') && (
+                      <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                        <p className="text-yellow-700 font-semibold">Normalización detectada:</p>
+                        <p className="text-yellow-600">Original: {physicalScannerInput}</p>
+                        <p className="text-green-600">Normalizado: {normalizeQRCode(physicalScannerInput)}</p>
                       </div>
                     )}
                   </div>
-                </div>
-              </motion.div>
+
+                  {/* Área visual indicando estado */}
+                  <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg flex flex-col items-center justify-center border-2 border-blue-200 border-dashed">
+                    <Scan size={48} className="text-blue-600 mb-4 animate-pulse" />
+                    <p className="text-lg font-semibold text-blue-800 mb-2">
+                      {physicalScannerInput ? 'Recibiendo datos...' : 'Lector Listo'}
+                    </p>
+                    <p className="text-sm text-blue-600 text-center px-4">
+                      {physicalScannerInput ? 
+                        `Código: ${physicalScannerInput.substring(0, 20)}${physicalScannerInput.length > 20 ? '...' : ''}` : 
+                        'Escanea el QR o ingresa el código manualmente'
+                      }
+                    </p>
+                  </div>
+
+                  {/* Botón manual de procesamiento */}
+                  {physicalScannerInput && (
+                    <button
+                      onClick={() => {
+                        let qrCode = physicalScannerInput.trim();
+                        if (qrCode) {
+                          // Normalizar antes de procesar
+                          qrCode = normalizeQRCode(qrCode);
+                          handleQRScan(qrCode);
+                          setTimeout(() => {
+                            setPhysicalScannerInput('');
+                            if (physicalScannerInputRef.current) {
+                              physicalScannerInputRef.current.focus();
+                            }
+                          }, 100);
+                        }
+                      }}
+                      className="mt-4 w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center"
+                    >
+                      <CheckCircle size={20} className="mr-2" />
+                      Procesar Código QR
+                    </button>
+                  )}
+                  
+                  {/* Indicadores de estado */}
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                        <span className="text-green-700">Lector listo</span>
+                      </div>
+                      
+                      {scanCooldown && (
+                        <div className="flex items-center space-x-1 text-orange-600">
+                          <Wifi size={14} className="animate-pulse" />
+                          <span>Cooldown 3s</span>
+                        </div>
+                      )}
+                      
+                      {scannerLoading && (
+                        <div className="flex items-center space-x-1 text-blue-600">
+                          <RefreshCw size={14} className="animate-spin" />
+                          <span>Procesando...</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-2 text-xs text-gray-500">
+                      <p>• El lector debe estar configurado para enviar Enter al final</p>
+                      <p>• Mantén esta ventana activa para capturar la lectura</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                /* Modo Cámara */
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-white rounded-xl shadow-lg p-6"
+                >
+                  <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <Camera className="mr-2" size={24} />
+                    Escanear con Cámara
+                  </h3>
+                  <div className="w-full">
+                    <QRScanner 
+                      onScanSuccess={handleQRScan}
+                      onScanError={(error) => setError(`Error de escáner: ${error.message}`)}
+                      isActive={scannerActive}
+                    />
+                  </div>
+                  
+                  {/* Indicadores de estado del scanner */}
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-3 h-3 rounded-full ${
+                          scannerActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+                        }`} />
+                        <span className={scannerActive ? 'text-green-700' : 'text-gray-500'}>
+                          {scannerActive ? 'Cámara activa' : 'Cámara inactiva'}
+                        </span>
+                      </div>
+                      
+                      {scanCooldown && (
+                        <div className="flex items-center space-x-1 text-orange-600">
+                          <Wifi size={14} className="animate-pulse" />
+                          <span>Cooldown 3s</span>
+                        </div>
+                      )}
+                      
+                      {scannerLoading && (
+                        <div className="flex items-center space-x-1 text-blue-600">
+                          <RefreshCw size={14} className="animate-spin" />
+                          <span>Procesando...</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </div>
             
             {/* Columna derecha - Instrucción */}
@@ -1150,13 +1590,44 @@ const VerificarPrueba = () => {
                   Esperando escaneo de código QR
                 </h3>
                 <p className="text-gray-500 mb-4">
-                  Coloca el código QR del asistente frente a la cámara para comenzar la verificación.
+                  {scannerMode === 'physical' 
+                    ? 'Usa tu lector de códigos de barras para escanear el QR del asistente'
+                    : 'Coloca el código QR del asistente frente a la cámara para comenzar la verificación'
+                  }
                 </p>
                 <div className="text-sm text-gray-400">
-                  <p>• Asegúrate de tener buena iluminación</p>
-                  <p>• Mantén el QR centrado en la cámara</p>
-                  <p>• Espera 3 segundos entre escaneos</p>
+                  {scannerMode === 'physical' ? (
+                    <>
+                      <p>• El lector enviará los datos automáticamente</p>
+                      <p>• Asegúrate de que está configurado para enviar Enter</p>
+                      <p>• Mantén esta ventana activa para capturar</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>• Asegúrate de tener buena iluminación</p>
+                      <p>• Mantén el QR centrado en la cámara</p>
+                      <p>• Espera 3 segundos entre escaneos</p>
+                    </>
+                  )}
                 </div>
+                
+                {/* Botón para cambiar modo */}
+                <button
+                  onClick={toggleScannerMode}
+                  className="mt-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors flex items-center justify-center mx-auto"
+                >
+                  {scannerMode === 'physical' ? (
+                    <>
+                      <Camera size={16} className="mr-2" />
+                      Cambiar a Cámara
+                    </>
+                  ) : (
+                    <>
+                      <Keyboard size={16} className="mr-2" />
+                      Cambiar a Lector Físico
+                    </>
+                  )}
+                </button>
               </motion.div>
             </div>
           </div>

@@ -59,11 +59,11 @@ class TermalPrinter4BARCODE:
         # --- AJUSTES RÁPIDOS (parámetros actualizados) ---
         QR_X = 70        # antes 60 → movido a la izquierda
         QR_Y = 70        # antes 60 → bajado para más margen arriba  
-        QR_CELL = 8      # antes 10 → más chico para evitar mordiscos
+        QR_CELL = 10      # antes 10 → más chico para evitar mordiscos
         FONT = "3"       # 0..7 (3 = grande/legible)
         CHAR_W = 20      # ancho aprox por carácter en font "3"
         TEXT_OFFSET = 50 # nombre a 50 dots por encima del QR
-        MAX_NAME = 10    # máximo de caracteres visibles en el nombre
+        MAX_NAME = 15    # máximo de caracteres visibles en el nombre
         
         # Procesar nombre con límite actualizado
         nombre_corto = nombre[:MAX_NAME]
@@ -434,6 +434,7 @@ def generar_imagen_qr(qr_text):
 def validar_formato_qr(qr_text):
     """
     Validar que el texto QR tenga el formato correcto
+    Soporta tanto formato antiguo (con pipes) como nuevo (sin separadores)
     
     Args:
         qr_text (str): Texto QR a validar
@@ -445,34 +446,95 @@ def validar_formato_qr(qr_text):
         if not qr_text or not isinstance(qr_text, str):
             return {"valid": False, "parsed": None}
         
-        # Dividir por pipes
-        parts = qr_text.split('|')
-        
-        if len(parts) != 5:
-            return {"valid": False, "parsed": None}
-        
-        tres_letras, numero, cargo, empresa, timestamp = parts
-        
-        # Validaciones básicas
-        if len(tres_letras) != 3 or not tres_letras.isalpha():
-            return {"valid": False, "parsed": None}
-        
-        if not numero or not cargo or not empresa:
-            return {"valid": False, "parsed": None}
-        
-        # Validar timestamp
-        try:
-            timestamp_int = int(timestamp)
-        except ValueError:
-            return {"valid": False, "parsed": None}
-        
-        parsed_data = {
-            "tres_letras": tres_letras,
-            "numero": numero,
-            "cargo": cargo,
-            "empresa": empresa,
-            "timestamp": timestamp_int
-        }
+        # Detectar si es formato antiguo (con pipes) o nuevo (sin separadores)
+        if '|' in qr_text:
+            # FORMATO ANTIGUO: 3LETRAS|DNI|CARGO|EMPRESA|TIMESTAMP
+            parts = qr_text.split('|')
+            
+            if len(parts) != 5:
+                return {"valid": False, "parsed": None}
+            
+            tres_letras, numero, cargo, empresa, timestamp = parts
+            
+            # Validaciones básicas
+            if len(tres_letras) != 3 or not tres_letras.isalpha():
+                return {"valid": False, "parsed": None}
+            
+            if not numero or not cargo or not empresa:
+                return {"valid": False, "parsed": None}
+            
+            # Validar timestamp
+            try:
+                timestamp_int = int(timestamp)
+            except ValueError:
+                return {"valid": False, "parsed": None}
+            
+            parsed_data = {
+                "tres_letras": tres_letras,
+                "numero": numero,
+                "cargo": cargo,
+                "empresa": empresa,
+                "timestamp": timestamp_int
+            }
+            
+        else:
+            # FORMATO NUEVO: 3letras + numeros + 3letras + 3letras + timestamp
+            # Ejemplo: asd51938101013asaatu1756243863
+            
+            # Validar longitud mínima (3 + al_menos_6_digitos + 3 + 3 + al_menos_10_timestamp = 25)
+            if len(qr_text) < 25:
+                return {"valid": False, "parsed": None}
+            
+            # Extraer las primeras 3 letras del nombre
+            tres_letras = qr_text[:3]
+            if not tres_letras.isalpha():
+                return {"valid": False, "parsed": None}
+            
+            # El resto del string después de las 3 primeras letras
+            resto = qr_text[3:]
+            
+            # Encontrar donde terminan los números (DNI)
+            numeros_dni = ""
+            pos = 0
+            while pos < len(resto) and resto[pos].isdigit():
+                numeros_dni += resto[pos]
+                pos += 1
+            
+            if len(numeros_dni) < 6:  # DNI debe tener al menos 6 dígitos
+                return {"valid": False, "parsed": None}
+            
+            # Después del DNI vienen 6 letras (3 cargo + 3 empresa) seguido del timestamp
+            resto_despues_dni = resto[pos:]
+            
+            if len(resto_despues_dni) < 16:  # 6 letras + al menos 10 dígitos timestamp
+                return {"valid": False, "parsed": None}
+            
+            # Extraer las siguientes 6 letras
+            seis_letras = resto_despues_dni[:6]
+            if not seis_letras.isalpha():
+                return {"valid": False, "parsed": None}
+            
+            # Las primeras 3 son del cargo, las siguientes 3 de la empresa
+            tres_letras_cargo = seis_letras[:3]
+            tres_letras_empresa = seis_letras[3:6]
+            
+            # El resto es el timestamp
+            timestamp_str = resto_despues_dni[6:]
+            if not timestamp_str.isdigit():
+                return {"valid": False, "parsed": None}
+                
+            try:
+                timestamp_int = int(timestamp_str)
+            except ValueError:
+                return {"valid": False, "parsed": None}
+            
+            parsed_data = {
+                "tres_letras": tres_letras,
+                "numero": numeros_dni,
+                "cargo": tres_letras_cargo,  # En el nuevo formato solo tenemos 3 letras
+                "empresa": tres_letras_empresa,  # En el nuevo formato solo tenemos 3 letras
+                "timestamp": timestamp_int
+            }
         
         return {"valid": True, "parsed": parsed_data}
         
