@@ -2731,7 +2731,7 @@ def obtener_todos_registros_cache():
             connection.close()
 
 @app.route('/api/verificar/obtener-eventos-usuario/<int:usuario_id>', methods=['GET'])
-def obtener_eventos_usuario(usuario_id):
+def obtener_eventos_usuario_api(usuario_id):
     """Obtener eventos detallados de un usuario específico (para cuando se necesiten)"""
     try:
         connection = get_db_connection()
