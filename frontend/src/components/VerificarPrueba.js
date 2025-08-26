@@ -25,8 +25,11 @@ import {
 } from 'lucide-react';
 
 const VerificarPrueba = () => {
-  // QR Code fijo para pruebas (fallback)
-  const QR_CODE_PRUEBA = "JEF|+51938101013|admin|A Tu Salud|1756136087";
+  
+  // Cache de registros para búsqueda rápida
+  const [registrosCache, setRegistrosCache] = useState([]);
+  const [cacheLoading, setCacheLoading] = useState(true);
+  const [lastCacheUpdate, setLastCacheUpdate] = useState(null);
   
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -36,9 +39,9 @@ const VerificarPrueba = () => {
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState({
-    confirmados: 127,
-    pendientes: 73,
-    tiempoPromedio: 8,
+    confirmados: 0,
+    pendientes: 0,
+    tiempoPromedio: 0,
     ultimaVerificacion: new Date().toLocaleTimeString()
   });
   
@@ -51,20 +54,18 @@ const VerificarPrueba = () => {
   const [scanCooldown, setScanCooldown] = useState(false);
   const [currentQR, setCurrentQR] = useState(null); // QR actualmente procesado
   
-  // Estados para generación de QR para impresión
-  const [qrStatus, setQrStatus] = useState('idle'); // 'idle', 'generating', 'ready', 'error'
-  const [qrData, setQrData] = useState(null); // {qr_text, qr_image_base64, filename}
-  const [qrError, setQrError] = useState(null);
+  // Estados para carga de eventos bajo demanda
+  const [eventosLoading, setEventosLoading] = useState(false);
   
   // Estados para impresión térmica
   const [thermalStatus, setThermalStatus] = useState('idle'); // 'idle', 'printing', 'success', 'error'
   const [thermalError, setThermalError] = useState(null);
   const [printerStatus, setPrinterStatus] = useState(null);
 
-  // Cargar datos al montar el componente con QR fijo
+  // Cargar configuración inicial al montar el componente
   useEffect(() => {
-    // Verificar con QR fijo al inicio para tener datos iniciales
-    verificarUsuarioConQR(QR_CODE_PRUEBA);
+    // Cargar cache de registros
+    cargarCacheRegistros();
     // Verificar estado de impresora térmica
     verificarEstadoImpresora();
   }, []);
@@ -88,6 +89,60 @@ const VerificarPrueba = () => {
     }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Función para cargar cache de registros
+  const cargarCacheRegistros = async () => {
+    setCacheLoading(true);
+    try {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/obtener-todos-registros`);
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setRegistrosCache(data.registros);
+        setLastCacheUpdate(Date.now());
+        
+        // Actualizar estadísticas reales
+        const confirmados = data.registros.filter(r => r.asistencia_confirmada).length;
+        const pendientes = data.registros.filter(r => !r.asistencia_confirmada).length;
+        
+        setStats(prev => ({
+          ...prev,
+          confirmados,
+          pendientes,
+          ultimaVerificacion: new Date().toLocaleTimeString()
+        }));
+        
+        console.log(`[CACHE] ${data.total} registros cargados en cache`);
+      } else {
+        console.error('Error cargando cache:', data.error);
+      }
+    } catch (error) {
+      console.error('Error cargando cache:', error);
+    } finally {
+      setCacheLoading(false);
+    }
+  };
+  
+  // Función para buscar en cache primero
+  const buscarEnCache = (qrCode) => {
+    // Buscar por QR exacto
+    const registro = registrosCache.find(r => 
+      r.qr_text === qrCode || 
+      r.qr_code === qrCode
+    );
+    
+    if (registro) {
+      console.log('[CACHE HIT] Usuario encontrado en cache:', registro.nombres);
+      return {
+        usuario: registro,
+        eventos: registro.eventos || [],
+        qr_validado: true
+      };
+    }
+    
+    console.log('[CACHE MISS] Usuario no encontrado en cache, consultando servidor...');
+    return null;
+  };
 
   // Función para manejar el escaneo del QR con prevención de lecturas múltiples
   const handleQRScan = async (qrCode) => {
@@ -122,47 +177,67 @@ const VerificarPrueba = () => {
       setScannerLoading(false);
     }, 3000);
 
-    // Procesar el QR
-    await verificarUsuarioConQR(qrCode);
+    // Buscar primero en cache
+    const cachedData = buscarEnCache(qrCode);
+    
+    if (cachedData) {
+      // Usuario encontrado en cache - respuesta instantánea
+      setCurrentQR(qrCode);
+      
+      // Cargar eventos bajo demanda
+      const eventos = await cargarEventosUsuario(cachedData.usuario.id);
+      
+      const newUserData = {
+        ...cachedData,
+        qr_original: qrCode,
+        eventos: eventos
+      };
+      setUserData(newUserData);
+      
+      // Inicializar datos para edición
+      if (cachedData.usuario) {
+        setEditData({
+          nombres: cachedData.usuario.nombres,
+          correo: cachedData.usuario.correo,
+          empresa: cachedData.usuario.empresa,
+          cargo: cachedData.usuario.cargo,
+          numero: cachedData.usuario.numero
+        });
+      }
+      
+      // Resetear estados de procesamiento más rápido
+      setTimeout(() => {
+        setScanCooldown(false);
+        setLastScannedQR(null);
+        processingRef.current = false;
+        setScannerLoading(false);
+      }, 1000); // Más rápido porque fue desde cache
+    } else {
+      // No está en cache, hacer consulta al servidor
+      await verificarUsuarioConQR(qrCode);
+    }
   };
 
-  // Función para generar QR en background
-  const generarQRParaImpresion = async (usuarioData) => {
-    if (!usuarioData || qrStatus === 'generating') return;
+  // Función para cargar eventos de un usuario específico bajo demanda
+  const cargarEventosUsuario = async (usuarioId) => {
+    if (eventosLoading) return null;
     
-    setQrStatus('generating');
-    setQrError(null);
-    setQrData(null);
-
+    setEventosLoading(true);
     try {
-      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/generar-qr-impresion`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          usuario_datos: {
-            nombres: usuarioData.nombres,
-            numero: usuarioData.numero,
-            cargo: usuarioData.cargo,
-            empresa: usuarioData.empresa
-          }
-        }),
-      });
-
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/obtener-eventos-usuario/${usuarioId}`);
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error generando QR');
+      
+      if (response.ok && data.success) {
+        return data.eventos;
+      } else {
+        console.error('Error cargando eventos:', data.error);
+        return [];
       }
-
-      setQrData(data);
-      setQrStatus('ready');
-
     } catch (error) {
-      console.error('Error generando QR:', error);
-      setQrError(error.message);
-      setQrStatus('error');
+      console.error('Error cargando eventos:', error);
+      return [];
+    } finally {
+      setEventosLoading(false);
     }
   };
 
@@ -172,11 +247,6 @@ const VerificarPrueba = () => {
     setError(null);
     setSuccess(null);
     setCurrentQR(qrCode);
-    
-    // Limpiar QR anterior
-    setQrStatus('idle');
-    setQrData(null);
-    setQrError(null);
 
     try {
       const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/buscar-usuario`, {
@@ -199,6 +269,7 @@ const VerificarPrueba = () => {
       };
 
       setUserData(newUserData);
+      setCurrentQR(qrCode); // Guardar el QR escaneado para impresión
       
       // Inicializar datos para edición
       if (data.usuario) {
@@ -210,11 +281,11 @@ const VerificarPrueba = () => {
           numero: data.usuario.numero
         });
 
-        // *** GENERAR QR EN BACKGROUND ***
-        // Ejecutar inmediatamente después de cargar datos del usuario
-        setTimeout(() => {
-          generarQRParaImpresion(data.usuario);
-        }, 100); // Pequeño delay para que se renderice la UI primero
+        // Cargar eventos bajo demanda si se necesitan para mostrar
+        if (data.usuario) {
+          const eventos = await cargarEventosUsuario(data.usuario.id);
+          newUserData.eventos = eventos;
+        }
       }
 
     } catch (error) {
@@ -362,7 +433,7 @@ const VerificarPrueba = () => {
 
   // Función para impresión térmica
   const imprimirTermica = async () => {
-    if (!userData?.usuario || !qrData) return;
+    if (!userData?.usuario || !currentQR) return;
     
     setThermalStatus('printing');
     setThermalError(null);
@@ -380,7 +451,7 @@ const VerificarPrueba = () => {
             cargo: userData.usuario.cargo,
             numero: userData.usuario.numero
           },
-          qr_text: qrData.qr_text,
+          qr_text: currentQR,  // USAR EL QR ORIGINAL ESCANEADO, NO GENERAR UNO NUEVO
           mode: 'TSPL'  // Usar comandos TSPL para 4BARCODE
         }),
       });
@@ -443,96 +514,6 @@ const VerificarPrueba = () => {
     }
   };
 
-  // Función para imprimir QR
-  const imprimirQR = () => {
-    if (!qrData || qrStatus !== 'ready') return;
-
-    try {
-      // Crear una nueva ventana para impresión
-      const printWindow = window.open('', '_blank');
-      
-      // Crear contenido HTML para impresión
-      const printContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>${qrData.filename}</title>
-          <style>
-            body { 
-              margin: 0; 
-              padding: 20px; 
-              text-align: center; 
-              font-family: Arial, sans-serif; 
-            }
-            .qr-container { 
-              border: 2px solid #333; 
-              display: inline-block; 
-              padding: 20px; 
-              margin: 20px;
-              background: white;
-            }
-            .qr-title { 
-              font-size: 18px; 
-              font-weight: bold; 
-              margin-bottom: 15px;
-              color: #333;
-            }
-            .qr-image { 
-              display: block; 
-              margin: 15px auto;
-              max-width: 300px;
-            }
-            .qr-info {
-              font-size: 12px;
-              color: #666;
-              margin-top: 10px;
-            }
-            .user-info {
-              font-size: 14px;
-              margin-bottom: 15px;
-              color: #444;
-            }
-            @media print {
-              body { margin: 0; }
-              .qr-container { border: 2px solid #000; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="qr-container">
-            <div class="qr-title">ExpoKossodo 2025 - Código QR</div>
-            <div class="user-info">
-              <strong>${userData?.usuario?.nombres || 'Usuario'}</strong><br>
-              ${userData?.usuario?.empresa || ''} - ${userData?.usuario?.cargo || ''}
-            </div>
-            <img src="data:image/png;base64,${qrData.qr_image_base64}" 
-                 class="qr-image" alt="Código QR" />
-            <div class="qr-info">
-              Código único e intransferible<br>
-              ${qrData.qr_text}
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      
-      // Esperar a que cargue y luego imprimir
-      printWindow.onload = () => {
-        printWindow.print();
-        printWindow.close();
-      };
-
-      // Actualizar estadísticas
-      setSuccess('QR enviado a impresión correctamente');
-      
-    } catch (error) {
-      console.error('Error imprimiendo QR:', error);
-      setError('Error al imprimir el código QR');
-    }
-  };
 
   const getEstadoBadge = (estado) => {
     const badges = {
@@ -546,14 +527,6 @@ const VerificarPrueba = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* QR Scanner oculto - siempre activo pero invisible */}
-      <div style={{ display: 'none' }}>
-        <QRScanner 
-          onScanSuccess={handleQRScan}
-          onScanError={(error) => setError(`Error de escáner: ${error.message}`)}
-          isActive={scannerActive}
-        />
-      </div>
 
       {/* Header con estadísticas */}
       <div className="bg-white shadow-sm border-b">
@@ -599,34 +572,24 @@ const VerificarPrueba = () => {
                 )}
               </div>
 
-              {/* Indicador de estado del QR para impresión */}
+              {/* Indicador del QR escaneado */}
               <div className="flex items-center space-x-3 bg-white border rounded-lg px-4 py-2">
                 <div className="flex items-center space-x-2">
                   <div className={`w-3 h-3 rounded-full ${
-                    qrStatus === 'ready' ? 'bg-green-500' :
-                    qrStatus === 'generating' ? 'bg-blue-500 animate-pulse' :
-                    qrStatus === 'error' ? 'bg-red-500' :
-                    'bg-gray-400'
+                    currentQR ? 'bg-green-500' : 'bg-gray-400'
                   }`} />
-                  {qrStatus === 'ready' ? (
+                  {currentQR ? (
                     <CheckCircle size={16} className="text-green-600" />
-                  ) : qrStatus === 'generating' ? (
-                    <RefreshCw size={16} className="text-blue-600 animate-spin" />
-                  ) : qrStatus === 'error' ? (
-                    <XCircle size={16} className="text-red-600" />
                   ) : (
                     <AlertCircle size={16} className="text-gray-600" />
                   )}
                   <span className="text-sm font-medium text-gray-700">
-                    {qrStatus === 'ready' ? 'QR Listo' :
-                     qrStatus === 'generating' ? 'Generando...' :
-                     qrStatus === 'error' ? 'Error QR' :
-                     'QR Inactivo'}
+                    {currentQR ? 'QR Escaneado' : 'Sin QR'}
                   </span>
                 </div>
-                {qrData && (
+                {currentQR && (
                   <span className="text-xs text-gray-500 font-mono">
-                    {qrData.qr_text?.substring(0, 8)}...
+                    {currentQR.substring(0, 8)}...
                   </span>
                 )}
               </div>
@@ -641,8 +604,12 @@ const VerificarPrueba = () => {
                 <div className="text-xs text-gray-500">Pendientes</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{stats.tiempoPromedio}s</div>
-                <div className="text-xs text-gray-500">Tiempo promedio</div>
+                <div className="text-2xl font-bold text-purple-600">{registrosCache.length}</div>
+                <div className="text-xs text-gray-500">Total en cache</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{cacheLoading ? '⏳' : '✓'}</div>
+                <div className="text-xs text-gray-500">Cache status</div>
               </div>
               <div className="text-center">
                 <div className="text-sm font-medium text-gray-600">{stats.ultimaVerificacion}</div>
@@ -718,7 +685,7 @@ const VerificarPrueba = () => {
                           )}
                         </h2>
                         <p className="text-gray-600">
-                          ID: {userData.usuario.id} | QR: {QR_CODE_PRUEBA.substring(0, 15)}...
+                          ID: {userData.usuario.id} | QR: {currentQR ? currentQR.substring(0, 15) + '...' : 'Esperando scan'}
                         </p>
                       </div>
                     </div>
@@ -966,13 +933,16 @@ const VerificarPrueba = () => {
                     </div>
                   )}
 
-                  <button
-                    onClick={() => verificarUsuarioConQR(currentQR || QR_CODE_PRUEBA)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
-                  >
-                    <RefreshCw size={20} className="mr-2" />
-                    Recargar Datos
-                  </button>
+                  {currentQR && (
+                    <button
+                      onClick={() => verificarUsuarioConQR(currentQR)}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
+                    >
+                      <RefreshCw size={20} className="mr-2" />
+                      Recargar Datos
+                    </button>
+                  )}
+                  
 
                   <button
                     onClick={() => {
@@ -985,10 +955,6 @@ const VerificarPrueba = () => {
                       setScanCooldown(false);
                       setLastScannedQR(null);
                       setScannerLoading(false);
-                      // Limpiar estados del QR
-                      setQrStatus('idle');
-                      setQrData(null);
-                      setQrError(null);
                       // Limpiar estados de impresión térmica
                       setThermalStatus('idle');
                       setThermalError(null);
@@ -1002,7 +968,7 @@ const VerificarPrueba = () => {
                   {/* Botón de impresión térmica */}
                   <button
                     onClick={imprimirTermica}
-                    disabled={!userData || !qrData || thermalStatus === 'printing'}
+                    disabled={!userData || !currentQR || thermalStatus === 'printing'}
                     className={`w-full font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center text-sm mb-2 ${
                       thermalStatus === 'success' 
                         ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -1010,7 +976,7 @@ const VerificarPrueba = () => {
                         ? 'bg-yellow-500 text-white cursor-not-allowed animate-pulse'
                         : thermalStatus === 'error'
                         ? 'bg-red-500 hover:bg-red-600 text-white'
-                        : qrData
+                        : currentQR
                         ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
                         : 'bg-gray-400 text-white cursor-not-allowed'
                     }`}
@@ -1038,42 +1004,6 @@ const VerificarPrueba = () => {
                     )}
                   </button>
 
-                  {/* Botón para imprimir QR normal */}
-                  <button
-                    onClick={imprimirQR}
-                    disabled={!userData || qrStatus !== 'ready'}
-                    className={`w-full font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center text-sm ${
-                      qrStatus === 'ready' 
-                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                        : qrStatus === 'generating'
-                        ? 'bg-blue-500 text-white cursor-not-allowed'
-                        : qrStatus === 'error'
-                        ? 'bg-red-500 text-white cursor-not-allowed'
-                        : 'bg-gray-400 text-white cursor-not-allowed'
-                    }`}
-                  >
-                    {qrStatus === 'generating' ? (
-                      <>
-                        <RefreshCw size={16} className="mr-2 animate-spin" />
-                        Generando QR...
-                      </>
-                    ) : qrStatus === 'ready' ? (
-                      <>
-                        <CheckCircle size={16} className="mr-2" />
-                        Imprimir QR
-                      </>
-                    ) : qrStatus === 'error' ? (
-                      <>
-                        <XCircle size={16} className="mr-2" />
-                        Error en QR
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle size={16} className="mr-2" />
-                        QR No Disponible
-                      </>
-                    )}
-                  </button>
                 </div>
               </motion.div>
 
@@ -1114,136 +1044,25 @@ const VerificarPrueba = () => {
                 </div>
               </motion.div>
 
-              {/* Estado del QR */}
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className={`rounded-xl p-4 border ${
-                  qrStatus === 'ready' ? 'bg-green-50 border-green-200' :
-                  qrStatus === 'generating' ? 'bg-blue-50 border-blue-200' :
-                  qrStatus === 'error' ? 'bg-red-50 border-red-200' :
-                  'bg-gray-50 border-gray-200'
-                }`}
-              >
-                <h4 className={`font-semibold mb-2 flex items-center ${
-                  qrStatus === 'ready' ? 'text-green-800' :
-                  qrStatus === 'generating' ? 'text-blue-800' :
-                  qrStatus === 'error' ? 'text-red-800' :
-                  'text-gray-800'
-                }`}>
-                  {qrStatus === 'ready' ? (
-                    <>
-                      <CheckCircle size={16} className="mr-2" />
-                      QR Listo para Imprimir
-                    </>
-                  ) : qrStatus === 'generating' ? (
-                    <>
-                      <RefreshCw size={16} className="mr-2 animate-spin" />
-                      Generando QR...
-                    </>
-                  ) : qrStatus === 'error' ? (
-                    <>
-                      <XCircle size={16} className="mr-2" />
-                      Error en QR
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle size={16} className="mr-2" />
-                      Estado del QR
-                    </>
-                  )}
-                </h4>
-                <div className={`text-sm space-y-1 ${
-                  qrStatus === 'ready' ? 'text-green-700' :
-                  qrStatus === 'generating' ? 'text-blue-700' :
-                  qrStatus === 'error' ? 'text-red-700' :
-                  'text-gray-700'
-                }`}>
-                  {qrStatus === 'ready' && (
-                    <>
-                      <div>✅ QR generado exitosamente</div>
-                      <div>📄 Formato: {qrData?.filename?.split('_')[1] || 'PNG'}</div>
-                      <div>🔒 Código: {qrData?.qr_text?.substring(0, 20) || ''}...</div>
-                    </>
-                  )}
-                  {qrStatus === 'generating' && (
-                    <>
-                      <div>⏳ Procesando datos del usuario</div>
-                      <div>🔄 Generando imagen QR</div>
-                      <div>📋 Preparando para impresión</div>
-                    </>
-                  )}
-                  {qrStatus === 'error' && (
-                    <>
-                      <div>❌ {qrError || 'Error desconocido'}</div>
-                      <div className="mt-2">
-                        <button
-                          onClick={() => userData?.usuario && generarQRParaImpresion(userData.usuario)}
-                          className="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg transition-colors"
-                        >
-                          🔄 Reintentar QR
-                        </button>
-                      </div>
-                    </>
-                  )}
-                  {qrStatus === 'idle' && (
-                    <>
-                      <div>• Esperando datos del usuario</div>
-                      <div>• QR se genera automáticamente</div>
-                      <div>• Sistema listo para impresión</div>
-                    </>
-                  )}
-                </div>
-              </motion.div>
 
-              {/* Estado de impresora térmica */}
+              {/* Botón discreto para actualizar cache */}
               <motion.div 
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
-                className={`rounded-xl p-4 border ${
-                  printerStatus?.success ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'
-                }`}
+                className="text-center"
               >
-                <h4 className={`font-semibold mb-2 flex items-center ${
-                  printerStatus?.success ? 'text-green-800' : 'text-orange-800'
-                }`}>
-                  <Activity size={16} className="mr-2" />
-                  Impresora Térmica 4BARCODE
-                </h4>
-                <div className="text-sm space-y-1">
-                  {printerStatus ? (
-                    <>
-                      <div className={printerStatus.success ? 'text-green-700' : 'text-orange-700'}>
-                        📍 {printerStatus.printer || 'No detectada'}
-                      </div>
-                      <div className={printerStatus.success ? 'text-green-700' : 'text-orange-700'}>
-                        {printerStatus.success ? '✅' : '⚠️'} Estado: {printerStatus.status_text || 'Desconocido'}
-                      </div>
-                      <div className={printerStatus.success ? 'text-green-700' : 'text-orange-700'}>
-                        📄 Trabajos en cola: {printerStatus.jobs || 0}
-                      </div>
-                      <button
-                        onClick={imprimirPruebaTermica}
-                        className="mt-2 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg transition-colors"
-                        disabled={!printerStatus.success || thermalStatus === 'printing'}
-                      >
-                        🧪 Imprimir Test
-                      </button>
-                    </>
+                <button
+                  onClick={cargarCacheRegistros}
+                  disabled={cacheLoading}
+                  className="text-xs bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white px-3 py-1 rounded-lg transition-colors"
+                >
+                  {cacheLoading ? (
+                    <>🔄 Actualizando...</>
                   ) : (
-                    <div className="text-orange-700">
-                      ⚠️ No se pudo detectar impresora térmica
-                      <button
-                        onClick={verificarEstadoImpresora}
-                        className="mt-2 text-xs bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded-lg transition-colors block"
-                      >
-                        🔄 Reintentar
-                      </button>
-                    </div>
+                    <>📊 Actualizar Cache ({registrosCache.length})</>
                   )}
-                </div>
+                </button>
               </motion.div>
 
               {/* Panel de ayuda rápida */}
@@ -1268,21 +1087,78 @@ const VerificarPrueba = () => {
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <XCircle size={64} className="text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">
-              No se encontraron datos
-            </h3>
-            <p className="text-gray-500 mb-6">
-              No se pudo cargar la información del usuario con el QR proporcionado
-            </p>
-            <button
-              onClick={() => verificarUsuarioConQR(QR_CODE_PRUEBA)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-            >
-              <RefreshCw size={20} className="inline mr-2" />
-              Reintentar
-            </button>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Columna izquierda - Scanner QR */}
+            <div className="space-y-6">
+              {/* Scanner QR visible */}
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-xl shadow-lg p-6"
+              >
+                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                  <Camera className="mr-2" size={24} />
+                  Escanear Código QR
+                </h3>
+                <div className="w-full">
+                  <QRScanner 
+                    onScanSuccess={handleQRScan}
+                    onScanError={(error) => setError(`Error de escáner: ${error.message}`)}
+                    isActive={scannerActive}
+                  />
+                </div>
+                
+                {/* Indicadores de estado del scanner */}
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-3 h-3 rounded-full ${
+                        scannerActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+                      }`} />
+                      <span className={scannerActive ? 'text-green-700' : 'text-gray-500'}>
+                        {scannerActive ? 'Cámara activa' : 'Cámara inactiva'}
+                      </span>
+                    </div>
+                    
+                    {scanCooldown && (
+                      <div className="flex items-center space-x-1 text-orange-600">
+                        <Wifi size={14} className="animate-pulse" />
+                        <span>Cooldown 3s</span>
+                      </div>
+                    )}
+                    
+                    {scannerLoading && (
+                      <div className="flex items-center space-x-1 text-blue-600">
+                        <RefreshCw size={14} className="animate-spin" />
+                        <span>Procesando...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+            
+            {/* Columna derecha - Instrucción */}
+            <div className="space-y-6">
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-white rounded-xl shadow-lg p-8 text-center"
+              >
+                <div className="text-6xl mb-4">👤</div>
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  Esperando escaneo de código QR
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  Coloca el código QR del asistente frente a la cámara para comenzar la verificación.
+                </p>
+                <div className="text-sm text-gray-400">
+                  <p>• Asegúrate de tener buena iluminación</p>
+                  <p>• Mantén el QR centrado en la cámara</p>
+                  <p>• Espera 3 segundos entre escaneos</p>
+                </div>
+              </motion.div>
+            </div>
           </div>
         )}
       </div>

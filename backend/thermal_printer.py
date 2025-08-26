@@ -1,32 +1,39 @@
 import win32print
 
-PRN = "4BARCODE 3B-303B"  # nombre exacto de tu impresora
-QR  = "JEF|+51938101013|admin|A Tu Salud|1756136087"
-NOMBRE = "Jefferson Camacho Portillo"
+PRN = "4BARCODE 3B-303B"
 
-# cortar nombre a 10 caracteres máximo
-NOMBRE_CORTO = NOMBRE[:15]
+# --- DATOS ---
+QR      = "FAN|933663676|GERENTE|FAINGENIEROS SAC|1752206278"
+NOMBRE  = "FANNY BLAS RODRIGUEZ"
+
+# --- AJUSTES RÁPIDOS (solo posición y tamaño) ---
+QR_X        = 70    # antes 80 → lo movemos un poco a la izquierda
+QR_Y        = 70    # antes 60 → lo bajamos leve para más margen arriba
+QR_CELL     = 8     # antes 10 → apenas más chico para evitar mordiscos
+FONT        = "3"   # 0..7 (3 = grande/legible)
+CHAR_W      = 20    # ancho aprox por carácter en font "3"
+TEXT_OFFSET = 50    # nombre a 50 dots por encima del QR
+MAX_NAME    = 10    # máximo de caracteres visibles en el nombre
+
+# ----
+
+nombre_corto = (NOMBRE or "INVITADO")[:MAX_NAME]
+text_width   = len(nombre_corto) * CHAR_W
+
+# Estimación del ancho del QR para centrar el texto respecto al bloque del QR
+qr_est_ancho = QR_CELL * 24   # ~24 módulos típico; funciona bien como aproximación
+center_x     = QR_X + (qr_est_ancho // 2) - (text_width // 2)
 
 def send(raw: bytes):
     h = win32print.OpenPrinter(PRN, {"DesiredAccess": win32print.PRINTER_ACCESS_USE})
-    win32print.StartDocPrinter(h, 1, ("TSPL_QR", None, "RAW"))
-    win32print.StartPagePrinter(h)
-    win32print.WritePrinter(h, raw)
-    win32print.EndPagePrinter(h)
-    win32print.EndDocPrinter(h)
-    win32print.ClosePrinter(h)
-
-# === Parámetros del layout ===
-QR_X = 60
-QR_Y = 60    # antes era 100 → lo subimos 40 px
-QR_SIZE = 10   # celda QR grande
-
-# ancho aprox. por caracter en fuente "3"
-char_width = 20
-text_width = len(NOMBRE_CORTO) * char_width
-
-# centrar texto encima del QR (QR mide ~200 px aprox)
-center_x = QR_X + (QR_SIZE * 8 * 3) // 2 - text_width // 2
+    try:
+        win32print.StartDocPrinter(h, 1, ("TSPL_QR", None, "RAW"))
+        win32print.StartPagePrinter(h)
+        win32print.WritePrinter(h, raw)
+        win32print.EndPagePrinter(h)
+        win32print.EndDocPrinter(h)
+    finally:
+        win32print.ClosePrinter(h)
 
 tspl = (
     "SIZE 50 mm,50 mm\r\n"
@@ -36,12 +43,12 @@ tspl = (
     "DIRECTION 1\r\n"
     "REFERENCE 0,0\r\n"
     "CLS\r\n"
-    # Nombre en grande, centrado sobre el QR
-    f'TEXT {center_x},{QR_Y-50},"3",0,1,1,"{NOMBRE_CORTO}"\r\n'
-    # QR debajo
-    f'QRCODE {QR_X},{QR_Y},M,{QR_SIZE},A,0,"{QR}"\r\n'
+    # Nombre centrado con respecto al QR (mismo espaciado)
+    f'TEXT {center_x},{QR_Y - TEXT_OFFSET},"{FONT}",0,1,1,"{nombre_corto}"\r\n'
+    # QR nativo grande (colores correctos)
+    f'QRCODE {QR_X},{QR_Y},M,{QR_CELL},A,0,"{QR}"\r\n'
     "PRINT 1\r\n"
 ).encode("ascii")
 
 send(tspl)
-print(f"[OK] Nombre centrado ({NOMBRE_CORTO}) + QR enviados (más arriba)")
+print(f"[OK] Enviado. Nombre='{nombre_corto}' | QR cell={QR_CELL} | pos=({QR_X},{QR_Y})")

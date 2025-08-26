@@ -25,146 +25,101 @@ from threading import Lock
 import logging
 import sys
 
-# Clase de impresora térmica integrada (método que SÍ funciona)
+# Clase de impresora térmica usando TSPL (método que SÍ funciona)
 class TermalPrinter4BARCODE:
-    """Impresora térmica usando método que funciona con ESC/POS"""
+    """Impresora térmica usando TSPL con el código que funciona perfectamente"""
     
     def __init__(self, printer_name=None):
         self.printer_name = printer_name or "4BARCODE 3B-303B"
     
-    def _send_raw_working(self, data):
-        """Método que SÍ funciona usando script temporal"""
-        import tempfile
-        import subprocess
-        import os
-        
-        script_content = f'''
-import win32print
-
-def send_raw(printer_name, data):
-    h = win32print.OpenPrinter(printer_name)
-    try:
-        docinfo = ("ExpoKossodo_QR", None, "RAW")
-        win32print.StartDocPrinter(h, 1, docinfo)
-        win32print.StartPagePrinter(h)
-        win32print.WritePrinter(h, data)
-        win32print.EndPagePrinter(h)
-        win32print.EndDocPrinter(h)
-        return True
-    except Exception as e:
-        print(f"Error: {{e}}")
-        return False
-    finally:
-        win32print.ClosePrinter(h)
-
-try:
-    result = send_raw("{self.printer_name}", {repr(data)})
-    print(f"RESULT:{{result}}")
-except Exception as e:
-    print(f"ERROR:{{e}}")
-'''
-        
+    def _send_raw_tspl(self, raw_data):
+        """Enviar datos TSPL a la impresora usando win32print"""
         try:
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as f:
-                f.write(script_content)
-                temp_script = f.name
+            import win32print
             
-            result = subprocess.run(['python', temp_script], 
-                                  capture_output=True, text=True, timeout=10)
-            os.remove(temp_script)
+            h = win32print.OpenPrinter(self.printer_name, {"DesiredAccess": win32print.PRINTER_ACCESS_USE})
+            win32print.StartDocPrinter(h, 1, ("TSPL_QR", None, "RAW"))
+            win32print.StartPagePrinter(h)
+            win32print.WritePrinter(h, raw_data)
+            win32print.EndPagePrinter(h)
+            win32print.EndDocPrinter(h)
+            win32print.ClosePrinter(h)
             
-            if "RESULT:True" in result.stdout:
-                return {"success": True, "message": "Impresión enviada correctamente"}
-            else:
-                return {"success": False, "error": "Error en impresión", "details": result.stdout + result.stderr}
-                
+            return {"success": True, "message": "Impresión enviada correctamente"}
+            
         except Exception as e:
             return {"success": False, "error": str(e)}
     
-    def _generate_escpos_commands(self, qr_text, user_data):
-        """Generar comandos ESC/POS (basado en test que funciona)"""
-        ESC = b'\\x1b'
-        GS = b'\\x1d'
+    def _generate_tspl_commands(self, qr_text, user_data):
+        """Generar comandos TSPL con parámetros actualizados y mejorados"""
         
-        commands = []
-        commands.append(ESC + b'@')  # Reset
-        commands.append(ESC + b'a' + b'\\x01')  # Center
+        # Extraer datos del usuario con fallback mejorado
+        nombre = user_data.get('nombres', 'INVITADO') or 'INVITADO'
         
-        # Título
-        commands.append(ESC + b'!' + b'\\x10')
-        commands.append(b'EXPOKOSSODO 2025\\n')
-        commands.append(ESC + b'!' + b'\\x00')
-        commands.append(b'-' * 32 + b'\\n')
+        # --- AJUSTES RÁPIDOS (parámetros actualizados) ---
+        QR_X = 70        # antes 60 → movido a la izquierda
+        QR_Y = 70        # antes 60 → bajado para más margen arriba  
+        QR_CELL = 8      # antes 10 → más chico para evitar mordiscos
+        FONT = "3"       # 0..7 (3 = grande/legible)
+        CHAR_W = 20      # ancho aprox por carácter en font "3"
+        TEXT_OFFSET = 50 # nombre a 50 dots por encima del QR
+        MAX_NAME = 10    # máximo de caracteres visibles en el nombre
         
-        # Usuario
-        nombre = user_data.get('nombres', 'Usuario')[:25]
-        empresa = user_data.get('empresa', '')[:20]
-        cargo = user_data.get('cargo', '')[:20]
+        # Procesar nombre con límite actualizado
+        nombre_corto = nombre[:MAX_NAME]
+        text_width = len(nombre_corto) * CHAR_W
         
-        if nombre:
-            commands.append(nombre.encode('utf-8', errors='ignore') + b'\\n')
-        if empresa:
-            commands.append(empresa.encode('utf-8', errors='ignore') + b'\\n')
-        if cargo:
-            commands.append(cargo.encode('utf-8', errors='ignore') + b'\\n')
-            
-        commands.append(b'Etiqueta 50x50mm\\n\\n')
+        # Estimación del ancho del QR para centrar el texto respecto al bloque del QR
+        qr_est_ancho = QR_CELL * 24  # ~24 módulos típico; funciona bien como aproximación
+        center_x = QR_X + (qr_est_ancho // 2) - (text_width // 2)
         
-        # QR Code (simplificado como el test que funciona)
-        try:
-            # Simplificar datos QR para que funcione como en test
-            qr_simple = qr_text.replace('|', '-')[:20]  # Remover | y limitar tamaño
-            qr_data = qr_simple.encode('ascii', errors='ignore')  # Solo ASCII
-            
-            if len(qr_data) > 0:
-                qr_len = len(qr_data) + 3
-                pL = qr_len & 0xFF
-                pH = (qr_len >> 8) & 0xFF
-                
-                # EXACTO como test_escpos_50mm.py que funciona
-                commands.append(GS + b'(k' + bytes([4, 0, 49, 65, 50, 0]))  # Modelo 2
-                commands.append(GS + b'(k' + bytes([3, 0, 49, 67, 4]))      # Tamaño 4
-                commands.append(GS + b'(k' + bytes([3, 0, 49, 69, 48]))     # Error L
-                commands.append(GS + b'(k' + bytes([pL, pH, 49, 80, 48]) + qr_data)
-                commands.append(GS + b'(k' + bytes([3, 0, 49, 81, 48]))
-            else:
-                commands.append(b'QR:DATOS_VACIOS\\n')
-        except Exception as e:
-            commands.append(f'QR_ERROR:{str(e)}\\n'.encode('ascii', errors='ignore'))
+        # Generar comandos TSPL con parámetros actualizados
+        tspl = (
+            "SIZE 50 mm,50 mm\r\n"
+            "GAP 2 mm,0 mm\r\n"
+            "SPEED 3\r\n"
+            "DENSITY 12\r\n"
+            "DIRECTION 1\r\n"
+            "REFERENCE 0,0\r\n"
+            "CLS\r\n"
+            # Nombre centrado con respecto al QR (mismo espaciado)
+            f'TEXT {center_x},{QR_Y - TEXT_OFFSET},"{FONT}",0,1,1,"{nombre_corto}"\r\n'
+            # QR nativo grande (colores correctos)
+            f'QRCODE {QR_X},{QR_Y},M,{QR_CELL},A,0,"{qr_text}"\r\n'
+            "PRINT 1\r\n"
+        ).encode("ascii")
         
-        # Final
-        commands.append(b'\\n')
-        qr_short = qr_text[:25] if len(qr_text) > 25 else qr_text
-        commands.append(qr_short.encode('utf-8', errors='ignore') + b'\\n')
-        
-        import time
-        timestamp = time.strftime("%d/%m %H:%M")
-        commands.append(timestamp.encode('utf-8') + b'\\n\\n\\n\\n')
-        
-        return b''.join(commands)
+        return tspl
     
-    def print_qr_label(self, qr_text, user_data, mode='ESCPOS'):
-        """Imprimir etiqueta"""
+    def print_qr_label(self, qr_text, user_data, mode='TSPL'):
+        """Imprimir etiqueta con QR y nombre"""
         try:
-            commands = self._generate_escpos_commands(qr_text, user_data)
-            result = self._send_raw_working(commands)
+            tspl_commands = self._generate_tspl_commands(qr_text, user_data)
+            result = self._send_raw_tspl(tspl_commands)
             
             if result['success']:
-                print(f"[OK] Etiqueta impresa: {user_data.get('nombres', 'Usuario')}")
+                nombre_corto = user_data.get('nombres', 'INVITADO')[:10]
+                print(f"[OK] Enviado. Nombre='{nombre_corto}' | QR cell=8 | pos=(70,70)")
             
             return result
         except Exception as e:
             return {"success": False, "error": str(e)}
     
     def test_print(self):
-        """Test"""
-        test_data = {"nombres": "TEST INTEGRADO", "empresa": "ExpoKossodo", "cargo": "Sistema"}
-        test_qr = f"TEST|123456|DEMO|EXPO|{int(time.time())}"
+        """Test usando los mismos datos del código que funciona"""
+        test_data = {"nombres": "Jefferson Camacho Portillo"}
+        test_qr = "ROY|907245135|Jefe de ventas|JQS CONSULTING|1752211193"
         return self.print_qr_label(test_qr, test_data)
     
     def get_printer_status(self):
-        """Estado"""
-        return {"success": True, "printer": self.printer_name, "status_text": "Lista (Método Integrado)", "jobs": 0}
+        """Estado de la impresora"""
+        try:
+            import win32print
+            handle = win32print.OpenPrinter(self.printer_name)
+            win32print.ClosePrinter(handle)
+            return {"success": True, "printer": self.printer_name, "status_text": "Lista (TSPL)", "jobs": 0}
+        except Exception as e:
+            return {"success": False, "error": str(e), "printer": self.printer_name}
 
 # Confirmar disponibilidad
 THERMAL_PRINTER_DISPONIBLE = True
@@ -392,9 +347,14 @@ def generar_texto_qr(nombres, numero, cargo, empresa):
         str: Texto QR formateado
     """
     try:
-        # Obtener primeras 3 letras del nombre (solo letras)
-        nombres_clean = re.sub(r'[^a-zA-ZáéíóúÁÉÍÓÚñÑ]', '', nombres.upper())
-        tres_letras = nombres_clean[:3].ljust(3, 'X')  # Rellenar con X si es muy corto
+        # Obtener primeras 3 letras del PRIMER NOMBRE
+        # Dividir por espacios y tomar el primer nombre
+        partes_nombre = nombres.strip().split() if nombres else []
+        primer_nombre = partes_nombre[0] if partes_nombre else 'XXX'
+        
+        # Tomar las primeras 3 letras del primer nombre (mantener solo letras)
+        primer_nombre_clean = re.sub(r'[^a-zA-ZáéíóúÁÉÍÓÚñÑ]', '', primer_nombre.upper())
+        tres_letras = primer_nombre_clean[:3].ljust(3, 'X')  # Rellenar con X si es muy corto
         
         # Limpiar campos para evitar problemas con pipe |
         numero_clean = str(numero).replace('|', '-')
@@ -2647,6 +2607,137 @@ def buscar_usuario_por_qr():
         cursor.close()
         connection.close()
 
+@app.route('/api/verificar/obtener-todos-registros', methods=['GET'])
+def obtener_todos_registros_cache():
+    """Obtener todos los registros con QR para cache en frontend"""
+    connection = None
+    cursor = None
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        
+        # Obtener todos los registros con QR
+        query = """
+        SELECT 
+            r.id,
+            r.nombres,
+            r.correo,
+            r.empresa,
+            r.cargo,
+            r.numero,
+            r.estado_asistencia,
+            r.asistencia_confirmada,
+            r.fecha_registro,
+            qr.qr_code,
+            qr.qr_text,
+            qr.fecha_generacion
+        FROM expokossodo_registros r
+        LEFT JOIN expokossodo_qr_registros qr ON r.id = qr.registro_id
+        WHERE r.activo = 1
+        ORDER BY r.id DESC
+        """
+        
+        cursor.execute(query)
+        registros = cursor.fetchall()
+        
+        # Procesar registros para incluir QR reconstruido si es necesario
+        for registro in registros:
+            # Si no hay QR guardado, generar uno basado en los datos actuales
+            if not registro.get('qr_text'):
+                registro['qr_text'] = generar_texto_qr(
+                    registro['nombres'],
+                    registro['numero'],
+                    registro['cargo'],
+                    registro['empresa']
+                )
+            
+            # Convertir fechas a string
+            if registro.get('fecha_registro'):
+                registro['fecha_registro'] = registro['fecha_registro'].isoformat() if registro['fecha_registro'] else None
+            if registro.get('fecha_generacion'):
+                registro['fecha_generacion'] = registro['fecha_generacion'].isoformat() if registro['fecha_generacion'] else None
+        
+        # Cache optimizado: Solo contar eventos, no cargar todos los detalles
+        for registro in registros:
+            cursor.execute("""
+                SELECT COUNT(*) as total_eventos
+                FROM expokossodo_registro_eventos re
+                WHERE re.registro_id = %s
+            """, (registro['id'],))
+            
+            count_result = cursor.fetchone()
+            registro['total_eventos'] = count_result['total_eventos'] if count_result else 0
+            
+            # Los eventos detallados se cargan solo cuando se necesitan
+            registro['eventos'] = []  # Vacío para cache ligero
+        
+        return jsonify({
+            "success": True,
+            "total": len(registros),
+            "registros": registros,
+            "timestamp": datetime.now().isoformat(),
+            "optimized": True,
+            "message": f"Cache optimizado: {len(registros)} registros con datos esenciales"
+        })
+        
+    except Exception as e:
+        print(f"Error obteniendo registros para cache: {e}")
+        return jsonify({
+            "success": False,
+            "error": "Error obteniendo registros"
+        }), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+@app.route('/api/verificar/obtener-eventos-usuario/<int:usuario_id>', methods=['GET'])
+def obtener_eventos_usuario(usuario_id):
+    """Obtener eventos detallados de un usuario específico (para cuando se necesiten)"""
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        
+        cursor.execute("""
+            SELECT 
+                e.id as evento_id,
+                e.titulo_charla,
+                e.sala,
+                e.hora,
+                e.fecha,
+                e.expositor,
+                e.pais,
+                re.estado_sala
+            FROM expokossodo_registro_eventos re
+            JOIN expokossodo_eventos e ON re.evento_id = e.id
+            WHERE re.registro_id = %s
+            ORDER BY e.fecha, e.hora
+        """, (usuario_id,))
+        
+        eventos = cursor.fetchall()
+        
+        # Convertir fechas de eventos
+        for evento in eventos:
+            if evento.get('fecha'):
+                evento['fecha'] = evento['fecha'].isoformat() if evento['fecha'] else None
+        
+        return jsonify({
+            "success": True,
+            "eventos": eventos,
+            "total": len(eventos)
+        })
+        
+    except Exception as e:
+        print(f"Error obteniendo eventos del usuario {usuario_id}: {e}")
+        return jsonify({
+            "success": False,
+            "error": "Error obteniendo eventos del usuario"
+        }), 500
+    finally:
+        cursor.close()
+        connection.close()
+
 @app.route('/api/verificar/generar-qr-impresion', methods=['POST'])
 def generar_qr_para_impresion():
     """Generar código QR para impresión basado en datos del usuario"""
@@ -2717,15 +2808,18 @@ def imprimir_qr_termica():
         if field not in usuario_datos:
             return jsonify({"error": f"Campo requerido: {field}"}), 400
     
+    # IMPORTANTE: El QR text es OBLIGATORIO - debe venir el QR escaneado
+    if not qr_text:
+        print(f"[ERROR] No se recibió qr_text. Data recibida: {data}")
+        return jsonify({
+            "error": "El código QR es requerido para la impresión",
+            "detail": "Debe enviar el QR escaneado original, no se genera uno nuevo"
+        }), 400
+    
     try:
-        # Generar QR text si no viene
-        if not qr_text:
-            qr_text = generar_texto_qr(
-                usuario_datos.get('nombres', ''),
-                usuario_datos.get('numero', ''),
-                usuario_datos.get('cargo', ''),
-                usuario_datos.get('empresa', '')
-            )
+        # Log para debug del QR recibido
+        print(f"[IMPRESION] QR recibido: {qr_text}")
+        print(f"[IMPRESION] Usuario: {usuario_datos.get('nombres', 'Sin nombre')}")
         
         # Inicializar impresora
         printer = TermalPrinter4BARCODE()
