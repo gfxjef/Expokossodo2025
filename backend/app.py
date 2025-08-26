@@ -335,7 +335,9 @@ def log_execution_time(func):
 
 def generar_texto_qr(nombres, numero, cargo, empresa):
     """
-    Generar texto QR con formato: {3_LETRAS_NOMBRE}|{DNI}|{CARGO}|{EMPRESA}|{TIMESTAMP}
+    Generar texto QR con formato simplificado: 
+    {3_letras_nombre}{numeros_dni}{3_letras_cargo}{3_letras_empresa}{timestamp}
+    Todo en minúsculas, sin caracteres especiales, sin separadores
     
     Args:
         nombres (str): Nombre completo del usuario
@@ -344,28 +346,47 @@ def generar_texto_qr(nombres, numero, cargo, empresa):
         empresa (str): Empresa del usuario
     
     Returns:
-        str: Texto QR formateado
+        str: Texto QR formateado sin caracteres especiales
     """
     try:
-        # Obtener primeras 3 letras del PRIMER NOMBRE
-        # Dividir por espacios y tomar el primer nombre
+        # Función auxiliar para limpiar texto: quitar tildes y caracteres especiales
+        def limpiar_texto(texto):
+            if not texto:
+                return 'xxx'
+            # Convertir a minúsculas
+            texto = texto.lower()
+            # Reemplazar vocales con tildes
+            texto = texto.replace('á', 'a').replace('é', 'e').replace('í', 'i')
+            texto = texto.replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+            texto = texto.replace('à', 'a').replace('è', 'e').replace('ì', 'i')
+            texto = texto.replace('ò', 'o').replace('ù', 'u')
+            texto = texto.replace('ä', 'a').replace('ë', 'e').replace('ï', 'i')
+            texto = texto.replace('ö', 'o').replace('ü', 'u')
+            # Mantener solo letras
+            texto = re.sub(r'[^a-z]', '', texto)
+            return texto if texto else 'xxx'
+        
+        # 1. Obtener primeras 3 letras del PRIMER NOMBRE
         partes_nombre = nombres.strip().split() if nombres else []
-        primer_nombre = partes_nombre[0] if partes_nombre else 'XXX'
+        primer_nombre = partes_nombre[0] if partes_nombre else 'xxx'
+        tres_letras_nombre = limpiar_texto(primer_nombre)[:3].ljust(3, 'x')
         
-        # Tomar las primeras 3 letras del primer nombre (mantener solo letras)
-        primer_nombre_clean = re.sub(r'[^a-zA-ZáéíóúÁÉÍÓÚñÑ]', '', primer_nombre.upper())
-        tres_letras = primer_nombre_clean[:3].ljust(3, 'X')  # Rellenar con X si es muy corto
+        # 2. Extraer solo números del DNI/número
+        solo_numeros = re.sub(r'[^0-9]', '', str(numero))
+        if not solo_numeros:
+            solo_numeros = '000000'  # Valor por defecto si no hay números
         
-        # Limpiar campos para evitar problemas con pipe |
-        numero_clean = str(numero).replace('|', '-')
-        cargo_clean = str(cargo).replace('|', '-')
-        empresa_clean = str(empresa).replace('|', '-')
+        # 3. Obtener primeras 3 letras del cargo
+        tres_letras_cargo = limpiar_texto(cargo)[:3].ljust(3, 'x')
         
-        # Generar timestamp único en segundos
-        timestamp = int(time.time())
+        # 4. Obtener primeras 3 letras de la empresa
+        tres_letras_empresa = limpiar_texto(empresa)[:3].ljust(3, 'x')
         
-        # Crear texto QR
-        qr_text = f"{tres_letras}|{numero_clean}|{cargo_clean}|{empresa_clean}|{timestamp}"
+        # 5. Generar timestamp único en segundos
+        timestamp = str(int(time.time()))
+        
+        # Crear texto QR todo junto sin separadores
+        qr_text = f"{tres_letras_nombre}{solo_numeros}{tres_letras_cargo}{tres_letras_empresa}{timestamp}"
         
         return qr_text
         
@@ -2636,7 +2657,8 @@ def obtener_todos_registros_cache():
             r.qr_generado_at,
             r.asistencia_general_confirmada,
             r.fecha_asistencia_general,
-            r.fecha_registro
+            r.fecha_registro,
+            r.eventos_seleccionados
         FROM expokossodo_registros r
         ORDER BY r.id DESC
         """
@@ -2669,10 +2691,23 @@ def obtener_todos_registros_cache():
             # Agregar estado de asistencia
             registro['estado_asistencia'] = 'confirmada' if registro.get('asistencia_general_confirmada') else 'pendiente'
         
-        # Cache ultra-ligero: Sin contar eventos para máxima velocidad
+        # Cache ultra-ligero: Contar eventos desde eventos_seleccionados
+        import json
         for registro in registros:
-            registro['total_eventos'] = 0  # Se carga bajo demanda
-            registro['eventos'] = []  # Vacío para cache ligero
+            # Contar eventos desde JSON de eventos_seleccionados
+            eventos_count = 0
+            if registro.get('eventos_seleccionados'):
+                try:
+                    eventos_seleccionados_str = str(registro['eventos_seleccionados'])
+                    eventos_ids = json.loads(eventos_seleccionados_str)
+                    if isinstance(eventos_ids, list):
+                        eventos_count = len(eventos_ids)
+                except Exception as e:
+                    # Silenciar error, mantener eventos_count = 0
+                    eventos_count = 0
+            
+            registro['total_eventos'] = eventos_count  # Número real de eventos
+            registro['eventos'] = []  # Vacío para cache ligero - se cargan bajo demanda
         
         return jsonify({
             "success": True,
