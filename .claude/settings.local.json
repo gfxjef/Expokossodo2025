@@ -30,7 +30,8 @@
       "Bash(source:*)",
       "Bash(taskkill:*)",
       "Bash(venvScriptspip.exe install pywin32)",
-      "Read(/C:\\Users\\USER\\Desktop/**)"
+      "Read(/C:\\Users\\USER\\Desktop/**)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

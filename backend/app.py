@@ -2614,6 +2614,13 @@ def obtener_todos_registros_cache():
     cursor = None
     try:
         connection = get_db_connection()
+        if not connection:
+            print("[ERROR] No se pudo obtener conexión a la base de datos")
+            return jsonify({
+                "success": False,
+                "error": "Error de conexión a la base de datos"
+            }), 500
+        
         cursor = connection.cursor(dictionary=True)
         
         # Obtener todos los registros con QR
@@ -2697,6 +2704,13 @@ def obtener_eventos_usuario(usuario_id):
     """Obtener eventos detallados de un usuario específico (para cuando se necesiten)"""
     try:
         connection = get_db_connection()
+        if not connection:
+            print("[ERROR] No se pudo obtener conexión a la base de datos")
+            return jsonify({
+                "success": False,
+                "error": "Error de conexión a la base de datos"
+            }), 500
+        
         cursor = connection.cursor(dictionary=True)
         
         cursor.execute("""
