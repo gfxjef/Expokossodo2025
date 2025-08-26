@@ -2670,18 +2670,21 @@ def obtener_todos_registros_cache():
             registro['estado_asistencia'] = 'confirmada' if registro.get('asistencia_general_confirmada') else 'pendiente'
         
         # Cache optimizado: Solo contar eventos, no cargar todos los detalles
-        for registro in registros:
-            cursor.execute("""
-                SELECT COUNT(*) as total_eventos
-                FROM expokossodo_registro_eventos re
-                WHERE re.registro_id = %s
-            """, (registro['id'],))
+        if registros:
+            registro_ids = [str(r['id']) for r in registros]
+            cursor.execute(f"""
+                SELECT registro_id, COUNT(*) as total_eventos
+                FROM expokossodo_registro_eventos
+                WHERE registro_id IN ({','.join(registro_ids)})
+                GROUP BY registro_id
+            """)
             
-            count_result = cursor.fetchone()
-            registro['total_eventos'] = count_result['total_eventos'] if count_result else 0
+            eventos_count = {row['registro_id']: row['total_eventos'] for row in cursor.fetchall()}
             
-            # Los eventos detallados se cargan solo cuando se necesitan
-            registro['eventos'] = []  # Vacío para cache ligero
+            for registro in registros:
+                registro['total_eventos'] = eventos_count.get(registro['id'], 0)
+                # Los eventos detallados se cargan solo cuando se necesiten
+                registro['eventos'] = []  # Vacío para cache ligero
         
         return jsonify({
             "success": True,
@@ -2727,9 +2730,10 @@ def obtener_eventos_usuario(usuario_id):
                 e.fecha,
                 e.expositor,
                 e.pais,
-                re.estado_sala
+                CASE WHEN aps.id IS NOT NULL THEN 'presente' ELSE 'ausente' END as estado_sala
             FROM expokossodo_registro_eventos re
             JOIN expokossodo_eventos e ON re.evento_id = e.id
+            LEFT JOIN expokossodo_asistencias_por_sala aps ON e.id = aps.evento_id AND aps.registro_id = re.registro_id
             WHERE re.registro_id = %s
             ORDER BY e.fecha, e.hora
         """, (usuario_id,))
