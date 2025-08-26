@@ -2669,22 +2669,10 @@ def obtener_todos_registros_cache():
             # Agregar estado de asistencia
             registro['estado_asistencia'] = 'confirmada' if registro.get('asistencia_general_confirmada') else 'pendiente'
         
-        # Cache optimizado: Solo contar eventos, no cargar todos los detalles
-        if registros:
-            registro_ids = [str(r['id']) for r in registros]
-            cursor.execute(f"""
-                SELECT registro_id, COUNT(*) as total_eventos
-                FROM expokossodo_registro_eventos
-                WHERE registro_id IN ({','.join(registro_ids)})
-                GROUP BY registro_id
-            """)
-            
-            eventos_count = {row['registro_id']: row['total_eventos'] for row in cursor.fetchall()}
-            
-            for registro in registros:
-                registro['total_eventos'] = eventos_count.get(registro['id'], 0)
-                # Los eventos detallados se cargan solo cuando se necesiten
-                registro['eventos'] = []  # Vacío para cache ligero
+        # Cache ultra-ligero: Sin contar eventos para máxima velocidad
+        for registro in registros:
+            registro['total_eventos'] = 0  # Se carga bajo demanda
+            registro['eventos'] = []  # Vacío para cache ligero
         
         return jsonify({
             "success": True,
