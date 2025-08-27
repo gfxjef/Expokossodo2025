@@ -2104,6 +2104,9 @@ def crear_registro():
     """
     data = request.get_json()
     
+    # Detectar tipo de registro (por defecto 'eventos' para compatibilidad)
+    tipo_registro = data.get('tipo_registro', 'eventos')
+    
     # Validaciones básicas
     required_fields = ['nombres', 'correo', 'empresa', 'cargo', 'numero', 'eventos_seleccionados']
     for field in required_fields:
@@ -2117,10 +2120,17 @@ def crear_registro():
     cursor = connection.cursor(dictionary=True, buffered=True)
     
     try:
-        # Verificar disponibilidad de eventos
+        # Verificar disponibilidad de eventos según tipo de registro
         eventos_nuevos = data['eventos_seleccionados']
-        if not eventos_nuevos:
-            return jsonify({"error": "Debe seleccionar al menos un evento"}), 400
+        
+        # Solo validar eventos si es registro con eventos
+        if tipo_registro == 'eventos':
+            if not eventos_nuevos:
+                return jsonify({"error": "Debe seleccionar al menos un evento"}), 400
+        elif tipo_registro == 'general':
+            # Para registro general, permitir array vacío
+            eventos_nuevos = []
+            data['eventos_seleccionados'] = []
         
         # === PASO 1: Verificar si el usuario ya está registrado ===
         cursor.execute("""
@@ -2145,12 +2155,17 @@ def crear_registro():
             eventos_inscritos = []
         
         # === PASO 2: Validar conflictos de horario y capacidad ===
-        eventos_validos, eventos_conflictivos = validar_conflictos_horario(
-            eventos_inscritos, eventos_nuevos, cursor
-        )
+        # Solo validar si hay eventos (no aplica para registro general)
+        if tipo_registro == 'general':
+            eventos_validos = []
+            eventos_conflictivos = []
+        else:
+            eventos_validos, eventos_conflictivos = validar_conflictos_horario(
+                eventos_inscritos, eventos_nuevos, cursor
+            )
         
         # === PASO 3: Verificar que los eventos nuevos existen ===
-        if eventos_nuevos:
+        if eventos_nuevos and tipo_registro != 'general':
             placeholders = ','.join(['%s'] * len(eventos_nuevos))
             cursor.execute(f"""
                 SELECT id FROM expokossodo_eventos 
@@ -2166,7 +2181,8 @@ def crear_registro():
                 }), 400
         
         # === PASO 4: Verificar si hay eventos válidos para procesar ===
-        if not eventos_validos:
+        # Para registro general, siempre continuar aunque no haya eventos
+        if not eventos_validos and tipo_registro != 'general':
             # No hay eventos válidos para agregar
             if modo_actualizacion:
                 # Para usuarios existentes, devolver 200 con información detallada
@@ -2215,22 +2231,39 @@ def crear_registro():
                 if not qr_text:
                     return jsonify({"error": "Error generando código QR"}), 500
                 
-                # Crear nuevo registro
-                cursor.execute("""
-                    INSERT INTO expokossodo_registros 
-                    (nombres, correo, empresa, cargo, numero, expectativas, eventos_seleccionados, 
-                     qr_code, qr_generado_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
-                """, (
-                    data['nombres'],
-                    data['correo'],
-                    data['empresa'],
-                    data['cargo'],
-                    data['numero'],
-                    data.get('expectativas', ''),
-                    json.dumps(eventos_finales),
-                    qr_text
-                ))
+                # Crear nuevo registro - marcar asistencia_general si es tipo general
+                if tipo_registro == 'general':
+                    cursor.execute("""
+                        INSERT INTO expokossodo_registros 
+                        (nombres, correo, empresa, cargo, numero, expectativas, eventos_seleccionados, 
+                         qr_code, qr_generado_at, asistencia_general_confirmada)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), TRUE)
+                    """, (
+                        data['nombres'],
+                        data['correo'],
+                        data['empresa'],
+                        data['cargo'],
+                        data['numero'],
+                        data.get('expectativas', ''),
+                        json.dumps([]),  # Array vacío para registro general
+                        qr_text
+                    ))
+                else:
+                    cursor.execute("""
+                        INSERT INTO expokossodo_registros 
+                        (nombres, correo, empresa, cargo, numero, expectativas, eventos_seleccionados, 
+                         qr_code, qr_generado_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                    """, (
+                        data['nombres'],
+                        data['correo'],
+                        data['empresa'],
+                        data['cargo'],
+                        data['numero'],
+                        data.get('expectativas', ''),
+                        json.dumps(eventos_finales),
+                        qr_text
+                    ))
                 registro_id = cursor.lastrowid
             
             # Insertar relaciones evento-registro solo para eventos válidos
@@ -2288,19 +2321,24 @@ def crear_registro():
             "success": True,
             "registro_id": registro_id,
             "modo": "actualizado" if modo_actualizacion else "creado",
+            "tipo_registro": tipo_registro,
             "eventos_agregados": eventos_agregados_detalles,
             "eventos_omitidos": eventos_conflictivos,
             "email_sent": False
         }
         
         # Mensaje dinámico basado en resultados
-        if eventos_conflictivos and eventos_validos:
+        if tipo_registro == 'general':
+            response_data["message"] = f"Registro general {'actualizado' if modo_actualizacion else 'creado'} exitosamente. Asistencia general confirmada."
+            response_data["asistencia_general"] = True
+        elif eventos_conflictivos and eventos_validos:
             response_data["message"] = f"Registro {'actualizado' if modo_actualizacion else 'creado'} exitosamente. {len(eventos_validos)} charla(s) agregada(s), {len(eventos_conflictivos)} omitida(s) por conflictos."
         elif eventos_validos:
             response_data["message"] = f"Registro {'actualizado' if modo_actualizacion else 'creado'} exitosamente. {len(eventos_validos)} charla(s) agregada(s)."
         
         # === PASO 7: Enviar email de confirmación ===
-        if eventos_validos or modo_actualizacion:
+        # Enviar email para registro general o cuando hay eventos válidos
+        if tipo_registro == 'general' or eventos_validos or modo_actualizacion:
             # Para actualización: obtener TODOS los eventos (anteriores + nuevos)
             # Para registro nuevo: solo los eventos nuevos
             if modo_actualizacion:
@@ -4361,10 +4399,34 @@ def obtener_asesores():
     
     asesores = [
         "Abigail Alvarez del Villar",
-        "Jaqueline",
-        "Azucena", 
-        "Cynthia",
-        "Fernando"
+        "Alexandra Ccota Chacon",
+        "Angela Gómez Sánchez",
+        "Azucena Chuquilin",
+        "Carlos Granda",
+        "Cinthya Zapata Ruiz",
+        "Daniel Torres",
+        "Denisse Duche",
+        "Diana Esteban Ladera",
+        "Eder Vilchez",
+        "Ernesto Rodriguez",
+        "Fernando Pacheco",
+        "Giovanna Ramirez",
+        "Hugo Guzman",
+        "Ines Cosinga Enriquez",
+        "Jackeline Rojas",
+        "Javier Santa Cruz",
+        "Jessica Soto Alarcón",
+        "Jimmy Bueno",
+        "Jonathan Lopez",
+        "Lidia Cachay",
+        "Lucy Elvira Torres Jiménez",
+        "Manuel Mosqueira",
+        "Milagros Pasaro",
+        "Mizael Despacho",
+        "Silvia Porras Quintanilla",
+        "Tania Hernandez",
+        "Vanessa Hoffman",
+        "Ximena Rojas"
     ]
     
     print(f"📋 Devolviendo {len(asesores)} asesores")

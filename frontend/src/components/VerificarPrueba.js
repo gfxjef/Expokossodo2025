@@ -10,6 +10,8 @@ import {
   Building2, 
   Mail, 
   Phone,
+  Briefcase,
+  MessageSquare,
   Edit2,
   Save,
   X,
@@ -25,7 +27,9 @@ import {
   Keyboard,
   ToggleLeft,
   ToggleRight,
-  Scan
+  Scan,
+  Plus,
+  Loader2
 } from 'lucide-react';
 
 const VerificarPrueba = () => {
@@ -64,6 +68,9 @@ const VerificarPrueba = () => {
   const physicalScannerInputRef = useRef(null);
   const [isPhysicalScannerReady, setIsPhysicalScannerReady] = useState(true);
   
+  // Ref para auto-focus del primer campo del modal
+  const firstModalInputRef = useRef(null);
+  
   // Estados para carga de eventos bajo demanda
   const [eventosLoading, setEventosLoading] = useState(false);
   
@@ -71,6 +78,19 @@ const VerificarPrueba = () => {
   const [thermalStatus, setThermalStatus] = useState('idle'); // 'idle', 'printing', 'success', 'error'
   const [thermalError, setThermalError] = useState(null);
   const [printerStatus, setPrinterStatus] = useState(null);
+  
+  // Estados para registro rápido
+  const [showRegistroModal, setShowRegistroModal] = useState(false);
+  const [registroLoading, setRegistroLoading] = useState(false);
+  const [registroData, setRegistroData] = useState({
+    nombres: '',
+    correo: '',
+    empresa: '',
+    cargo: '',
+    numero: '',
+    expectativas: 'Registro de asistencia general'
+  });
+  const [registroErrors, setRegistroErrors] = useState({});
 
   // Cargar configuración inicial al montar el componente
   useEffect(() => {
@@ -134,7 +154,8 @@ const VerificarPrueba = () => {
 
   // Effect para mantener focus en el input cuando está en modo lector físico
   useEffect(() => {
-    if (scannerMode === 'physical') {
+    // Solo mantener focus si está en modo físico Y el modal de registro NO está abierto
+    if (scannerMode === 'physical' && !showRegistroModal) {
       const handleFocus = () => {
         if (physicalScannerInputRef.current && document.activeElement !== physicalScannerInputRef.current) {
           physicalScannerInputRef.current.focus();
@@ -155,7 +176,31 @@ const VerificarPrueba = () => {
         document.removeEventListener('click', handleFocus);
       };
     }
-  }, [scannerMode, userData]);
+  }, [scannerMode, userData, showRegistroModal]); // Agregar showRegistroModal como dependencia
+
+  // Effect para hacer focus al primer campo del modal cuando se abre
+  useEffect(() => {
+    if (showRegistroModal && firstModalInputRef.current) {
+      // Delay pequeño para asegurar que el modal esté completamente renderizado
+      setTimeout(() => {
+        firstModalInputRef.current.focus();
+      }, 100);
+    }
+  }, [showRegistroModal]);
+
+  // Effect para manejar tecla Escape en el modal
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape' && showRegistroModal) {
+        handleCloseRegistroModal();
+      }
+    };
+
+    if (showRegistroModal) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [showRegistroModal]);
 
   // Función para normalizar el código QR del lector físico
   const normalizeQRCode = (code) => {
@@ -728,6 +773,117 @@ const VerificarPrueba = () => {
   };
 
 
+  // Función para validar campos del registro
+  const validateRegistroField = (field, value) => {
+    switch(field) {
+      case 'nombres':
+        return value.trim().length >= 2 ? '' : 'Nombre muy corto';
+      case 'correo':
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(value) ? '' : 'Email inválido';
+      case 'empresa':
+        return value.trim().length >= 2 ? '' : 'Empresa requerida';
+      case 'cargo':
+        return value.trim().length >= 2 ? '' : 'Cargo requerido';
+      case 'numero':
+        return value.trim().length >= 8 ? '' : 'Número inválido';
+      default:
+        return '';
+    }
+  };
+  
+  // Función para manejar cambios en el formulario de registro
+  const handleRegistroChange = (field, value) => {
+    setRegistroData(prev => ({ ...prev, [field]: value }));
+    const error = validateRegistroField(field, value);
+    setRegistroErrors(prev => ({ ...prev, [field]: error }));
+  };
+  
+  // Función para cerrar el modal y restaurar focus
+  const handleCloseRegistroModal = () => {
+    setShowRegistroModal(false);
+    
+    // Limpiar errores
+    setRegistroErrors({});
+    
+    // Restaurar focus al lector físico si está en modo físico
+    if (scannerMode === 'physical') {
+      setTimeout(() => {
+        if (physicalScannerInputRef.current) {
+          physicalScannerInputRef.current.focus();
+        }
+      }, 100);
+    }
+  };
+  
+  // Función para crear registro rápido
+  const handleRegistroRapido = async () => {
+    // Validar todos los campos
+    const errors = {};
+    Object.keys(registroData).forEach(field => {
+      if (field !== 'expectativas') {
+        const error = validateRegistroField(field, registroData[field]);
+        if (error) errors[field] = error;
+      }
+    });
+    
+    if (Object.keys(errors).length > 0) {
+      setRegistroErrors(errors);
+      return;
+    }
+    
+    setRegistroLoading(true);
+    try {
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/registro`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...registroData,
+          eventos_seleccionados: [],
+          tipo_registro: 'general'
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        // Limpiar formulario
+        setRegistroData({
+          nombres: '',
+          correo: '',
+          empresa: '',
+          cargo: '',
+          numero: '',
+          expectativas: 'Registro de asistencia general'
+        });
+        setRegistroErrors({});
+        
+        // Cerrar modal y restaurar focus
+        handleCloseRegistroModal();
+        
+        // Actualizar cache primero
+        await cargarCacheRegistros();
+        
+        // Buscar automáticamente el QR creado
+        setTimeout(() => {
+          handleQRScan(data.qr_code);
+        }, 500);
+        
+        // Mostrar mensaje de éxito
+        setSuccess(`Usuario registrado exitosamente. QR: ${data.qr_code}`);
+      } else {
+        throw new Error(data.error || 'Error al crear registro');
+      }
+    } catch (error) {
+      console.error('Error en registro rápido:', error);
+      setError(`Error al registrar: ${error.message}`);
+    } finally {
+      setRegistroLoading(false);
+    }
+  };
+
   const getEstadoBadge = (estado) => {
     const badges = {
       confirmada: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle, label: 'CONFIRMADO' },
@@ -843,6 +999,16 @@ const VerificarPrueba = () => {
                   </span>
                 )}
               </div>
+
+              {/* Botón de registro rápido */}
+              <button
+                onClick={() => setShowRegistroModal(true)}
+                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                title="Registro rápido sin eventos"
+              >
+                <Plus size={28} className="font-bold" />
+                <span className="hidden lg:inline font-medium">Nuevo Registro</span>
+              </button>
 
               {/* Estadísticas en tiempo real */}
               <div className="text-center">
@@ -1633,6 +1799,177 @@ const VerificarPrueba = () => {
           </div>
         )}
       </div>
+      
+      {/* Modal de Registro Rápido */}
+      {showRegistroModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-800">Registro Rápido</h3>
+              <button
+                onClick={handleCloseRegistroModal}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={24} className="text-gray-600" />
+              </button>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              Registro de asistencia general sin eventos específicos
+            </p>
+            
+            <div className="space-y-4">
+              {/* Campo Nombres */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <User size={16} className="inline mr-1" />
+                  Nombres Completos *
+                </label>
+                <input
+                  ref={firstModalInputRef}
+                  type="text"
+                  value={registroData.nombres}
+                  onChange={(e) => handleRegistroChange('nombres', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                    registroErrors.nombres ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Juan Pérez"
+                />
+                {registroErrors.nombres && (
+                  <p className="text-red-500 text-xs mt-1">{registroErrors.nombres}</p>
+                )}
+              </div>
+              
+              {/* Campo Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Mail size={16} className="inline mr-1" />
+                  Correo Electrónico *
+                </label>
+                <input
+                  type="email"
+                  value={registroData.correo}
+                  onChange={(e) => handleRegistroChange('correo', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                    registroErrors.correo ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="juan@empresa.com"
+                />
+                {registroErrors.correo && (
+                  <p className="text-red-500 text-xs mt-1">{registroErrors.correo}</p>
+                )}
+              </div>
+              
+              {/* Campo Empresa */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Building2 size={16} className="inline mr-1" />
+                  Empresa *
+                </label>
+                <input
+                  type="text"
+                  value={registroData.empresa}
+                  onChange={(e) => handleRegistroChange('empresa', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                    registroErrors.empresa ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Nombre de la empresa"
+                />
+                {registroErrors.empresa && (
+                  <p className="text-red-500 text-xs mt-1">{registroErrors.empresa}</p>
+                )}
+              </div>
+              
+              {/* Campo Cargo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Briefcase size={16} className="inline mr-1" />
+                  Cargo *
+                </label>
+                <input
+                  type="text"
+                  value={registroData.cargo}
+                  onChange={(e) => handleRegistroChange('cargo', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                    registroErrors.cargo ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Gerente, Director, etc."
+                />
+                {registroErrors.cargo && (
+                  <p className="text-red-500 text-xs mt-1">{registroErrors.cargo}</p>
+                )}
+              </div>
+              
+              {/* Campo Teléfono */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Phone size={16} className="inline mr-1" />
+                  Número de Teléfono *
+                </label>
+                <input
+                  type="tel"
+                  value={registroData.numero}
+                  onChange={(e) => handleRegistroChange('numero', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                    registroErrors.numero ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="+507 6000-0000"
+                />
+                {registroErrors.numero && (
+                  <p className="text-red-500 text-xs mt-1">{registroErrors.numero}</p>
+                )}
+              </div>
+              
+              {/* Campo Expectativas (Opcional) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <MessageSquare size={16} className="inline mr-1" />
+                  Expectativas (Opcional)
+                </label>
+                <textarea
+                  value={registroData.expectativas}
+                  onChange={(e) => handleRegistroChange('expectativas', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  placeholder="¿Qué espera del evento?"
+                  rows={3}
+                />
+              </div>
+            </div>
+            
+            {/* Botones de acción */}
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={handleCloseRegistroModal}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                disabled={registroLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleRegistroRapido}
+                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={registroLoading}
+              >
+                {registroLoading ? (
+                  <>
+                    <Loader2 size={20} className="mr-2 animate-spin" />
+                    Registrando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={20} className="mr-2" />
+                    Crear Registro
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
