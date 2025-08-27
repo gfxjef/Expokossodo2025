@@ -20,10 +20,9 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from openai import OpenAI
 import threading
-import queue
-from threading import Lock
 import logging
 import sys
+import requests
 
 # Clase de impresora térmica usando TSPL (método que SÍ funciona)
 class TermalPrinter4BARCODE:
@@ -125,24 +124,23 @@ class TermalPrinter4BARCODE:
 THERMAL_PRINTER_DISPONIBLE = True
 print("[OK] Impresora térmica: Usando método integrado que funciona")
 
-# Agregar path del proyecto de transcripción
-transcripcion_path = os.path.join(os.path.dirname(__file__), '../../transcripcion_expokossodo')
-if os.path.exists(transcripcion_path):
-    sys.path.append(transcripcion_path)
-    try:
-        from services.batch_processor import BatchProcessor
-        from services.gemini_service import GeminiService
+# Configuración del servicio de transcripción en Railway
+TRANSCRIPCION_API_URL = os.getenv('TRANSCRIPCION_API_URL', 
+                                   'https://transcripcionleads-production.up.railway.app')
+TRANSCRIPCION_API_KEY = os.getenv('TRANSCRIPCION_API_KEY', '')  # Para autenticación futura si es necesaria
+
+# Verificar disponibilidad del servicio de transcripción
+try:
+    response = requests.get(f"{TRANSCRIPCION_API_URL}/health", timeout=5)
+    if response.status_code == 200:
         TRANSCRIPCION_DISPONIBLE = True
-        print("[OK] Sistema de transcripción importado correctamente")
-    except ImportError as e:
-        print(f"[WARN] No se pudo importar el sistema de transcripción: {e}")
+        print(f"[OK] Servicio de transcripción conectado en: {TRANSCRIPCION_API_URL}")
+    else:
         TRANSCRIPCION_DISPONIBLE = False
-    except Exception as e:
-        print(f"[WARN] Error inesperado importando transcripción: {e}")
-        TRANSCRIPCION_DISPONIBLE = False
-else:
-    print(f"[WARN] Proyecto de transcripción no encontrado en: {transcripcion_path}")
+        print(f"[WARN] Servicio de transcripción no disponible (status: {response.status_code})")
+except Exception as e:
     TRANSCRIPCION_DISPONIBLE = False
+    print(f"[WARN] No se pudo conectar al servicio de transcripción: {e}")
 
 # Configuración de logging mejorada
 logging.basicConfig(
@@ -151,16 +149,43 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Sistema de cola para transcripciones
-transcripcion_queue = queue.Queue()
-transcripcion_lock = Lock()
-transcripcion_stats = {
-    'procesadas': 0,
-    'errores': 0,
-    'en_cola': 0,
-    'ultima_procesada': None,
-    'worker_activo': False
-}
+# Función para enviar consultas al servicio de transcripción
+def enviar_a_transcripcion(consulta_id, texto, callback_url=None):
+    """Enviar consulta al servicio de transcripción en Railway"""
+    if not TRANSCRIPCION_DISPONIBLE:
+        print(f"[WARN] Servicio de transcripción no disponible para consulta {consulta_id}")
+        return False
+    
+    try:
+        payload = {
+            "texto": texto,
+            "contexto": "consulta_asesor",
+            "callback_url": callback_url
+        }
+        
+        # Agregar el ID de consulta al payload
+        payload["consulta_id"] = consulta_id
+        
+        response = requests.post(
+            f"{TRANSCRIPCION_API_URL}/procesar-resumenes",
+            json=payload,
+            headers={'X-API-Key': TRANSCRIPCION_API_KEY} if TRANSCRIPCION_API_KEY else {},
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            print(f"[OK] Consulta {consulta_id} enviada a transcripción exitosamente")
+            return True
+        else:
+            print(f"[ERROR] Transcripción falló para consulta {consulta_id}: Status {response.status_code}")
+            return False
+            
+    except requests.exceptions.Timeout:
+        print(f"[ERROR] Timeout enviando consulta {consulta_id} a transcripción")
+        return False
+    except Exception as e:
+        print(f"[ERROR] No se pudo enviar consulta {consulta_id} a transcripción: {e}")
+        return False
 
 # Cargar variables de entorno desde .env
 from dotenv import load_dotenv
@@ -3441,10 +3466,7 @@ def agregar_asistente_a_evento():
                 "usuario": usuario['nombres']
             }), 400
         
-        # Verificar cupos disponibles
-        cupos_libres = evento['slots_disponibles'] - evento['slots_ocupados']
-        if cupos_libres <= 0:
-            return jsonify({"error": "No hay cupos disponibles en este evento"}), 400
+        # NOTA: Se permite sobrecupo para casos especiales - asesor puede agregar sin límite de cupos
         
         # Agregar usuario al evento
         cursor.execute("""
@@ -3470,7 +3492,7 @@ def agregar_asistente_a_evento():
             data['qr_code'],
             data['asesor_verificador'],
             request.remote_addr,
-            f"Agregado y registrado por {data['asesor_verificador']}"
+            f"Agregado y registrado por {data['asesor_verificador']} - Sobrecupo autorizado"
         ))
         
         connection.commit()
@@ -4252,34 +4274,82 @@ def guardar_consulta():
         
         connection.commit()
         
-        # Si se usó transcripción, agregar a la cola para procesamiento
-        if uso_transcripcion and TRANSCRIPCION_DISPONIBLE:
-            try:
-                tarea = {
-                    'consulta_id': consulta_id,
-                    'consulta_texto': data['consulta'].strip()
-                }
-                transcripcion_queue.put(tarea)
-                
-                with transcripcion_lock:
-                    transcripcion_stats['en_cola'] = transcripcion_queue.qsize()
-                
-                print(f"[LOG] Consulta ID {consulta_id} agregada a cola de transcripción")
-                
-            except Exception as e:
-                print(f"[WARN] Error agregando consulta {consulta_id} a cola de transcripción: {e}")
+        # Si se usó transcripción, enviar al servicio Railway
+        if uso_transcripcion:
+            # Construir URL del callback dentro del contexto de request
+            callback_url = f"{request.url_root}api/transcripcion/callback"
+            
+            # Llamada asíncrona al servicio de transcripción
+            threading.Thread(
+                target=enviar_a_transcripcion,
+                args=(consulta_id, data['consulta'].strip(), callback_url),
+                daemon=True
+            ).start()
+            print(f"[LOG] Consulta ID {consulta_id} enviada al servicio de transcripción")
         
         return jsonify({
             "message": "Consulta guardada exitosamente",
             "cliente": cliente['nombres'],
             "asesor": data['asesor_nombre'],
-            "transcripcion_programada": uso_transcripcion and TRANSCRIPCION_DISPONIBLE
+            "transcripcion_programada": uso_transcripcion
         })
         
     except Error as e:
         print(f"Error guardando consulta: {e}")
         connection.rollback()
         return jsonify({"error": "Error del servidor"}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.route('/api/transcripcion/callback', methods=['POST'])
+def recibir_resultado_transcripcion():
+    """Recibir el resultado procesado desde el servicio de transcripción Railway"""
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({"error": "No se recibieron datos"}), 400
+    
+    consulta_id = data.get('consulta_id')
+    resumen = data.get('resumen')
+    
+    if not consulta_id:
+        return jsonify({"error": "consulta_id es requerido"}), 400
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    
+    cursor = connection.cursor()
+    
+    try:
+        # Actualizar la consulta con el resumen generado
+        cursor.execute("""
+            UPDATE expokossodo_consultas 
+            SET resumen = %s
+            WHERE id = %s
+        """, (json.dumps(resumen) if resumen else None, consulta_id))
+        
+        affected_rows = cursor.rowcount
+        connection.commit()
+        
+        if affected_rows > 0:
+            print(f"[OK] Resumen actualizado para consulta {consulta_id}")
+            return jsonify({
+                "success": True,
+                "message": f"Resumen actualizado para consulta {consulta_id}"
+            })
+        else:
+            print(f"[WARN] No se encontró la consulta {consulta_id}")
+            return jsonify({
+                "success": False,
+                "message": f"No se encontró la consulta {consulta_id}"
+            }), 404
+            
+    except Error as e:
+        print(f"[ERROR] Error actualizando resumen: {e}")
+        connection.rollback()
+        return jsonify({"error": "Error actualizando resumen"}), 500
     finally:
         cursor.close()
         connection.close()
@@ -4304,31 +4374,54 @@ def obtener_asesores():
 
 @app.route('/api/transcripcion/stats', methods=['GET'])
 def transcripcion_stats_endpoint():
-    """Estadísticas del sistema de transcripción"""
-    with transcripcion_lock:
-        stats = transcripcion_stats.copy()
-        stats['cola_actual'] = transcripcion_queue.qsize()
-        stats['sistema_disponible'] = TRANSCRIPCION_DISPONIBLE
-    
-    return jsonify(stats)
+    """Estadísticas del sistema de transcripción en Railway"""
+    try:
+        # Solicitar estadísticas al servicio Railway
+        response = requests.get(f"{TRANSCRIPCION_API_URL}/stats", timeout=5)
+        if response.status_code == 200:
+            stats = response.json()
+            stats['sistema_disponible'] = TRANSCRIPCION_DISPONIBLE
+            stats['servicio_url'] = TRANSCRIPCION_API_URL
+            return jsonify(stats)
+        else:
+            return jsonify({
+                'sistema_disponible': TRANSCRIPCION_DISPONIBLE,
+                'servicio_url': TRANSCRIPCION_API_URL,
+                'error': 'No se pudieron obtener estadísticas del servicio'
+            })
+    except Exception as e:
+        return jsonify({
+            'sistema_disponible': False,
+            'servicio_url': TRANSCRIPCION_API_URL,
+            'error': str(e)
+        })
 
 @app.route('/api/transcripcion/health', methods=['GET'])
 def transcripcion_health():
-    """Estado de salud del sistema de transcripción"""
-    status = {
-        'sistema_disponible': TRANSCRIPCION_DISPONIBLE,
-        'worker_activo': transcripcion_stats.get('worker_activo', False),
-        'en_cola': transcripcion_queue.qsize(),
-        'timestamp': time.strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    return jsonify(status)
+    """Estado de salud del sistema de transcripción en Railway"""
+    try:
+        # Verificar salud del servicio Railway
+        response = requests.get(f"{TRANSCRIPCION_API_URL}/health", timeout=5)
+        status = {
+            'sistema_disponible': response.status_code == 200,
+            'servicio_url': TRANSCRIPCION_API_URL,
+            'timestamp': time.strftime("%Y-%m-%d %H:%M:%S"),
+            'status_code': response.status_code
+        }
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({
+            'sistema_disponible': False,
+            'servicio_url': TRANSCRIPCION_API_URL,
+            'timestamp': time.strftime("%Y-%m-%d %H:%M:%S"),
+            'error': str(e)
+        })
 
 @app.route('/api/transcripcion/procesar-pendientes', methods=['POST'])
 def procesar_transcripciones_pendientes():
-    """Procesar todas las consultas pendientes de transcripción manualmente"""
+    """Procesar todas las consultas pendientes de transcripción enviándolas a Railway"""
     if not TRANSCRIPCION_DISPONIBLE:
-        return jsonify({"error": "Sistema de transcripción no disponible"}), 503
+        return jsonify({"error": "Servicio de transcripción no disponible"}), 503
     
     try:
         # Buscar consultas con uso_transcripcion=1 pero sin resumen
@@ -4347,128 +4440,39 @@ def procesar_transcripciones_pendientes():
         cursor.close()
         connection.close()
         
-        # Agregar todas a la cola
-        agregadas = 0
+        # Construir URL del callback dentro del contexto de request
+        callback_url = f"{request.url_root}api/transcripcion/callback"
+        
+        # Enviar todas al servicio Railway
+        enviadas = 0
+        errores = 0
         for consulta in consultas_pendientes:
             try:
-                tarea = {
-                    'consulta_id': consulta['id'],
-                    'consulta_texto': consulta['consulta']
-                }
-                transcripcion_queue.put(tarea)
-                agregadas += 1
+                # Enviar cada consulta al servicio de transcripción
+                threading.Thread(
+                    target=enviar_a_transcripcion,
+                    args=(consulta['id'], consulta['consulta'], callback_url),
+                    daemon=True
+                ).start()
+                enviadas += 1
+                # Pequeña pausa para no saturar
+                time.sleep(0.5)
             except Exception as e:
-                print(f"Error agregando consulta {consulta['id']} a cola: {e}")
-        
-        with transcripcion_lock:
-            transcripcion_stats['en_cola'] = transcripcion_queue.qsize()
+                print(f"Error enviando consulta {consulta['id']} a transcripción: {e}")
+                errores += 1
         
         return jsonify({
-            "message": f"Se agregaron {agregadas} consultas a la cola de procesamiento",
+            "message": f"Se enviaron {enviadas} consultas al servicio de transcripción",
             "consultas_encontradas": len(consultas_pendientes),
-            "consultas_agregadas": agregadas,
-            "cola_actual": transcripcion_queue.qsize()
+            "consultas_enviadas": enviadas,
+            "errores": errores,
+            "servicio_url": TRANSCRIPCION_API_URL
         })
         
     except Exception as e:
         print(f"Error procesando consultas pendientes: {e}")
         return jsonify({"error": "Error interno del servidor"}), 500
 
-def transcripcion_worker():
-    """Worker thread para procesar cola de transcripciones en background"""
-    global transcripcion_stats
-    
-    print("[BOT] Worker de transcripción iniciado")
-    
-    with transcripcion_lock:
-        transcripcion_stats['worker_activo'] = True
-    
-    while True:
-        try:
-            # Esperar por nueva tarea en la cola (bloquea hasta que haya algo)
-            tarea = transcripcion_queue.get(timeout=30)
-            
-            if tarea is None:  # Señal de parada
-                print("🛑 Worker de transcripción detenido")
-                break
-                
-            with transcripcion_lock:
-                transcripcion_stats['en_cola'] = transcripcion_queue.qsize()
-            
-            consulta_id = tarea['consulta_id']
-            consulta_texto = tarea['consulta_texto']
-            
-            print(f"[INFO] Procesando transcripción para consulta ID: {consulta_id}")
-            
-            if TRANSCRIPCION_DISPONIBLE:
-                try:
-                    # Crear instancia del procesador
-                    gemini_service = GeminiService()
-                    
-                    # Generar resumen usando Gemini
-                    resumen = gemini_service.generar_resumen(consulta_texto, consulta_id)
-                    
-                    if resumen:
-                        # Actualizar resumen en base de datos
-                        connection = get_db_connection()
-                        if connection:
-                            cursor = connection.cursor()
-                            try:
-                                cursor.execute("""
-                                    UPDATE expokossodo_consultas 
-                                    SET resumen = %s 
-                                    WHERE id = %s
-                                """, (resumen, consulta_id))
-                                connection.commit()
-                                
-                                with transcripcion_lock:
-                                    transcripcion_stats['procesadas'] += 1
-                                    transcripcion_stats['ultima_procesada'] = time.strftime("%Y-%m-%d %H:%M:%S")
-                                
-                                print(f"[OK] Transcripción completada para consulta ID: {consulta_id}")
-                                
-                            except Exception as e:
-                                print(f"[ERROR] Error actualizando resumen en BD: {e}")
-                                with transcripcion_lock:
-                                    transcripcion_stats['errores'] += 1
-                            finally:
-                                cursor.close()
-                                connection.close()
-                        else:
-                            print(f"[ERROR] Error conectando a BD para consulta ID: {consulta_id}")
-                            with transcripcion_lock:
-                                transcripcion_stats['errores'] += 1
-                    else:
-                        print(f"[ERROR] No se pudo generar resumen para consulta ID: {consulta_id}")
-                        with transcripcion_lock:
-                            transcripcion_stats['errores'] += 1
-                            
-                except Exception as e:
-                    print(f"[ERROR] Error procesando transcripción ID {consulta_id}: {e}")
-                    with transcripcion_lock:
-                        transcripcion_stats['errores'] += 1
-            else:
-                print(f"[WARN] Sistema de transcripción no disponible para consulta ID: {consulta_id}")
-                with transcripcion_lock:
-                    transcripcion_stats['errores'] += 1
-            
-            # Marcar tarea como completada
-            transcripcion_queue.task_done()
-            
-            # Pequeña pausa entre procesamiento
-            time.sleep(2)
-            
-        except queue.Empty:
-            # Timeout - continuar esperando
-            continue
-        except Exception as e:
-            print(f"[ERROR] Error crítico en worker de transcripción: {e}")
-            with transcripcion_lock:
-                transcripcion_stats['errores'] += 1
-            time.sleep(5)
-    
-    with transcripcion_lock:
-        transcripcion_stats['worker_activo'] = False
 
 if __name__ == '__main__':
     print("[INIT] Iniciando ExpoKossodo Backend...")
@@ -4485,17 +4489,6 @@ if __name__ == '__main__':
         
         # No salir, permitir que el servidor inicie sin DB
         # Esto permite probar otros aspectos del backend
-    
-    # Inicializar worker de transcripción si está disponible
-    if TRANSCRIPCION_DISPONIBLE:
-        try:
-            worker_thread = threading.Thread(target=transcripcion_worker, daemon=True)
-            worker_thread.start()
-            print("[OK] Worker de transcripción iniciado en background")
-        except Exception as e:
-            print(f"[WARN] Error iniciando worker de transcripción: {e}")
-    else:
-        print("[WARN] Sistema de transcripción no disponible - worker no iniciado")
     
     # Configuración del servidor
     port = int(os.getenv('FLASK_PORT', 5000))
