@@ -70,7 +70,9 @@ const SelectorCharlas = () => {
   };
 
   const formatearFecha = (fecha) => {
-    return new Date(fecha).toLocaleDateString('es-ES', {
+    const [year, month, day] = fecha.split('-');
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('es-ES', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

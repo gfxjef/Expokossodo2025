@@ -599,6 +599,16 @@ const VerificarPrueba = () => {
         pendientes: Math.max(0, prev.pendientes - 1),
         ultimaVerificacion: new Date().toLocaleTimeString()
       }));
+
+      // Imprimir etiqueta térmica automáticamente después de confirmar asistencia
+      if (currentQR) {
+        try {
+          await imprimirTermica();
+        } catch (printError) {
+          console.error('Error al imprimir etiqueta automáticamente:', printError);
+          // No interrumpir el flujo principal si falla la impresión
+        }
+      }
       
       // Resetear el scanner para el siguiente escaneo
       setTimeout(() => {
@@ -1473,7 +1483,7 @@ const VerificarPrueba = () => {
                     ) : (
                       <>
                         <Activity size={18} className="mr-2" />
-                        🖨️ Impresión Térmica (50x50mm)
+                        🖨️ Re-Imprimir QR
                       </>
                     )}
                   </button>
