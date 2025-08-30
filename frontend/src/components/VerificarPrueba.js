@@ -695,111 +695,135 @@ const VerificarPrueba = () => {
         ultimaVerificacion: new Date().toLocaleTimeString()
       }));
 
-      // Imprimir etiqueta térmica automáticamente después de confirmar asistencia
+      // OPTIMIZACIÓN: Imprimir etiqueta térmica EN PARALELO (no bloquea)
       if (currentQR) {
-        try {
-          await imprimirTermica();
-        } catch (printError) {
+        // Ejecutar impresión en background sin esperar
+        imprimirTermica().catch(printError => {
           console.error('Error al imprimir etiqueta automáticamente:', printError);
-          // No interrumpir el flujo principal si falla la impresión
-        }
+          // Error silencioso - no interrumpe flujo principal
+        });
+        console.log('[PRINT] 🖨️ Impresión iniciada en paralelo (no bloquea)');
       }
       
-      // Capturar foto silenciosamente y subirla al FTP (sin await, sin bloquear)
-      fetch(`${API_CONFIG.getApiUrl()}/verificar/capturar-foto`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          registro_id: userData.usuario.id,
-          nombres: userData.usuario.nombres
-        }),
-      }).catch(err => {
-        console.log('[FOTO] Error iniciando captura:', err);
-        // Ignorar errores silenciosamente, no afectar el flujo
-      });
+      // 📸 CAPTURAR FOTO SÍNCRONA PRIMERO, LUEGO WHATSAPP
+      let photoURL = null;
+      try {
+        console.log('[FOTO-SYNC] 📷 Capturando foto SÍNCRONA antes de WhatsApp...');
+        const fotoResponse = await fetch(`${API_CONFIG.getApiUrl()}/verificar/capturar-foto-sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            registro_id: userData.usuario.id,
+            nombres: userData.usuario.nombres
+          }),
+        });
+        
+        if (fotoResponse.ok) {
+          const fotoData = await fotoResponse.json();
+          if (fotoData.success && fotoData.photo_url) {
+            photoURL = fotoData.photo_url;
+            console.log('[FOTO-SYNC] ✅ Foto capturada y subida EXITOSAMENTE:', photoURL);
+            console.log('[FOTO-SYNC] 📁 Archivo:', fotoData.filename);
+          } else {
+            console.log('[FOTO-SYNC] ⚠️ Error:', fotoData.error || 'Captura fallida sin URL válida');
+          }
+        } else {
+          const errorData = await fotoResponse.json().catch(() => ({}));
+          console.log('[FOTO-SYNC] ⚠️ Error HTTP:', fotoResponse.status, errorData.error || 'Sin detalles');
+        }
+      } catch (err) {
+        console.log('[FOTO-SYNC] ❌ Error de red capturando foto:', err);
+        // Continuar sin foto
+      }
 
-      // 📲 ENVIAR NOTIFICACIÓN WHATSAPP SILENCIOSAMENTE
-      (() => {
+      // 📲 OBTENER DATOS COMPLETOS Y ENVIAR WHATSAPP
+      (async () => {
         try {
+          console.log('[WHATSAPP] Usando datos cacheados del usuario...');
+          
+          // Buscar el usuario actual por ID en los datos ya cargados
+          const usuarioCompleto = registrosCache.find(r => r.id === userData.usuario.id);
+          
+          if (!usuarioCompleto) {
+            console.error('[WHATSAPP] Usuario no encontrado en los datos cacheados');
+            return;
+          }
+          
+          console.log('[WHATSAPP] Datos completos obtenidos:', usuarioCompleto);
+          
           // Generar timestamp en formato YYYY-MM-DD HH:MM:SS
           const now = new Date();
           const fecha_hora = now.toISOString().slice(0, 19).replace('T', ' ');
           
-          // Generar URL de la foto (mismo formato que FTP)
-          const nombreArchivo = userData.usuario.nombres
-            .toLowerCase()
-            .replace(/[àáäâ]/g, 'a')
-            .replace(/[èéëê]/g, 'e') 
-            .replace(/[ìíïî]/g, 'i')
-            .replace(/[òóöô]/g, 'o')
-            .replace(/[ùúüû]/g, 'u')
-            .replace(/[ñ]/g, 'n')
-            .replace(/[^a-z0-9\s]/g, '')
-            .replace(/ /g, '_')
-            .split('_')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join('_');
-          
-          const photoURL = `https://www.kossomet.com/public_html/clientexpokossodo/${nombreArchivo}.jpg`;
-          
-          const whatsappData = {
-            nombre: userData.usuario.nombres,
-            empresa: userData.usuario.empresa,
-            cargo: userData.usuario.cargo,
-            fecha_hora: fecha_hora,
-            photo: photoURL
+          // Función para limpiar tildes y caracteres especiales (WhatsApp requirement)
+          const limpiarTexto = (texto) => {
+            return texto
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "") // Quitar tildes (á→a, é→e, í→i, ó→o, ú→u)
+              .replace(/ñ/g, "n")              // ñ → n
+              .replace(/Ñ/g, "N")              // Ñ → N
+              .trim();
           };
           
-          console.log('[WHATSAPP] 📤 Enviando notificación:', whatsappData);
+          // Usar datos reales de la base de datos CON LIMPIEZA de tildes
+          const whatsappData = {
+            nombre: limpiarTexto(usuarioCompleto.nombres),
+            empresa: limpiarTexto(usuarioCompleto.empresa),
+            cargo: limpiarTexto(usuarioCompleto.cargo),
+            fecha_hora: fecha_hora,
+            numero: usuarioCompleto.numero // IMPORTANTE: Incluir número real
+          };
           
-          // Usar endpoint directo de WhatsApp
-          const endpoint = 'https://expokossodowhatsappvisita-production.up.railway.app/attendance-webhook';
+          // Solo agregar photo si fue capturada y subida exitosamente
+          if (photoURL) {
+            whatsappData.photo = photoURL;
+            console.log('[WHATSAPP] 📸 Incluyendo foto CONFIRMADA desde captura síncrona:', photoURL);
+          } else {
+            console.log('[WHATSAPP] 📸 Sin foto confirmada - enviando solo datos de texto');
+          }
+          
+          console.log('[WHATSAPP] 📤 Enviando notificación con datos reales:', whatsappData);
+          
+          // Usar proxy con headers EXACTOS del script de referencia
+          const endpoint = `${API_CONFIG.getApiUrl()}/verificar/whatsapp-proxy`;
             
           console.log('[WHATSAPP] 🎯 Endpoint destino:', endpoint);
           
-          fetch(endpoint, {
+          const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'User-Agent': 'RealMultipleDataTester/1.0'
             },
             body: JSON.stringify(whatsappData),
-          })
-          .then(response => {
-            console.log('[WHATSAPP] 📨 Respuesta recibida - Status:', response.status);
-            console.log('[WHATSAPP] 📨 Respuesta recibida - OK:', response.ok);
-            
-            return response.json().catch(() => null); // En caso de que no sea JSON válido
-          })
-          .then(data => {
-            if (data) {
-              console.log('[WHATSAPP] 📋 Datos de respuesta:', data);
-              
-              if (data.success) {
-                console.log('[WHATSAPP] ✅ ÉXITO - Mensaje enviado correctamente');
-                console.log('[WHATSAPP] 📱 Message ID:', data.data?.message_id || 'No disponible');
-                console.log('[WHATSAPP] 👤 Empleado:', data.data?.employee_name || 'No disponible');
-                console.log('[WHATSAPP] 📸 Tiene foto:', data.data?.has_photo || false);
-              } else {
-                console.warn('[WHATSAPP] ⚠️  API devolvió success: false');
-                console.warn('[WHATSAPP] ⚠️  Error:', data.message || 'Sin mensaje de error');
-              }
-            } else {
-              console.warn('[WHATSAPP] ⚠️  Respuesta vacía o no es JSON válido');
-            }
-          })
-          .catch(err => {
-            console.error('[WHATSAPP] ❌ Error enviando notificación:', err);
-            console.error('[WHATSAPP] ❌ Error details:', {
-              name: err.name,
-              message: err.message,
-              stack: err.stack
-            });
           });
           
+          console.log('[WHATSAPP] 📨 Respuesta recibida - Status:', response.status);
+          console.log('[WHATSAPP] 📨 Respuesta recibida - OK:', response.ok);
+          
+          const data = await response.json();
+          console.log('[WHATSAPP] 📋 Datos de respuesta:', data);
+          
+          if (data.success) {
+            console.log('[WHATSAPP] ✅ ÉXITO - Mensaje enviado correctamente');
+            console.log('[WHATSAPP] 📱 Message ID:', data.data?.message_id || 'No disponible');
+            console.log('[WHATSAPP] 👤 Empleado:', data.data?.employee_name || 'No disponible');
+            console.log('[WHATSAPP] 📸 Tiene foto:', data.data?.has_photo || false);
+            console.log('[WHATSAPP] 📞 Número:', usuarioCompleto.numero);
+          } else {
+            console.warn('[WHATSAPP] ⚠️  API devolvió success: false');
+            console.warn('[WHATSAPP] ⚠️  Error:', data.message || 'Sin mensaje de error');
+          }
+          
         } catch (error) {
-          console.log('[WHATSAPP] Error preparando datos:', error);
+          console.error('[WHATSAPP] ❌ Error enviando notificación:', error);
+          console.error('[WHATSAPP] ❌ Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          });
         }
       })();
       

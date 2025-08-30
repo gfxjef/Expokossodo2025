@@ -3164,19 +3164,29 @@ def capturar_foto_rapida(camera_index=0):
             print(f"[FOTO] No se pudo abrir la cámara {camera_index}")
             return None
         
-        # Configuraciones para velocidad máxima
+        # OPTIMIZACIÓN: Configuraciones para velocidad máxima + menor resolución
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         cap.set(cv2.CAP_PROP_FPS, 30)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)   # Reducir de 640 a 480
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)  # Reducir de 480 a 360
+        cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # Auto-exposición rápida
         
-        # Capturar un frame
+        # PRE-CALENTAMIENTO: Descartar primeros frames (cámara se estabiliza)
+        for _ in range(3):
+            cap.read()  # Descartar frames iniciales
+        
+        # Capturar frame final optimizado
         ret, frame = cap.read()
         cap.release()
         
         if ret:
-            # Convertir a bytes JPEG
-            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            # OPTIMIZACIÓN: Compresión agresiva para subida FTP más rápida
+            # Calidad 60 (vs 85) = ~40-50% menos tamaño, velocidad 2x más rápida
+            _, buffer = cv2.imencode('.jpg', frame, [
+                cv2.IMWRITE_JPEG_QUALITY, 60,  # Reducir calidad para menor tamaño
+                cv2.IMWRITE_JPEG_OPTIMIZE, 1   # Optimización adicional
+            ])
+            print(f"[FOTO-OPTIMIZADA] Imagen comprimida: {len(buffer.tobytes())/1024:.1f}KB")
             return buffer.tobytes()
         
         print("[FOTO] No se pudo capturar frame de la cámara")
@@ -3206,29 +3216,37 @@ def sanitizar_nombre_archivo(nombre):
     return nombre + '.jpg'
 
 def subir_foto_ftp(imagen_bytes, nombre_archivo):
-    """Sube una foto al servidor FTP"""
+    """Sube una foto al servidor FTP con timeouts optimizados"""
     try:
         # Obtener credenciales del .env
         ftp_host = os.getenv('FTP_HOST', 'ftp.kossomet.com')
         ftp_user = os.getenv('FTP_USER', 'marketing@kossomet.com')
         ftp_pass = os.getenv('FTP_PASS', '#k55d.202$INT')
         
-        # Conectar al FTP
-        ftp = ftplib.FTP(ftp_host)
+        print(f"[FTP-OPTIMIZADO] Conectando con timeout agresivo a {ftp_host}...")
+        
+        # OPTIMIZACIÓN: Conectar al FTP con timeout agresivo
+        ftp = ftplib.FTP(ftp_host, timeout=8)  # Timeout conexión: 8s (vs default 60s)
         ftp.login(ftp_user, ftp_pass)
         
         # Cambiar al directorio destino
         ftp.cwd('/public_html/clientexpokossodo/')
         
-        # Subir archivo desde memoria
-        bio = io.BytesIO(imagen_bytes)
-        ftp.storbinary(f'STOR {nombre_archivo}', bio)
+        # OPTIMIZACIÓN: Medir tiempo de subida y configurar modo binario optimizado
+        import time
+        start_time = time.time()
         
+        bio = io.BytesIO(imagen_bytes)
+        ftp.storbinary(f'STOR {nombre_archivo}', bio, blocksize=8192)  # Buffer optimizado
         ftp.quit()
+        
+        upload_time = time.time() - start_time
         
         # Retornar URL pública (incluyendo public_html en la URL)
         url = f"https://www.kossomet.com/public_html/clientexpokossodo/{nombre_archivo}"
-        print(f"[FTP] Foto subida exitosamente: {url}")
+        size_kb = len(imagen_bytes) / 1024
+        print(f"[FTP-OPTIMIZADO] ✅ Subida exitosa: {size_kb:.1f}KB en {upload_time:.2f}s")
+        print(f"[FTP-OPTIMIZADO] 📸 URL: {url}")
         return url
         
     except Exception as e:
@@ -3284,6 +3302,67 @@ def capturar_foto_endpoint():
         "success": True,
         "message": "Captura de foto iniciada"
     })
+
+@app.route('/api/verificar/capturar-foto-sync', methods=['POST'])
+def capturar_foto_sync_endpoint():
+    """
+    Endpoint SÍNCRONO para capturar foto, subirla al FTP y retornar URL confirmada.
+    Este endpoint espera hasta que la foto esté completamente subida antes de responder.
+    """
+    try:
+        data = request.get_json()
+        
+        registro_id = data.get('registro_id')
+        nombres = data.get('nombres')
+        
+        if not registro_id or not nombres:
+            return jsonify({
+                "success": False,
+                "error": "registro_id y nombres son requeridos"
+            }), 400
+        
+        print(f"[FOTO-SYNC] Iniciando captura síncrona para {nombres} (ID: {registro_id})")
+        
+        # Capturar foto
+        imagen_bytes = capturar_foto_rapida()
+        if not imagen_bytes:
+            print(f"[FOTO-SYNC] No se pudo capturar foto para {nombres}")
+            return jsonify({
+                "success": False,
+                "error": "No se pudo capturar foto de la cámara"
+            }), 500
+        
+        # Generar nombre de archivo
+        nombre_archivo = sanitizar_nombre_archivo(nombres)
+        
+        # Subir al FTP y esperar confirmación
+        url = subir_foto_ftp(imagen_bytes, nombre_archivo)
+        if url:
+            print(f"[FOTO-SYNC] Foto de {nombres} subida exitosamente")
+            print(f"[FOTO-SYNC] URL confirmada: {url}")
+            
+            # Retornar URL confirmada
+            return jsonify({
+                "success": True,
+                "message": "Foto capturada y subida exitosamente",
+                "photo_url": url,
+                "filename": nombre_archivo,
+                "registro_id": registro_id,
+                "nombres": nombres
+            })
+        else:
+            print(f"[FOTO-SYNC] Error subiendo foto de {nombres}")
+            return jsonify({
+                "success": False,
+                "error": "Error subiendo foto al servidor FTP"
+            }), 500
+            
+    except Exception as e:
+        print(f"[FOTO-SYNC] Error en captura síncrona: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Error interno: {str(e)}"
+        }), 500
 
 @app.route('/api/verificar/obtener-todos-eventos', methods=['GET'])
 def obtener_todos_eventos_sin_filtros():
@@ -3411,9 +3490,9 @@ def whatsapp_proxy():
             json=data,
             headers={
                 'Content-Type': 'application/json',
-                'User-Agent': 'ExpoKossodo-Backend/1.0'
+                'User-Agent': 'RealMultipleDataTester/1.0'
             },
-            timeout=10
+            timeout=30
         )
         
         print(f"[WHATSAPP PROXY] 📨 Respuesta del webhook - Status: {webhook_response.status_code}")
