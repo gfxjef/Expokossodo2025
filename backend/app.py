@@ -20,6 +20,8 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from openai import OpenAI
 import threading
+import cv2
+import ftplib
 import logging
 import sys
 import requests
@@ -3138,6 +3140,329 @@ def confirmar_asistencia_general():
     finally:
         cursor.close()
         connection.close()
+
+# ===== FUNCIONES DE CAPTURA DE FOTO Y FTP =====
+
+def capturar_foto_rapida(camera_index=0):
+    """Captura una foto rápidamente de la cámara y retorna los bytes de la imagen"""
+    try:
+        cap = cv2.VideoCapture(camera_index)
+        
+        if not cap.isOpened():
+            print(f"[FOTO] No se pudo abrir la cámara {camera_index}")
+            return None
+        
+        # Configuraciones para velocidad máxima
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        cap.set(cv2.CAP_PROP_FPS, 30)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        
+        # Capturar un frame
+        ret, frame = cap.read()
+        cap.release()
+        
+        if ret:
+            # Convertir a bytes JPEG
+            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            return buffer.tobytes()
+        
+        print("[FOTO] No se pudo capturar frame de la cámara")
+        return None
+        
+    except Exception as e:
+        print(f"[FOTO] Error capturando foto: {str(e)}")
+        return None
+
+def sanitizar_nombre_archivo(nombre):
+    """Convierte el nombre a un formato válido para archivo"""
+    # Eliminar caracteres especiales y acentos
+    nombre = re.sub(r'[àáäâ]', 'a', nombre.lower())
+    nombre = re.sub(r'[èéëê]', 'e', nombre)
+    nombre = re.sub(r'[ìíïî]', 'i', nombre)
+    nombre = re.sub(r'[òóöô]', 'o', nombre)
+    nombre = re.sub(r'[ùúüû]', 'u', nombre)
+    nombre = re.sub(r'[ñ]', 'n', nombre)
+    
+    # Reemplazar espacios por underscore y eliminar caracteres no alfanuméricos
+    nombre = re.sub(r'[^a-z0-9\s]', '', nombre)
+    nombre = nombre.replace(' ', '_')
+    
+    # Capitalizar primera letra de cada palabra
+    nombre = '_'.join(word.capitalize() for word in nombre.split('_'))
+    
+    return nombre + '.jpg'
+
+def subir_foto_ftp(imagen_bytes, nombre_archivo):
+    """Sube una foto al servidor FTP"""
+    try:
+        # Obtener credenciales del .env
+        ftp_host = os.getenv('FTP_HOST', 'ftp.kossomet.com')
+        ftp_user = os.getenv('FTP_USER', 'marketing@kossomet.com')
+        ftp_pass = os.getenv('FTP_PASS', '#k55d.202$INT')
+        
+        # Conectar al FTP
+        ftp = ftplib.FTP(ftp_host)
+        ftp.login(ftp_user, ftp_pass)
+        
+        # Cambiar al directorio destino
+        ftp.cwd('/public_html/clientexpokossodo/')
+        
+        # Subir archivo desde memoria
+        bio = io.BytesIO(imagen_bytes)
+        ftp.storbinary(f'STOR {nombre_archivo}', bio)
+        
+        ftp.quit()
+        
+        # Retornar URL pública (incluyendo public_html en la URL)
+        url = f"https://www.kossomet.com/public_html/clientexpokossodo/{nombre_archivo}"
+        print(f"[FTP] Foto subida exitosamente: {url}")
+        return url
+        
+    except Exception as e:
+        print(f"[FTP] Error subiendo foto: {str(e)}")
+        return None
+
+def capturar_y_subir_foto_async(registro_id, nombres):
+    """Función asíncrona para capturar y subir foto en background"""
+    try:
+        print(f"[FOTO] Iniciando captura para {nombres} (ID: {registro_id})")
+        
+        # Capturar foto
+        imagen_bytes = capturar_foto_rapida()
+        if not imagen_bytes:
+            print(f"[FOTO] No se pudo capturar foto para {nombres}")
+            return
+        
+        # Generar nombre de archivo
+        nombre_archivo = sanitizar_nombre_archivo(nombres)
+        
+        # Subir al FTP
+        url = subir_foto_ftp(imagen_bytes, nombre_archivo)
+        if url:
+            print(f"[FOTO] Foto de {nombres} subida exitosamente")
+            print(f"[FOTO] URL: {url}")
+        else:
+            print(f"[FOTO] Error subiendo foto de {nombres}")
+            
+    except Exception as e:
+        print(f"[FOTO] Error en proceso de captura: {str(e)}")
+
+@app.route('/api/verificar/capturar-foto', methods=['POST'])
+def capturar_foto_endpoint():
+    """Endpoint para capturar foto y subirla al FTP"""
+    data = request.get_json()
+    
+    registro_id = data.get('registro_id')
+    nombres = data.get('nombres')
+    
+    if not registro_id or not nombres:
+        return jsonify({"error": "registro_id y nombres son requeridos"}), 400
+    
+    # Ejecutar en background para no bloquear
+    thread = threading.Thread(
+        target=capturar_y_subir_foto_async,
+        args=(registro_id, nombres)
+    )
+    thread.daemon = True
+    thread.start()
+    
+    # Retornar inmediatamente
+    return jsonify({
+        "success": True,
+        "message": "Captura de foto iniciada"
+    })
+
+@app.route('/api/verificar/obtener-todos-eventos', methods=['GET'])
+def obtener_todos_eventos_sin_filtros():
+    """Obtener TODOS los eventos sin filtros para cache del frontend de verificación"""
+    connection = None
+    cursor = None
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "Error de conexión a la base de datos"}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # Consulta SIN filtros - obtener TODOS los eventos
+        cursor.execute("""
+            SELECT 
+                e.id, e.titulo_charla, e.expositor, e.sala, e.hora, e.fecha,
+                e.disponible, e.pais, e.descripcion, e.imagen_url, e.post,
+                e.slots_disponibles, e.slots_ocupados
+            FROM expokossodo_eventos e
+            ORDER BY e.id
+        """)
+        eventos = cursor.fetchall()
+        
+        print(f"[CACHE EVENTOS] Devolviendo {len(eventos)} eventos SIN FILTROS")
+        
+        # Convertir fechas para JSON
+        for evento in eventos:
+            if evento.get('fecha'):
+                evento['fecha'] = evento['fecha'].isoformat() if evento['fecha'] else None
+        
+        return jsonify({
+            "success": True,
+            "eventos": eventos,
+            "total": len(eventos)
+        })
+        
+    except Exception as e:
+        print(f"[ERROR] obtener-todos-eventos: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+@app.route('/api/verificar/test-whatsapp', methods=['POST'])
+def test_whatsapp_webhook():
+    """Endpoint de prueba para verificar los datos que se envían al webhook de WhatsApp"""
+    try:
+        data = request.get_json()
+        
+        print("\n" + "="*60)
+        print("[WHATSAPP TEST] 📨 DATOS RECIBIDOS PARA WEBHOOK:")
+        print("="*60)
+        print(f"[WHATSAPP TEST] 👤 Nombre: {data.get('nombre', 'NO DISPONIBLE')}")
+        print(f"[WHATSAPP TEST] 🏢 Empresa: {data.get('empresa', 'NO DISPONIBLE')}")
+        print(f"[WHATSAPP TEST] 💼 Cargo: {data.get('cargo', 'NO DISPONIBLE')}")
+        print(f"[WHATSAPP TEST] 🕐 Fecha/Hora: {data.get('fecha_hora', 'NO DISPONIBLE')}")
+        print(f"[WHATSAPP TEST] 📸 Photo URL: {data.get('photo', 'NO DISPONIBLE')}")
+        print("="*60)
+        
+        # Verificar que todos los campos requeridos estén presentes
+        required_fields = ['nombre', 'empresa', 'cargo', 'fecha_hora']
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        
+        if missing_fields:
+            print(f"[WHATSAPP TEST] ⚠️  CAMPOS FALTANTES: {missing_fields}")
+            return jsonify({
+                "success": False,
+                "error": f"Campos requeridos faltantes: {missing_fields}",
+                "received_data": data
+            }), 400
+        
+        # Simular respuesta exitosa como el webhook real
+        response_data = {
+            "success": True,
+            "message": "Datos válidos para WhatsApp webhook",
+            "data": {
+                "employee_name": data['nombre'],
+                "company": data['empresa'],
+                "cargo": data['cargo'],
+                "timestamp": data['fecha_hora'],
+                "has_photo": bool(data.get('photo')),
+                "photo_url": data.get('photo'),
+                "test_mode": True
+            }
+        }
+        
+        print(f"[WHATSAPP TEST] ✅ RESPUESTA SIMULADA: {response_data}")
+        print("="*60 + "\n")
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"[WHATSAPP TEST] ❌ ERROR: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route('/api/verificar/whatsapp-proxy', methods=['POST'])
+def whatsapp_proxy():
+    """Proxy para evitar problemas de CORS con el webhook de WhatsApp"""
+    try:
+        data = request.get_json()
+        
+        print("\n" + "="*60)
+        print("[WHATSAPP PROXY] 📤 REENVIANDO DATOS AL WEBHOOK:")
+        print("="*60)
+        print(f"[WHATSAPP PROXY] 👤 Nombre: {data.get('nombre', 'NO DISPONIBLE')}")
+        print(f"[WHATSAPP PROXY] 🏢 Empresa: {data.get('empresa', 'NO DISPONIBLE')}")
+        print(f"[WHATSAPP PROXY] 💼 Cargo: {data.get('cargo', 'NO DISPONIBLE')}")
+        print(f"[WHATSAPP PROXY] 🕐 Fecha/Hora: {data.get('fecha_hora', 'NO DISPONIBLE')}")
+        print(f"[WHATSAPP PROXY] 📸 Photo URL: {data.get('photo', 'NO DISPONIBLE')}")
+        print("="*60)
+        
+        # Reenviar al webhook de WhatsApp
+        webhook_url = "https://expokossodowhatsappvisita-production.up.railway.app/attendance-webhook"
+        
+        print(f"[WHATSAPP PROXY] 🚀 Enviando a: {webhook_url}")
+        
+        webhook_response = requests.post(
+            webhook_url,
+            json=data,
+            headers={
+                'Content-Type': 'application/json',
+                'User-Agent': 'ExpoKossodo-Backend/1.0'
+            },
+            timeout=10
+        )
+        
+        print(f"[WHATSAPP PROXY] 📨 Respuesta del webhook - Status: {webhook_response.status_code}")
+        
+        if webhook_response.status_code == 200:
+            try:
+                webhook_data = webhook_response.json()
+                print(f"[WHATSAPP PROXY] ✅ Respuesta del webhook: {webhook_data}")
+                
+                # Verificar si WhatsApp envió el mensaje correctamente
+                if webhook_data.get('success'):
+                    message_id = webhook_data.get('data', {}).get('message_id', 'NO DISPONIBLE')
+                    print(f"[WHATSAPP PROXY] 📱 MESSAGE ID: {message_id}")
+                    print("[WHATSAPP PROXY] ✅ MENSAJE DE WHATSAPP ENVIADO EXITOSAMENTE")
+                else:
+                    print(f"[WHATSAPP PROXY] ⚠️  WEBHOOK DEVOLVIÓ SUCCESS=FALSE: {webhook_data}")
+                
+                print("="*60 + "\n")
+                return jsonify(webhook_data)
+                
+            except Exception as json_error:
+                print(f"[WHATSAPP PROXY] ⚠️  Respuesta no es JSON válido: {webhook_response.text}")
+                print("="*60 + "\n")
+                return jsonify({
+                    "success": False,
+                    "error": "Respuesta del webhook no es JSON válido",
+                    "raw_response": webhook_response.text
+                }), 500
+        else:
+            print(f"[WHATSAPP PROXY] ❌ Error HTTP: {webhook_response.status_code}")
+            print(f"[WHATSAPP PROXY] ❌ Respuesta: {webhook_response.text}")
+            print("="*60 + "\n")
+            return jsonify({
+                "success": False,
+                "error": f"Webhook devolvió status {webhook_response.status_code}",
+                "response": webhook_response.text
+            }), webhook_response.status_code
+            
+    except requests.exceptions.Timeout:
+        print("[WHATSAPP PROXY] ⏰ TIMEOUT - El webhook tardó más de 10 segundos")
+        print("="*60 + "\n")
+        return jsonify({
+            "success": False,
+            "error": "Timeout al conectar con el webhook de WhatsApp"
+        }), 504
+        
+    except requests.exceptions.ConnectionError:
+        print("[WHATSAPP PROXY] 🚫 ERROR DE CONEXIÓN - No se pudo conectar al webhook")
+        print("="*60 + "\n")
+        return jsonify({
+            "success": False,
+            "error": "No se pudo conectar con el webhook de WhatsApp"
+        }), 503
+        
+    except Exception as e:
+        print(f"[WHATSAPP PROXY] ❌ ERROR INESPERADO: {str(e)}")
+        print("="*60 + "\n")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 # ===== ENDPOINTS DE VERIFICACIÓN POR SALA =====
 

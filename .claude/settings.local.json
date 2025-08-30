@@ -31,7 +31,20 @@
       "Bash(taskkill:*)",
       "Bash(venvScriptspip.exe install pywin32)",
       "Read(/C:\\Users\\USER\\Desktop/**)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Read(/C:\\Users\\USER\\Pictures\\Screenshots/**)",
+      "Read(/C:\\Users\\USER\\Pictures\\Screenshots/**)",
+      "WebSearch",
+      "Bash(git log:*)",
+      "Bash(venvScriptspip.exe install opencv-python)",
+      "Bash(venvScripts:*)",
+      "Bash(.venvScriptspython.exe -m pip install opencv-python)",
+      "Bash(powershell:*)",
+      "Read(C:\\Users\\USER\\Pictures\\Screenshots/**)",
+      "Read(C:\\Users\\USER\\Pictures\\Screenshots/**)",
+      "Read(C:\\Users\\USER\\Pictures\\Screenshots/**)",
+      "Read(c:\\Users\\USER\\Desktop\\python projects\\Whatsapp_expokssd\\attendance_notifier\\tests/**)",
+      "Read(c:\\Users\\USER\\Desktop\\python projects\\Whatsapp_expokssd\\attendance_notifier\\tests/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

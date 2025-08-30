@@ -29,7 +29,8 @@ import {
   ToggleRight,
   Scan,
   Plus,
-  Loader2
+  Loader2,
+  Search
 } from 'lucide-react';
 
 const VerificarPrueba = () => {
@@ -38,6 +39,10 @@ const VerificarPrueba = () => {
   const [registrosCache, setRegistrosCache] = useState([]);
   const [cacheLoading, setCacheLoading] = useState(true);
   const [lastCacheUpdate, setLastCacheUpdate] = useState(null);
+  
+  // Cache de eventos para filtrado local ultrarrápido
+  const [eventosCache, setEventosCache] = useState(new Map());
+  const [eventosCacheLoading, setEventosCacheLoading] = useState(true);
   
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -71,9 +76,6 @@ const VerificarPrueba = () => {
   // Ref para auto-focus del primer campo del modal
   const firstModalInputRef = useRef(null);
   
-  // Estados para carga de eventos bajo demanda
-  const [eventosLoading, setEventosLoading] = useState(false);
-  
   // Estados para impresión térmica
   const [thermalStatus, setThermalStatus] = useState('idle'); // 'idle', 'printing', 'success', 'error'
   const [thermalError, setThermalError] = useState(null);
@@ -92,10 +94,16 @@ const VerificarPrueba = () => {
   });
   const [registroErrors, setRegistroErrors] = useState({});
 
+  // Estados para búsqueda de usuarios
+  const [showBuscarModal, setShowBuscarModal] = useState(false);
+  const [buscarQuery, setBuscarQuery] = useState('');
+
   // Cargar configuración inicial al montar el componente
   useEffect(() => {
     // Cargar cache de registros SOLO UNA VEZ
     cargarCacheRegistros();
+    // Cargar cache de eventos SOLO UNA VEZ (al recargar página)
+    cargarCacheEventos();
     // Verificar estado de impresora térmica SOLO UNA VEZ
     verificarEstadoImpresora();
     
@@ -154,8 +162,8 @@ const VerificarPrueba = () => {
 
   // Effect para mantener focus en el input cuando está en modo lector físico
   useEffect(() => {
-    // Solo mantener focus si está en modo físico Y el modal de registro NO está abierto
-    if (scannerMode === 'physical' && !showRegistroModal) {
+    // Solo mantener focus si está en modo físico Y NINGÚN modal está abierto
+    if (scannerMode === 'physical' && !showRegistroModal && !showBuscarModal) {
       const handleFocus = () => {
         if (physicalScannerInputRef.current && document.activeElement !== physicalScannerInputRef.current) {
           physicalScannerInputRef.current.focus();
@@ -176,7 +184,7 @@ const VerificarPrueba = () => {
         document.removeEventListener('click', handleFocus);
       };
     }
-  }, [scannerMode, userData, showRegistroModal]); // Agregar showRegistroModal como dependencia
+  }, [scannerMode, userData, showRegistroModal, showBuscarModal]); // Agregar ambos modales como dependencia
 
   // Effect para hacer focus al primer campo del modal cuando se abre
   useEffect(() => {
@@ -188,19 +196,23 @@ const VerificarPrueba = () => {
     }
   }, [showRegistroModal]);
 
-  // Effect para manejar tecla Escape en el modal
+  // Effect para manejar tecla Escape en los modales
   useEffect(() => {
     const handleEscape = (event) => {
-      if (event.key === 'Escape' && showRegistroModal) {
-        handleCloseRegistroModal();
+      if (event.key === 'Escape') {
+        if (showRegistroModal) {
+          handleCloseRegistroModal();
+        } else if (showBuscarModal) {
+          handleCloseBuscarModal();
+        }
       }
     };
 
-    if (showRegistroModal) {
+    if (showRegistroModal || showBuscarModal) {
       document.addEventListener('keydown', handleEscape);
       return () => document.removeEventListener('keydown', handleEscape);
     }
-  }, [showRegistroModal]);
+  }, [showRegistroModal, showBuscarModal]);
 
   // Función para normalizar el código QR del lector físico
   const normalizeQRCode = (code) => {
@@ -321,6 +333,65 @@ const VerificarPrueba = () => {
       setCacheLoading(false);
     }
   };
+
+  // Función para cargar cache de eventos (llamada al recargar página)
+  const cargarCacheEventos = async () => {
+    setEventosCacheLoading(true);
+    try {
+      // 🔧 SOLUCIÓN: Usar endpoint sin filtros para obtener TODOS los eventos
+      console.log('[EVENTOS CACHE] Iniciando carga desde endpoint SIN FILTROS...');
+      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/obtener-todos-eventos`);
+      const data = await response.json();
+      
+      console.log('[EVENTOS CACHE] Respuesta recibida:', {
+        status: response.status,
+        ok: response.ok,
+        success: !!data.success,
+        totalEventos: data.total || 0,
+        hasEventos: !!data.eventos && Array.isArray(data.eventos),
+        dataKeys: Object.keys(data)
+      });
+      
+      if (response.ok && data.success && data.eventos) {
+        // 🔧 NUEVA ESTRUCTURA: Lista plana de eventos
+        const cache = new Map();
+        
+        data.eventos.forEach(evento => {
+          cache.set(evento.id, {
+            ...evento,
+            estado_sala: 'pendiente' // Estado por defecto
+          });
+        });
+        
+        setEventosCache(cache);
+        console.log(`[EVENTOS CACHE] ${cache.size} eventos cargados en cache`);
+        console.log('[EVENTOS CACHE] Eventos disponibles (IDs):', Array.from(cache.keys()).slice(0, 15));
+        console.log('[EVENTOS CACHE] Muestra de eventos:', Array.from(cache.entries()).slice(0, 3).map(([id, evento]) => ({
+          id: id,
+          titulo: evento.titulo_charla,
+          sala: evento.sala
+        })));
+        
+        // 🔍 DIAGNÓSTICO CRÍTICO: Verificar si los IDs buscados existen
+        const idsBuscados = [32, 33, 4, 8, 43, 12, 16, 48, 52, 53, 23, 26];
+        const coincidencias = idsBuscados.map(id => ({
+          id: id,
+          existe: cache.has(id),
+          titulo: cache.get(id)?.titulo_charla || 'NO EXISTE'
+        }));
+        console.log('[EVENTOS CACHE] ⚠️  VERIFICACIÓN DE IDs PROBLEMÁTICOS:', coincidencias);
+        
+        // Mostrar TODOS los IDs disponibles en el cache
+        console.log('[EVENTOS CACHE] 📋 TODOS LOS IDs EN CACHE:', Array.from(cache.keys()).sort((a, b) => a - b));
+      } else {
+        console.error('Error cargando cache de eventos:', data.error);
+      }
+    } catch (error) {
+      console.error('Error cargando cache de eventos:', error);
+    } finally {
+      setEventosCacheLoading(false);
+    }
+  };
   
   // Función para buscar en cache primero
   const buscarEnCache = (qrCode) => {
@@ -357,6 +428,52 @@ const VerificarPrueba = () => {
       console.log('[CACHE HIT] Usuario encontrado en cache:', registro.nombres);
       console.log('[CACHE HIT] Datos completos:', registro);
       
+      // 🚀 FILTRADO LOCAL ULTRARRÁPIDO DE EVENTOS
+      let eventosUsuario = [];
+      try {
+        const eventosSeleccionados = JSON.parse(registro.eventos_seleccionados || '[]');
+        console.log('[EVENTOS] IDs seleccionados:', eventosSeleccionados);
+        
+        // 🔍 DIAGNÓSTICO: Verificar estado del cache de eventos
+        console.log('[EVENTOS DEBUG] Cache size:', eventosCache.size);
+        console.log('[EVENTOS DEBUG] Cache keys (primeros 10):', Array.from(eventosCache.keys()).slice(0, 10));
+        console.log('[EVENTOS DEBUG] IDs buscados:', eventosSeleccionados);
+        
+        // Verificar cuáles IDs existen en el cache
+        const existenEnCache = eventosSeleccionados.map(id => ({
+          id: id,
+          existe: eventosCache.has(id),
+          evento: eventosCache.get(id)?.titulo_charla || 'NO ENCONTRADO'
+        }));
+        console.log('[EVENTOS DEBUG] Verificación por ID:', existenEnCache);
+        
+        // Filtrar eventos localmente usando el cache (O(1) por evento)
+        eventosUsuario = eventosSeleccionados
+          .map(id => {
+            const evento = eventosCache.get(id);
+            if (!evento) {
+              console.warn(`[EVENTOS] Evento ID ${id} no encontrado en cache`);
+            }
+            return evento;
+          })
+          .filter(evento => evento !== undefined)
+          .map(evento => ({
+            evento_id: evento.id,
+            titulo_charla: evento.titulo_charla,
+            sala: evento.sala,
+            hora: evento.hora,
+            fecha: evento.fecha,
+            expositor: evento.expositor,
+            pais: evento.pais,
+            estado_sala: 'pendiente' // Se actualizará si hay asistencias confirmadas
+          }));
+        
+        console.log(`[EVENTOS] ${eventosUsuario.length} eventos filtrados localmente`);
+      } catch (error) {
+        console.error('[EVENTOS] Error filtrando eventos:', error);
+        eventosUsuario = [];
+      }
+      
       // Mapear correctamente los campos del cache
       return {
         usuario: {
@@ -371,9 +488,9 @@ const VerificarPrueba = () => {
           estado_asistencia: registro.estado_asistencia || 'pendiente',
           fecha_registro: registro.fecha_registro,
           fecha_asistencia_general: registro.fecha_asistencia_general,
-          total_eventos: registro.total_eventos || 0 // Número de eventos desde el cache
+          total_eventos: eventosUsuario.length // Conteo real de eventos filtrados
         },
-        eventos: registro.eventos || [],
+        eventos: eventosUsuario, // ✅ Eventos filtrados localmente
         qr_validado: true
       };
     }
@@ -422,15 +539,15 @@ const VerificarPrueba = () => {
     const cachedData = buscarEnCache(qrCode);
     
     if (cachedData) {
-      // ✅ MOSTRAR DATOS INMEDIATAMENTE DESDE EL CACHE
+      // ✅ MOSTRAR DATOS INMEDIATAMENTE DESDE EL CACHE (CON EVENTOS YA FILTRADOS)
       setCurrentQR(qrCode);
       
       const newUserData = {
         ...cachedData,
-        qr_original: qrCode,
-        eventos: [] // Vacío inicialmente, se cargarán después
+        qr_original: qrCode
+        // Los eventos ya están filtrados en cachedData.eventos ✅
       };
-      setUserData(newUserData); // ✅ MOSTRAR INMEDIATAMENTE
+      setUserData(newUserData); // ✅ MOSTRAR INMEDIATAMENTE CON EVENTOS
       
       // Inicializar datos para edición inmediatamente
       if (cachedData.usuario) {
@@ -449,53 +566,12 @@ const VerificarPrueba = () => {
         setLastScannedQR(null);
         processingRef.current = false;
         setScannerLoading(false);
-      }, 500); // Mucho más rápido
+      }, 300); // Aún más rápido porque no hay carga adicional
       
-      // 🔄 CARGAR EVENTOS EN SEGUNDO PLANO (NO BLOQUEA LA UI)
-      console.log('[CACHE] Mostrando datos inmediatamente, cargando eventos en segundo plano...');
-      cargarEventosUsuario(cachedData.usuario.id).then(eventos => {
-        if (eventos) {
-          console.log('[CACHE] Eventos cargados, actualizando UI...');
-          // Solo actualizar si todavía estamos mostrando este usuario
-          setUserData(prevData => {
-            if (prevData && prevData.usuario.id === cachedData.usuario.id) {
-              return {
-                ...prevData,
-                eventos: eventos
-              };
-            }
-            return prevData;
-          });
-        }
-      }).catch(error => {
-        console.error('[CACHE] Error cargando eventos:', error);
-      });
+      console.log('[CACHE] ⚡ Datos y eventos mostrados instantáneamente desde cache local');
     } else {
       // No está en cache, hacer consulta al servidor
       await verificarUsuarioConQR(qrCode);
-    }
-  };
-
-  // Función para cargar eventos de un usuario específico bajo demanda
-  const cargarEventosUsuario = async (usuarioId) => {
-    if (eventosLoading) return null;
-    
-    setEventosLoading(true);
-    try {
-      const response = await fetch(`${API_CONFIG.getApiUrl()}/verificar/obtener-eventos-usuario/${usuarioId}`);
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        return data.eventos;
-      } else {
-        console.error('Error cargando eventos:', data.error);
-        return [];
-      }
-    } catch (error) {
-      console.error('Error cargando eventos:', error);
-      return [];
-    } finally {
-      setEventosLoading(false);
     }
   };
 
@@ -539,10 +615,29 @@ const VerificarPrueba = () => {
           numero: data.usuario.numero
         });
 
-        // Cargar eventos bajo demanda si se necesitan para mostrar
-        if (data.usuario) {
-          const eventos = await cargarEventosUsuario(data.usuario.id);
-          newUserData.eventos = eventos;
+        // Los eventos se filtrarán localmente si están disponibles en el cache
+        if (data.usuario && data.usuario.eventos_seleccionados) {
+          try {
+            const eventosSeleccionados = JSON.parse(data.usuario.eventos_seleccionados || '[]');
+            const eventos = eventosSeleccionados
+              .map(id => eventosCache.get(id))
+              .filter(evento => evento !== undefined)
+              .map(evento => ({
+                evento_id: evento.id,
+                titulo_charla: evento.titulo_charla,
+                sala: evento.sala,
+                hora: evento.hora,
+                fecha: evento.fecha,
+                expositor: evento.expositor,
+                pais: evento.pais,
+                estado_sala: 'pendiente'
+              }));
+            newUserData.eventos = eventos;
+            console.log(`[SERVER + CACHE] ${eventos.length} eventos filtrados localmente`);
+          } catch (error) {
+            console.error('[SERVER] Error filtrando eventos:', error);
+            newUserData.eventos = [];
+          }
         }
       }
 
@@ -609,6 +704,114 @@ const VerificarPrueba = () => {
           // No interrumpir el flujo principal si falla la impresión
         }
       }
+      
+      // Capturar foto silenciosamente y subirla al FTP (sin await, sin bloquear)
+      fetch(`${API_CONFIG.getApiUrl()}/verificar/capturar-foto`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          registro_id: userData.usuario.id,
+          nombres: userData.usuario.nombres
+        }),
+      }).catch(err => {
+        console.log('[FOTO] Error iniciando captura:', err);
+        // Ignorar errores silenciosamente, no afectar el flujo
+      });
+
+      // 📲 ENVIAR NOTIFICACIÓN WHATSAPP SILENCIOSAMENTE
+      (() => {
+        try {
+          // Generar timestamp en formato YYYY-MM-DD HH:MM:SS
+          const now = new Date();
+          const fecha_hora = now.toISOString().slice(0, 19).replace('T', ' ');
+          
+          // Generar URL de la foto (mismo formato que FTP)
+          const nombreArchivo = userData.usuario.nombres
+            .toLowerCase()
+            .replace(/[àáäâ]/g, 'a')
+            .replace(/[èéëê]/g, 'e') 
+            .replace(/[ìíïî]/g, 'i')
+            .replace(/[òóöô]/g, 'o')
+            .replace(/[ùúüû]/g, 'u')
+            .replace(/[ñ]/g, 'n')
+            .replace(/[^a-z0-9\s]/g, '')
+            .replace(/ /g, '_')
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join('_');
+          
+          const photoURL = `https://www.kossomet.com/public_html/clientexpokossodo/${nombreArchivo}.jpg`;
+          
+          const whatsappData = {
+            nombre: userData.usuario.nombres,
+            empresa: userData.usuario.empresa,
+            cargo: userData.usuario.cargo,
+            fecha_hora: fecha_hora,
+            photo: photoURL
+          };
+          
+          console.log('[WHATSAPP] 📤 Enviando notificación:', whatsappData);
+          
+          // 🧪 MODO DE PRUEBA: Alternar entre diferentes endpoints
+          const TESTING_MODE = 'proxy'; // Opciones: 'test', 'proxy', 'direct'
+          
+          let endpoint;
+          if (TESTING_MODE === 'test') {
+            endpoint = `${API_CONFIG.getApiUrl()}/verificar/test-whatsapp`; // Solo prueba local
+          } else if (TESTING_MODE === 'proxy') {
+            endpoint = `${API_CONFIG.getApiUrl()}/verificar/whatsapp-proxy`; // Proxy sin CORS
+          } else {
+            endpoint = 'https://expokossodowhatsappvisita-production.up.railway.app/attendance-webhook'; // Directo (CORS)
+          }
+            
+          console.log('[WHATSAPP] 🎯 Endpoint destino:', endpoint);
+          console.log('[WHATSAPP] 🧪 Modo:', TESTING_MODE);
+          
+          fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(whatsappData),
+          })
+          .then(response => {
+            console.log('[WHATSAPP] 📨 Respuesta recibida - Status:', response.status);
+            console.log('[WHATSAPP] 📨 Respuesta recibida - OK:', response.ok);
+            
+            return response.json().catch(() => null); // En caso de que no sea JSON válido
+          })
+          .then(data => {
+            if (data) {
+              console.log('[WHATSAPP] 📋 Datos de respuesta:', data);
+              
+              if (data.success) {
+                console.log('[WHATSAPP] ✅ ÉXITO - Mensaje enviado correctamente');
+                console.log('[WHATSAPP] 📱 Message ID:', data.data?.message_id || 'No disponible');
+                console.log('[WHATSAPP] 👤 Empleado:', data.data?.employee_name || 'No disponible');
+                console.log('[WHATSAPP] 📸 Tiene foto:', data.data?.has_photo || false);
+              } else {
+                console.warn('[WHATSAPP] ⚠️  API devolvió success: false');
+                console.warn('[WHATSAPP] ⚠️  Error:', data.message || 'Sin mensaje de error');
+              }
+            } else {
+              console.warn('[WHATSAPP] ⚠️  Respuesta vacía o no es JSON válido');
+            }
+          })
+          .catch(err => {
+            console.error('[WHATSAPP] ❌ Error enviando notificación:', err);
+            console.error('[WHATSAPP] ❌ Error details:', {
+              name: err.name,
+              message: err.message,
+              stack: err.stack
+            });
+          });
+          
+        } catch (error) {
+          console.log('[WHATSAPP] Error preparando datos:', error);
+        }
+      })();
       
       // Resetear el scanner para el siguiente escaneo
       setTimeout(() => {
@@ -826,6 +1029,47 @@ const VerificarPrueba = () => {
     }
   };
   
+  // Función para filtrar usuarios en el cache
+  const filtrarUsuarios = (query) => {
+    if (!query.trim()) return [];
+    
+    const queryLower = query.toLowerCase();
+    return registrosCache
+      .filter(registro => 
+        registro.nombres.toLowerCase().includes(queryLower) ||
+        registro.numero.toLowerCase().includes(queryLower) ||
+        registro.correo.toLowerCase().includes(queryLower)
+      )
+      .slice(0, 10); // Limitar a 10 resultados para performance
+  };
+
+  // Función para seleccionar usuario desde búsqueda
+  const seleccionarUsuario = (registro) => {
+    setShowBuscarModal(false);
+    setBuscarQuery('');
+    
+    // Usar el QR del usuario para activar el flujo normal
+    const qrCode = registro.qr_code || registro.qr_text;
+    if (qrCode) {
+      handleQRScan(qrCode);
+    }
+  };
+
+  // Función para cerrar modal de búsqueda
+  const handleCloseBuscarModal = () => {
+    setShowBuscarModal(false);
+    setBuscarQuery('');
+    
+    // Restaurar focus al lector físico si está en modo físico
+    if (scannerMode === 'physical') {
+      setTimeout(() => {
+        if (physicalScannerInputRef.current) {
+          physicalScannerInputRef.current.focus();
+        }
+      }, 100);
+    }
+  };
+
   // Función para crear registro rápido
   const handleRegistroRapido = async () => {
     // Validar todos los campos
@@ -1009,6 +1253,16 @@ const VerificarPrueba = () => {
                   </span>
                 )}
               </div>
+
+              {/* Botón de búsqueda de usuario */}
+              <button
+                onClick={() => setShowBuscarModal(true)}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                title="Buscar usuario registrado"
+              >
+                <Search size={24} />
+                <span className="hidden lg:inline font-medium">Buscar Usuario</span>
+              </button>
 
               {/* Botón de registro rápido */}
               <button
@@ -1300,32 +1554,15 @@ const VerificarPrueba = () => {
               >
                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
                   <Calendar className="mr-2" size={20} />
-                  Eventos Registrados ({userData.eventos?.length || 0}
-                  {userData.usuario?.total_eventos && userData.usuario.total_eventos > 0 && 
-                   (!userData.eventos || userData.eventos.length === 0) && 
-                   ` de ${userData.usuario.total_eventos}`})
-                  {eventosLoading && (
-                    <div className="ml-2 flex items-center">
-                      <RefreshCw size={16} className="text-blue-500 animate-spin mr-1" />
-                      <span className="text-sm text-blue-600">
-                        {userData.usuario?.total_eventos && userData.usuario.total_eventos > 0 
-                          ? `Cargando ${userData.usuario.total_eventos} eventos...` 
-                          : 'Cargando...'}
-                      </span>
-                    </div>
-                  )}
-                </h3>
-                
-                {eventosLoading && (!userData.eventos || userData.eventos.length === 0) ? (
-                  <div className="flex items-center justify-center py-8 text-gray-500">
-                    <RefreshCw size={24} className="animate-spin mr-3" />
-                    <span>
-                      {userData.usuario?.total_eventos && userData.usuario.total_eventos > 0 
-                        ? `Cargando ${userData.usuario.total_eventos} eventos registrados...` 
-                        : 'Cargando eventos del asistente...'}
+                  Eventos Registrados ({userData.eventos?.length || 0})
+                  <div className="ml-2 flex items-center">
+                    <span className="text-sm text-green-600 bg-green-50 px-2 py-1 rounded">
+                      ⚡ Carga instantánea
                     </span>
                   </div>
-                ) : userData.eventos && userData.eventos.length > 0 ? (
+                </h3>
+                
+                {userData.eventos && userData.eventos.length > 0 ? (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {userData.eventos.map((evento, index) => (
                       <motion.div 
@@ -1541,17 +1778,31 @@ const VerificarPrueba = () => {
                 transition={{ delay: 0.3 }}
                 className="text-center"
               >
-                <button
-                  onClick={cargarCacheRegistros}
-                  disabled={cacheLoading}
-                  className="text-xs bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white px-3 py-1 rounded-lg transition-colors"
-                >
-                  {cacheLoading ? (
-                    <>🔄 Actualizando...</>
-                  ) : (
-                    <>📊 Actualizar Cache ({registrosCache.length})</>
-                  )}
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={cargarCacheRegistros}
+                    disabled={cacheLoading}
+                    className="text-xs bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white px-3 py-1 rounded-lg transition-colors"
+                  >
+                    {cacheLoading ? (
+                      <>🔄 Actualizando...</>
+                    ) : (
+                      <>📊 Actualizar Registros ({registrosCache.length})</>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={cargarCacheEventos}
+                    disabled={eventosCacheLoading}
+                    className="text-xs bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white px-3 py-1 rounded-lg transition-colors"
+                  >
+                    {eventosCacheLoading ? (
+                      <>🔄 Cargando...</>
+                    ) : (
+                      <>⚡ Cache Eventos ({eventosCache.size})</>
+                    )}
+                  </button>
+                </div>
               </motion.div>
 
               {/* Panel de ayuda rápida */}
@@ -1810,6 +2061,130 @@ const VerificarPrueba = () => {
         )}
       </div>
       
+      {/* Modal de Búsqueda de Usuario */}
+      {showBuscarModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-hidden"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-800 flex items-center">
+                <Search className="mr-2" size={24} />
+                Buscar Usuario
+              </h3>
+              <button
+                onClick={handleCloseBuscarModal}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={24} className="text-gray-600" />
+              </button>
+            </div>
+            
+            {/* Barra de búsqueda */}
+            <div className="mb-4">
+              <input
+                type="text"
+                value={buscarQuery}
+                onChange={(e) => setBuscarQuery(e.target.value)}
+                className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                placeholder="Buscar por nombre, teléfono o correo..."
+                autoFocus
+              />
+              <p className="mt-2 text-sm text-gray-500">
+                Escribe para buscar entre {registrosCache.length} usuarios registrados
+              </p>
+            </div>
+            
+            {/* Resultados de búsqueda */}
+            <div className="max-h-96 overflow-y-auto">
+              {(() => {
+                const resultados = filtrarUsuarios(buscarQuery);
+                
+                if (!buscarQuery.trim()) {
+                  return (
+                    <div className="text-center py-8 text-gray-500">
+                      <Search size={48} className="mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg font-medium">Buscar Usuario</p>
+                      <p className="text-sm">Escribe nombre, teléfono o correo para comenzar</p>
+                    </div>
+                  );
+                }
+                
+                if (resultados.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-gray-500">
+                      <AlertCircle size={48} className="mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg font-medium">Sin resultados</p>
+                      <p className="text-sm">No se encontraron usuarios con "{buscarQuery}"</p>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600 mb-3">
+                      {resultados.length} resultado{resultados.length !== 1 ? 's' : ''} encontrado{resultados.length !== 1 ? 's' : ''}
+                    </p>
+                    {resultados.map((registro) => (
+                      <motion.div
+                        key={registro.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        whileHover={{ scale: 1.02 }}
+                        onClick={() => seleccionarUsuario(registro)}
+                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-blue-300 cursor-pointer transition-all bg-white"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <h4 className="text-lg font-semibold text-gray-800">
+                                {registro.nombres}
+                              </h4>
+                              {/* Badge de estado */}
+                              {(() => {
+                                const badge = getEstadoBadge(registro.asistencia_general_confirmada ? 'confirmada' : 'pendiente');
+                                const Icon = badge.icon;
+                                return (
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center ${badge.bg} ${badge.text}`}>
+                                    <Icon size={12} className="mr-1" />
+                                    {badge.label}
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                              <div className="flex items-center">
+                                <Building2 size={14} className="mr-2 text-gray-400" />
+                                {registro.empresa} - {registro.cargo}
+                              </div>
+                              <div className="flex items-center">
+                                <Phone size={14} className="mr-2 text-gray-400" />
+                                {registro.numero}
+                              </div>
+                              <div className="flex items-center md:col-span-2">
+                                <Mail size={14} className="mr-2 text-gray-400" />
+                                {registro.correo}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="ml-4">
+                            <ChevronRight size={20} className="text-gray-400" />
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Modal de Registro Rápido */}
       {showRegistroModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
