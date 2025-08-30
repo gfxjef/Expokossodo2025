@@ -754,20 +754,10 @@ const VerificarPrueba = () => {
           
           console.log('[WHATSAPP] 📤 Enviando notificación:', whatsappData);
           
-          // 🧪 MODO DE PRUEBA: Alternar entre diferentes endpoints
-          const TESTING_MODE = 'proxy'; // Opciones: 'test', 'proxy', 'direct'
-          
-          let endpoint;
-          if (TESTING_MODE === 'test') {
-            endpoint = `${API_CONFIG.getApiUrl()}/verificar/test-whatsapp`; // Solo prueba local
-          } else if (TESTING_MODE === 'proxy') {
-            endpoint = `${API_CONFIG.getApiUrl()}/verificar/whatsapp-proxy`; // Proxy sin CORS
-          } else {
-            endpoint = 'https://expokossodowhatsappvisita-production.up.railway.app/attendance-webhook'; // Directo (CORS)
-          }
+          // Usar endpoint directo de WhatsApp
+          const endpoint = 'https://expokossodowhatsappvisita-production.up.railway.app/attendance-webhook';
             
           console.log('[WHATSAPP] 🎯 Endpoint destino:', endpoint);
-          console.log('[WHATSAPP] 🧪 Modo:', TESTING_MODE);
           
           fetch(endpoint, {
             method: 'POST',
