@@ -20,11 +20,19 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from openai import OpenAI
 import threading
-import cv2
 import ftplib
 import logging
 import sys
 import requests
+
+# Import condicional de cv2 para evitar errores en producción
+try:
+    import cv2
+    CV2_AVAILABLE = True
+    print("[CV2] OpenCV cargado exitosamente")
+except ImportError as e:
+    print(f"[CV2] Warning: OpenCV no disponible: {e}")
+    CV2_AVAILABLE = False
 
 # Clase de impresora térmica usando TSPL (método que SÍ funciona)
 class TermalPrinter4BARCODE:
@@ -3145,6 +3153,10 @@ def confirmar_asistencia_general():
 
 def capturar_foto_rapida(camera_index=0):
     """Captura una foto rápidamente de la cámara y retorna los bytes de la imagen"""
+    if not CV2_AVAILABLE:
+        print("[FOTO] OpenCV no está disponible - captura de foto deshabilitada")
+        return None
+        
     try:
         cap = cv2.VideoCapture(camera_index)
         
