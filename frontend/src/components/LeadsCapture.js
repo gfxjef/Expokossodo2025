@@ -21,6 +21,8 @@ const LeadsCapture = () => {
   const [lastScannedQR, setLastScannedQR] = useState(null);
   const [scanCooldown, setScanCooldown] = useState(false);
   const isRecordingRef = useRef(false);
+  const lastProcessedIndexRef = useRef(0);
+  const recognitionRef = useRef(null);
   const [usoTranscripcion, setUsoTranscripcion] = useState(false);
   const [historialLoading, setHistorialLoading] = useState(false);
 
@@ -38,57 +40,72 @@ const LeadsCapture = () => {
     }
   }, []);
 
+  const cleanDuplicateText = (newText, existingText) => {
+    if (!existingText || !newText) return newText;
+    
+    const existingWords = existingText.trim().split(' ').slice(-10);
+    const newWords = newText.trim().split(' ');
+    
+    if (existingWords.length > 0 && newWords.length > 0) {
+      for (let i = 0; i < Math.min(existingWords.length, newWords.length); i++) {
+        const pattern = existingWords.slice(-i - 1).join(' ');
+        const newStart = newWords.slice(0, i + 1).join(' ');
+        
+        if (pattern === newStart) {
+          return newWords.slice(i + 1).join(' ');
+        }
+      }
+    }
+    
+    return newText;
+  };
+
   const initializeSpeechRecognition = () => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       
-      recognition.continuous = true; // DEBE ser true para seguir escuchando
-      recognition.interimResults = true; // Para ver texto en tiempo real
+      const isChrome = /Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
+      const isEdge = /Edg/.test(navigator.userAgent);
+      const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+      
+      recognition.continuous = !isEdge;
+      recognition.interimResults = true;
       recognition.lang = 'es-ES';
       recognition.maxAlternatives = 1;
       
-      // Variable para rastrear lo que ya se procesó
-      let lastProcessedIndex = 0;
-      
       recognition.onresult = (event) => {
-        let interimTranscript = '';
         let finalTranscript = '';
         
-        // Procesar solo desde el último índice procesado
-        for (let i = lastProcessedIndex; i < event.results.length; i++) {
+        for (let i = lastProcessedIndexRef.current; i < event.results.length; i++) {
           const result = event.results[i];
           const transcript = result[0].transcript;
           
           if (result.isFinal) {
-            finalTranscript += transcript;
-            lastProcessedIndex = i + 1; // Actualizar índice procesado
-          } else {
-            interimTranscript += transcript;
+            finalTranscript += transcript + ' ';
           }
         }
         
-        // Solo agregar texto final (confirmado) al textarea
         if (finalTranscript.trim()) {
-          // Marcar que se usó transcripción
           setUsoTranscripcion(true);
           
           setConsulta(prev => {
-            let processedText = finalTranscript.trim();
+            const cleanedText = cleanDuplicateText(finalTranscript.trim(), prev);
             
-            // Agregar coma si termina abrupto (para marcar pausas)
+            if (!cleanedText) return prev;
+            
             if (prev.trim() && !prev.trim().endsWith(',') && !prev.trim().endsWith('.') && !prev.trim().endsWith('!') && !prev.trim().endsWith('?')) {
-              return prev.trim() + ', ' + processedText;
+              return prev.trim() + ', ' + cleanedText;
             }
             
-            const newText = prev.trim() ? prev + ' ' + processedText : processedText;
-            return newText;
+            return prev.trim() ? prev + ' ' + cleanedText : cleanedText;
           });
+          
+          lastProcessedIndexRef.current = event.results.length;
         }
       };
       
       recognition.onstart = () => {
-        lastProcessedIndex = 0; // Resetear al iniciar
         console.log('Reconocimiento de voz iniciado');
       };
       
@@ -105,13 +122,11 @@ const LeadsCapture = () => {
       };
       
       recognition.onend = () => {
-        // Solo detener si el usuario presionó el botón parar
-        if (isRecordingRef.current) {
-          // Si se detiene inesperadamente, reiniciar automáticamente
+        if (isRecordingRef.current && !isEdge) {
           setTimeout(() => {
-            if (isRecordingRef.current) {
+            if (isRecordingRef.current && recognitionRef.current) {
               try {
-                recognition.start();
+                recognitionRef.current.start();
                 console.log('Reconocimiento reiniciado automáticamente');
               } catch (error) {
                 console.log('No se pudo reiniciar automáticamente:', error);
@@ -120,9 +135,23 @@ const LeadsCapture = () => {
               }
             }
           }, 100);
+        } else if (isRecordingRef.current && isEdge) {
+          setTimeout(() => {
+            if (isRecordingRef.current && recognitionRef.current) {
+              try {
+                lastProcessedIndexRef.current = 0;
+                recognitionRef.current.start();
+                console.log('Reconocimiento reiniciado para Edge');
+              } catch (error) {
+                setIsRecording(false);
+                isRecordingRef.current = false;
+              }
+            }
+          }, 500);
         }
       };
       
+      recognitionRef.current = recognition;
       setRecognition(recognition);
     }
   };
@@ -166,14 +195,14 @@ const LeadsCapture = () => {
     }
     
     if (isRecording) {
-      // Parar grabación
       isRecordingRef.current = false;
       recognition.stop();
       setIsRecording(false);
+      lastProcessedIndexRef.current = 0;
       console.log('Grabación detenida por el usuario');
     } else {
-      // Iniciar grabación
       setError(null);
+      lastProcessedIndexRef.current = 0;
       try {
         recognition.start();
         setIsRecording(true);
@@ -186,6 +215,12 @@ const LeadsCapture = () => {
         isRecordingRef.current = false;
       }
     }
+  };
+
+  const clearConsulta = () => {
+    setConsulta('');
+    lastProcessedIndexRef.current = 0;
+    setUsoTranscripcion(false);
   };
 
   const handleQRScan = async (qrCode) => {
@@ -338,9 +373,9 @@ const LeadsCapture = () => {
     setSuccess(null);
     setModoScanner(true);
     processingRef.current = false;
-    setUsoTranscripcion(false); // Resetear estado de transcripción
+    setUsoTranscripcion(false);
+    lastProcessedIndexRef.current = 0;
     
-    // Parar grabación si está activa
     if (isRecording && recognition) {
       isRecordingRef.current = false;
       recognition.stop();
@@ -590,7 +625,7 @@ const LeadsCapture = () => {
               />
             </div>
 
-            {/* Botones - Guardar y Record */}
+            {/* Botones - Guardar, Record y Limpiar */}
             <div className="flex items-center space-x-3">
               <button
                 onClick={handleGuardarConsulta}
@@ -620,9 +655,21 @@ const LeadsCapture = () => {
                     ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-lg'
                     : 'bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl'
                 } ${!recognition ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={isRecording ? 'Detener grabación' : 'Iniciar grabación'}
               >
                 {isRecording ? '⏹️' : '🔴'}
               </button>
+              
+              {/* Botón de Limpiar */}
+              {consulta.trim() && (
+                <button
+                  onClick={clearConsulta}
+                  className="w-12 h-12 rounded-full bg-gray-500 hover:bg-gray-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center"
+                  title="Limpiar texto"
+                >
+                  🗑️
+                </button>
+              )}
             </div>
           </div>
         </div>

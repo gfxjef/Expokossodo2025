@@ -495,7 +495,7 @@ def enviar_correo_terminos(usuario_datos):
         msg = MIMEMultipart('related')
         msg['From'] = f"Kossodo <{email_user}>"
         msg['To'] = usuario_datos['correo']
-        msg['Subject'] = "ExpoKossodo 2025: QR de acceso + términos y condiciones"
+        msg['Subject'] = "A un día de ExpoKossodo 2025"
         
         # Generar HTML
         html_body = generar_html_correo(usuario_datos)
@@ -686,7 +686,7 @@ def main():
                 print("\n" + "=" * 60)
                 print("[SUCCESS] PROCESO COMPLETADO EXITOSAMENTE")
                 print(f"Correo enviado a: {usuario['correo']}")
-                print(f"Asunto: ExpoKossodo 2025: QR de acceso + términos y condiciones")
+                print(f"Asunto: A un día de ExpoKossodo 2025")
                 print(f"Remitente: Kossodo")
                 print(f"QR adjunto: {usuario['qr_code']}")
                 print("=" * 60)
