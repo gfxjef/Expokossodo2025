@@ -21,7 +21,7 @@ const LeadsCapture = () => {
   const [lastScannedQR, setLastScannedQR] = useState(null);
   const [scanCooldown, setScanCooldown] = useState(false);
   const isRecordingRef = useRef(false);
-  const lastProcessedIndexRef = useRef(0);
+  const finalBoundaryRef = useRef(0);
   const recognitionRef = useRef(null);
   const [usoTranscripcion, setUsoTranscripcion] = useState(false);
   const [historialLoading, setHistorialLoading] = useState(false);
@@ -40,26 +40,6 @@ const LeadsCapture = () => {
     }
   }, []);
 
-  const cleanDuplicateText = (newText, existingText) => {
-    if (!existingText || !newText) return newText;
-    
-    const existingWords = existingText.trim().split(' ').slice(-10);
-    const newWords = newText.trim().split(' ');
-    
-    if (existingWords.length > 0 && newWords.length > 0) {
-      for (let i = 0; i < Math.min(existingWords.length, newWords.length); i++) {
-        const pattern = existingWords.slice(-i - 1).join(' ');
-        const newStart = newWords.slice(0, i + 1).join(' ');
-        
-        if (pattern === newStart) {
-          return newWords.slice(i + 1).join(' ');
-        }
-      }
-    }
-    
-    return newText;
-  };
-
   const initializeSpeechRecognition = () => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -75,42 +55,30 @@ const LeadsCapture = () => {
       recognition.maxAlternatives = 1;
       
       recognition.onresult = (event) => {
-        let finalTranscript = '';
-        let interimTranscript = '';
-        
-        // Solo procesar resultados NO procesados
-        for (let i = 0; i < event.results.length; i++) {
-          const result = event.results[i];
-          const transcript = result[0].transcript;
-          
-          if (result.isFinal) {
-            // Solo agregar si NO ha sido procesado antes
-            if (i >= lastProcessedIndexRef.current) {
-              finalTranscript += transcript + ' ';
-              console.log(`[FINAL] Índice ${i}: "${transcript}"`);
-            }
+        // Recolecta SOLO los 'finales' nuevos desde el límite actual
+        let newPieces = [];
+        let newBoundary = finalBoundaryRef.current;
+
+        for (let i = finalBoundaryRef.current; i < event.results.length; i++) {
+          const r = event.results[i];
+          if (r.isFinal) {
+            newPieces.push(r[0].transcript.trim());
+            newBoundary = i + 1; // avanzamos el límite hasta después de este final
+            console.log(`[FINAL] Índice ${i}: "${r[0].transcript.trim()}"`);
           } else {
-            interimTranscript += transcript;
+            // De aquí en adelante son 'interim'; nos detenemos.
+            break;
           }
         }
-        
-        // Solo procesar texto final nuevo
-        if (finalTranscript.trim()) {
+
+        if (newPieces.length) {
+          const chunk = newPieces.join(' ').replace(/\s+/g, ' ').trim();
+
+          // Sin comas automáticas. Solo espacio si ya hay texto.
+          setConsulta((prev) => (prev ? `${prev} ${chunk}`.replace(/\s+/g, ' ') : chunk));
+
           setUsoTranscripcion(true);
-          
-          setConsulta(prev => {
-            // Simplemente agregar el texto nuevo, sin función de limpieza compleja
-            const newText = finalTranscript.trim();
-            
-            if (prev.trim() && !prev.trim().endsWith(',') && !prev.trim().endsWith('.') && !prev.trim().endsWith('!') && !prev.trim().endsWith('?')) {
-              return prev.trim() + ', ' + newText;
-            }
-            
-            return prev.trim() ? prev + ' ' + newText : newText;
-          });
-          
-          // Actualizar el índice solo DESPUÉS de procesar
-          lastProcessedIndexRef.current = event.results.length;
+          finalBoundaryRef.current = newBoundary; // marcamos hasta dónde ya procesamos
         }
       };
       
@@ -133,34 +101,26 @@ const LeadsCapture = () => {
       recognition.onend = () => {
         console.log('Reconocimiento terminado. Estado grabación:', isRecordingRef.current);
         
-        if (isRecordingRef.current && !isEdge) {
-          // Para Chrome y otros navegadores: reiniciar sin resetear índice
-          setTimeout(() => {
-            if (isRecordingRef.current && recognitionRef.current) {
-              try {
-                recognitionRef.current.start();
-                console.log('Reconocimiento reiniciado automáticamente');
-              } catch (error) {
-                console.log('No se pudo reiniciar automáticamente:', error);
-                setIsRecording(false);
-                isRecordingRef.current = false;
-              }
+        if (isRecordingRef.current) {
+          finalBoundaryRef.current = 0; // nuevo ciclo, nuevo límite
+          
+          const restart = () => {
+            try {
+              recognitionRef.current.start();
+              console.log('Reconocimiento reiniciado');
+            } catch (error) {
+              console.log('No se pudo reiniciar automáticamente:', error);
+              setIsRecording(false);
+              isRecordingRef.current = false;
             }
-          }, 100);
-        } else if (isRecordingRef.current && isEdge) {
-          // Para Edge: reiniciar con reseteo de índice porque no es continuo
-          setTimeout(() => {
-            if (isRecordingRef.current && recognitionRef.current) {
-              try {
-                lastProcessedIndexRef.current = 0; // Solo resetear en Edge
-                recognitionRef.current.start();
-                console.log('Reconocimiento reiniciado para Edge (modo no-continuo)');
-              } catch (error) {
-                setIsRecording(false);
-                isRecordingRef.current = false;
-              }
-            }
-          }, 500);
+          };
+
+          // Manejo especial para Edge con mayor delay
+          if (isEdge) {
+            setTimeout(restart, 500);
+          } else {
+            setTimeout(restart, 100);
+          }
         }
       };
       
@@ -217,9 +177,9 @@ const LeadsCapture = () => {
     } else {
       // Iniciar grabación
       setError(null);
-      // Solo resetear el índice al INICIAR una nueva sesión de grabación
-      lastProcessedIndexRef.current = 0;
-      console.log('Índice reseteado para nueva grabación');
+      // Solo resetear el boundary al INICIAR una nueva sesión de grabación
+      finalBoundaryRef.current = 0;
+      console.log('Boundary reseteado para nueva grabación');
       
       try {
         recognition.start();
@@ -237,7 +197,7 @@ const LeadsCapture = () => {
 
   const clearConsulta = () => {
     setConsulta('');
-    lastProcessedIndexRef.current = 0;
+    finalBoundaryRef.current = 0;
     setUsoTranscripcion(false);
   };
 
@@ -392,7 +352,7 @@ const LeadsCapture = () => {
     setModoScanner(true);
     processingRef.current = false;
     setUsoTranscripcion(false);
-    lastProcessedIndexRef.current = 0;
+    finalBoundaryRef.current = 0;
     
     if (isRecording && recognition) {
       isRecordingRef.current = false;
