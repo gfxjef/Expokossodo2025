@@ -14,6 +14,7 @@ import bcrypt
 import time
 import re
 import json
+import unicodedata
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -33,6 +34,43 @@ try:
 except ImportError as e:
     print(f"[CV2] Warning: OpenCV no disponible: {e}")
     CV2_AVAILABLE = False
+
+def prepare_text_for_thermal_printer(text):
+    """Prepara texto completamente para impresora térmica ASCII
+    
+    Maneja:
+    - Tildes/acentos: á,é,í,ó,ú → a,e,i,o,u
+    - Eñes: ñ,Ñ → n,N  
+    - Símbolos especiales: &,@,¿,¡ → equivalentes ASCII
+    - Filtra caracteres no-ASCII
+    - Limita longitud a 15 caracteres
+    """
+    if not text:
+        return "INVITADO"
+    
+    # 1. Normalizar tildes/acentos (NFD)
+    normalized = unicodedata.normalize('NFD', text)
+    no_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+    
+    # 2. Mapeo manual para caracteres que NFD no maneja
+    replacements = {
+        'ñ': 'n', 'Ñ': 'N',           # Eñes
+        '&': 'y', '@': 'at',           # Símbolos comunes
+        '¿': '', '¡': '',              # Signos de pregunta/exclamación
+        '°': 'deg', '²': '2', '³': '3', # Símbolos matemáticos
+    }
+    
+    result = no_accents
+    for special, replacement in replacements.items():
+        result = result.replace(special, replacement)
+    
+    # 3. Remover cualquier carácter que no sea ASCII básico (32-126)
+    result = re.sub(r'[^\x20-\x7E]', '', result)
+    
+    # 4. Limpiar espacios múltiples
+    result = ' '.join(result.split())
+    
+    return result[:15]  # Limitar longitud
 
 # Clase de impresora térmica usando TSPL (método que SÍ funciona)
 class TermalPrinter4BARCODE:
@@ -74,9 +112,9 @@ class TermalPrinter4BARCODE:
         TEXT_OFFSET = 50 # nombre a 50 dots por encima del QR
         MAX_NAME = 15    # máximo de caracteres visibles en el nombre
         
-        # Procesar nombre con límite actualizado
-        nombre_corto = nombre[:MAX_NAME]
-        text_width = len(nombre_corto) * CHAR_W
+        # Procesar nombre con normalización ASCII-safe
+        nombre_normalizado = prepare_text_for_thermal_printer(nombre)
+        text_width = len(nombre_normalizado) * CHAR_W
         
         # Estimación del ancho del QR para centrar el texto respecto al bloque del QR
         qr_est_ancho = QR_CELL * 24  # ~24 módulos típico; funciona bien como aproximación
@@ -91,7 +129,9 @@ class TermalPrinter4BARCODE:
             "DIRECTION 1\r\n"
             "REFERENCE 0,0\r\n"
             "CLS\r\n"
-            # Solo QR code, sin texto del nombre
+            # Nombre normalizado ASCII-safe centrado sobre el QR
+            f'TEXT {center_x},{QR_Y - TEXT_OFFSET},"{FONT}",0,1,1,"{nombre_normalizado}"\r\n'
+            # QR code
             f'QRCODE {QR_X},{QR_Y},M,{QR_CELL},A,0,"{qr_text}"\r\n'
             "PRINT 1\r\n"
         ).encode("ascii")
@@ -105,8 +145,8 @@ class TermalPrinter4BARCODE:
             result = self._send_raw_tspl(tspl_commands)
             
             if result['success']:
-                nombre_corto = user_data.get('nombres', 'INVITADO')[:10]
-                print(f"[OK] Enviado. Nombre='{nombre_corto}' | QR cell=8 | pos=(70,70)")
+                nombre_normalizado = prepare_text_for_thermal_printer(user_data.get('nombres', 'INVITADO'))
+                print(f"[OK] Enviado. Nombre='{nombre_normalizado}' | QR cell={10} | pos=(70,70)")
             
             return result
         except Exception as e:
