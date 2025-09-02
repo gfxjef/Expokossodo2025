@@ -36,11 +36,40 @@ const TranscriptionTest = () => {
     setLogs(prev => [...prev, `[${timestamp}] ${message}`]);
   };
 
-  const longestCommonPrefix = (a, b) => {
-    const len = Math.min(a.length, b.length);
-    let i = 0;
-    while (i < len && a[i] === b[i]) i++;
-    return a.slice(0, i);
+  // Normaliza solo para comparar (no para mostrar)
+  const normalizeForCompare = (s) => {
+    const base = s.toLowerCase().replace(/\s+/g, ' ').trim();
+    try {
+      return base.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // quita tildes
+    } catch {
+      return base;
+    }
+  };
+
+  const tokenize = (s) => s.trim().split(/\s+/);
+
+  // Encuentra el mayor k tal que los últimos k tokens de prev == primeros k tokens de curr
+  const computeWordOverlap = (prev, curr, maxWindow = 15) => {
+    if (!prev) return { overlapTokens: 0, toAppend: curr };
+
+    const prevTokens = tokenize(prev);
+    const currTokens = tokenize(curr);
+
+    const prevCmp = tokenize(normalizeForCompare(prev));
+    const currCmp = tokenize(normalizeForCompare(curr));
+
+    const maxK = Math.min(maxWindow, prevCmp.length, currCmp.length);
+    for (let k = maxK; k > 0; k--) {
+      const prevSuffix = prevCmp.slice(prevCmp.length - k).join(' ');
+      const currPrefix = currCmp.slice(0, k).join(' ');
+      if (prevSuffix === currPrefix) {
+        return {
+          overlapTokens: k,
+          toAppend: currTokens.slice(k).join(' ')
+        };
+      }
+    }
+    return { overlapTokens: 0, toAppend: curr };
   };
 
   const initializeSpeechRecognition = () => {
@@ -51,29 +80,26 @@ const TranscriptionTest = () => {
       const isEdge = /Edg/.test(navigator.userAgent);
       
       // Configuración
+      const isAndroid10 = /Android 10/.test(navigator.userAgent);
       recognition.continuous = !isEdge;
-      recognition.interimResults = true;
+      recognition.interimResults = !isAndroid10; // false en Android 10 para reducir ruido
       recognition.lang = 'es-ES';
       recognition.maxAlternatives = 1;
       
-      addLog(`Configuración: continuous=${!isEdge}, lang=es-ES`);
+      addLog(`Configuración: continuous=${!isEdge}, interimResults=${!isAndroid10}, lang=es-ES`);
+      if (isAndroid10) addLog('🤖 Android 10 detectado - interimResults desactivado');
       
       recognition.onresult = (event) => {
-        // Buscar el último índice que sea final
+        // Encuentra el último índice FINAL
         let lastFinalIndex = -1;
         for (let i = event.results.length - 1; i >= 0; i--) {
-          if (event.results[i].isFinal) { 
-            lastFinalIndex = i; 
-            break; 
-          }
+          if (event.results[i].isFinal) { lastFinalIndex = i; break; }
         }
-        
         if (lastFinalIndex < 0) {
-          // Solo interim results, podemos mostrarlos en gris sin guardarlo
+          // (Opcional) loguea interim sin guardarlo
           for (let i = 0; i < event.results.length; i++) {
             if (!event.results[i].isFinal) {
-              const interimText = event.results[i][0].transcript;
-              addLog(`INTERIM [${i}]: "${interimText}"`);
+              addLog(`INTERIM [${i}]: "${event.results[i][0].transcript}"`);
             }
           }
           return;
@@ -81,41 +107,27 @@ const TranscriptionTest = () => {
 
         const currentFinal = (event.results[lastFinalIndex][0]?.transcript || '').trim();
         if (!currentFinal) return;
-        
+
         if (currentFinal === lastFinalRef.current) {
-          // Final repetido exactamente igual; no agregamos nada
           addLog(`FINAL (igual, ignorado): "${currentFinal}"`);
           return;
         }
 
-        // Calcula solo el sufijo nuevo respecto a lo ya consolidado
-        const prevStable = stableTextRef.current;
-        let toAppend = '';
+        const { overlapTokens, toAppend } = computeWordOverlap(stableTextRef.current, currentFinal, 15);
+        const cleaned = toAppend.replace(/\s+/g, ' ').trim();
 
-        if (currentFinal.startsWith(prevStable)) {
-          toAppend = currentFinal.slice(prevStable.length);
+        if (cleaned) {
+          setTranscript((t) => (t ? `${t} ${cleaned}`.replace(/\s+/g, ' ') : cleaned));
+          stableTextRef.current = (stableTextRef.current + ' ' + cleaned).replace(/\s+/g, ' ').trim();
+          addLog(`FINAL [${lastFinalIndex}] overlap=${overlapTokens} → añade: "${cleaned}"`);
         } else {
-          // Si el motor reescribió parte del texto, usa el prefijo común
-          const lcp = longestCommonPrefix(prevStable, currentFinal);
-          toAppend = currentFinal.slice(lcp.length);
-          if (lcp !== prevStable) {
-            addLog(`LCP detectado: "${lcp}" (prev: "${prevStable}")`);
-          }
-        }
-
-        toAppend = toAppend.replace(/\s+/g, ' ').trim();
-        if (toAppend) {
-          setTranscript((t) => (t ? `${t} ${toAppend}`.replace(/\s+/g, ' ') : toAppend));
-          stableTextRef.current = (prevStable + ' ' + toAppend).replace(/\s+/g, ' ').trim();
-          addLog(`FINAL [${lastFinalIndex}] nuevo → añade: "${toAppend}"`);
-        } else {
-          // No hay sufijo nuevo; solo actualiza el estable por si cambió mínimamente
+          // Solapamiento total (no hay nada nuevo); sincroniza estable igual
           stableTextRef.current = currentFinal;
-          addLog(`FINAL [${lastFinalIndex}] sin sufijo nuevo (solo sincroniza estable)`);
+          addLog(`FINAL [${lastFinalIndex}] sin sufijo (overlap total)`);
         }
 
         lastFinalRef.current = currentFinal;
-        finalBoundaryRef.current = event.results.length;
+        finalBoundaryRef.current = event.results.length; // solo informativo en tu panel
       };
       
       recognition.onstart = () => {
