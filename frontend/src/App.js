@@ -10,6 +10,7 @@ import VerificarPrueba from './components/VerificarPrueba';
 import VisualizacionDashboard from './components/VisualizacionDashboard';
 import AsesoresDashboard from './components/asesores/AsesoresDashboard';
 import LeadsCapture from './components/LeadsCapture';
+import TranscriptionTest from './components/TranscriptionTest';
 import { analyticsService } from './services/analytics';
 import './index.css';
 
@@ -35,6 +36,7 @@ function RouteTracker() {
     if (path === '/visualizacion') return 'Dashboard Visualización';
     if (path === '/asesores') return 'Panel Asesores';
     if (path === '/leads') return 'Captura de Leads';
+    if (path === '/test-transcription') return 'Test de Transcripción';
     if (path.startsWith('/verificar')) return 'Verificación QR';
     if (path.startsWith('/charla/')) return 'Charlas Específicas';
     if (path === '/registrate') return 'Registro Directo';
@@ -97,6 +99,9 @@ function App() {
           
           {/* Sistema de captura de leads */}
           <Route path="/leads" element={<LeadsCapture />} />
+          
+          {/* Test de transcripción */}
+          <Route path="/test-transcription" element={<TranscriptionTest />} />
           
           {/* Rutas de verificación QR */}
           <Route path="/verificar" element={<VerificadorGeneral />} />
