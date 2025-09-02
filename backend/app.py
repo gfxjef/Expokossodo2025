@@ -4432,6 +4432,13 @@ def obtener_cliente_info():
         if not cliente:
             return jsonify({"error": "Cliente no encontrado"}), 404
         
+        # Consumir cualquier resultado restante para evitar "Unread result found"
+        try:
+            while cursor.nextset():
+                pass
+        except:
+            pass
+        
         return jsonify({"cliente": cliente})
         
     except Error as e:
