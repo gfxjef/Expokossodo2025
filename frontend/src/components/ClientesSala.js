@@ -19,6 +19,7 @@ import {
   Calendar,
   MapPin,
   ChevronRight,
+  ChevronLeft,
   RefreshCw,
   Users,
   Activity,
@@ -1171,35 +1172,64 @@ const ClientesSala = () => {
       {/* Header con estadísticas */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-center space-x-4">
-            {/* Toggle de modo de scanner */}
-            <div className="flex items-center space-x-2 bg-white border rounded-lg px-4 py-2">
+          <div className="flex items-center justify-between">
+            {/* Botón de regresar (solo cuando hay userData) */}
+            {userData ? (
               <button
-                onClick={toggleScannerMode}
-                className="flex items-center space-x-2 hover:bg-gray-50 rounded px-2 py-1 transition-colors"
+                onClick={() => {
+                  setUserData(null);
+                  setError(null);
+                  setSuccess(null);
+                  setCurrentQR(null);
+                  // Resetear scanner para estar listo para el siguiente
+                  processingRef.current = false;
+                  setScanCooldown(false);
+                  setLastScannedQR(null);
+                  setScannerLoading(false);
+                  // Limpiar estados de impresión térmica
+                  setThermalStatus('idle');
+                  setThermalError(null);
+                }}
+                className="flex items-center space-x-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                title="Volver al scanner"
               >
-                {scannerMode === 'physical' ? (
-                  <>
-                    <Keyboard size={18} className="text-blue-600" />
-                    <ToggleLeft size={24} className="text-blue-600" />
-                  </>
-                ) : (
-                  <>
-                    <Camera size={18} className="text-green-600" />
-                    <ToggleRight size={24} className="text-green-600" />
-                  </>
-                )}
+                <ChevronLeft size={24} />
+              </button>
+            ) : (
+              <div></div>
+            )}
+            
+            {/* Controles centrales */}
+            <div className="flex items-center space-x-4">
+              {/* Toggle de modo de scanner */}
+              <div className="flex items-center space-x-2 bg-white border rounded-lg px-4 py-2">
+                <button
+                  onClick={toggleScannerMode}
+                  className="flex items-center space-x-2 hover:bg-gray-50 rounded px-2 py-1 transition-colors"
+                >
+                  {scannerMode === 'physical' ? (
+                    <>
+                      <Keyboard size={18} className="text-blue-600" />
+                      <ToggleLeft size={24} className="text-blue-600" />
+                    </>
+                  ) : (
+                    <>
+                      <Camera size={18} className="text-green-600" />
+                      <ToggleRight size={24} className="text-green-600" />
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Botón de búsqueda de usuario */}
+              <button
+                onClick={() => setShowBuscarModal(true)}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                title="Buscar usuario registrado"
+              >
+                <Search size={24} />
               </button>
             </div>
-
-            {/* Botón de búsqueda de usuario */}
-            <button
-              onClick={() => setShowBuscarModal(true)}
-              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
-              title="Buscar usuario registrado"
-            >
-              <Search size={24} />
-            </button>
 
             {/* Estadística del cache */}
             <div className="text-center">
@@ -1281,9 +1311,9 @@ const ClientesSala = () => {
               </div>
             )}
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Columna principal - Información del asistente */}
-              <div className="lg:col-span-2 space-y-6">
+            <div className="max-w-4xl mx-auto">
+              {/* Información del asistente */}
+              <div className="space-y-6">
               {/* Tarjeta de información principal */}
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -1528,213 +1558,6 @@ const ClientesSala = () => {
               </motion.div>
             </div>
 
-            {/* Columna lateral - Acciones rápidas */}
-            <div className="space-y-6">
-              {/* Panel de acciones principales */}
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="bg-white rounded-xl shadow-lg p-6"
-              >
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Acciones Rápidas</h3>
-                
-                <div className="space-y-3">
-                  {userData.usuario.estado_asistencia !== 'confirmada' ? (
-                    <button
-                      onClick={confirmarAsistencia}
-                      disabled={loading}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center"
-                    >
-                      {loading ? (
-                        <RefreshCw size={24} className="animate-spin" />
-                      ) : (
-                        <>
-                          <CheckCircle size={24} className="mr-2" />
-                          CONFIRMAR ASISTENCIA
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
-                      <CheckCircle size={32} className="text-green-600 mx-auto mb-2" />
-                      <p className="text-green-800 font-bold">Asistencia Confirmada</p>
-                      <p className="text-green-600 text-sm mt-1">
-                        {new Date().toLocaleString('es-ES')}
-                      </p>
-                    </div>
-                  )}
-
-                  {currentQR && (
-                    <button
-                      onClick={() => verificarUsuarioConQR(currentQR)}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
-                    >
-                      <RefreshCw size={20} className="mr-2" />
-                      Recargar Datos
-                    </button>
-                  )}
-                  
-
-                  <button
-                    onClick={() => {
-                      setUserData(null);
-                      setError(null);
-                      setSuccess(null);
-                      setCurrentQR(null);
-                      // Resetear scanner para estar listo para el siguiente
-                      processingRef.current = false;
-                      setScanCooldown(false);
-                      setLastScannedQR(null);
-                      setScannerLoading(false);
-                      // Limpiar estados de impresión térmica
-                      setThermalStatus('idle');
-                      setThermalError(null);
-                    }}
-                    className="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
-                  >
-                    <ChevronRight size={20} className="mr-2" />
-                    Siguiente Asistente
-                  </button>
-                  
-                  {/* Botón de impresión térmica */}
-                  <button
-                    onClick={imprimirTermica}
-                    disabled={!userData || !currentQR || thermalStatus === 'printing'}
-                    className={`w-full font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center text-sm mb-2 ${
-                      thermalStatus === 'success' 
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : thermalStatus === 'printing'
-                        ? 'bg-yellow-500 text-white cursor-not-allowed animate-pulse'
-                        : thermalStatus === 'error'
-                        ? 'bg-red-500 hover:bg-red-600 text-white'
-                        : currentQR
-                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                        : 'bg-gray-400 text-white cursor-not-allowed'
-                    }`}
-                  >
-                    {thermalStatus === 'printing' ? (
-                      <>
-                        <RefreshCw size={18} className="mr-2 animate-spin" />
-                        Imprimiendo Etiqueta...
-                      </>
-                    ) : thermalStatus === 'success' ? (
-                      <>
-                        <CheckCircle size={18} className="mr-2" />
-                        Etiqueta Impresa
-                      </>
-                    ) : thermalStatus === 'error' ? (
-                      <>
-                        <XCircle size={18} className="mr-2" />
-                        Error Impresión
-                      </>
-                    ) : (
-                      <>
-                        <Activity size={18} className="mr-2" />
-                        🖨️ Re-Imprimir QR
-                      </>
-                    )}
-                  </button>
-
-                </div>
-              </motion.div>
-
-              {/* Resumen de estadísticas del usuario */}
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-white rounded-xl shadow-lg p-6"
-              >
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Resumen del Asistente</h3>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span className="text-gray-600">Total Eventos</span>
-                    <span className="font-bold text-blue-600">
-                      {userData.eventos?.length || 0}
-                      {userData.usuario?.total_eventos && userData.usuario.total_eventos > 0 && 
-                       userData.eventos?.length !== userData.usuario.total_eventos && 
-                       ` de ${userData.usuario.total_eventos}`}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span className="text-gray-600">Asistencias</span>
-                    <span className="font-bold text-green-600">
-                      {userData.eventos?.filter(e => e.estado_sala === 'presente').length || 0}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span className="text-gray-600">Pendientes</span>
-                    <span className="font-bold text-orange-600">
-                      {userData.eventos?.filter(e => e.estado_sala === 'ausente').length || 0}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-gray-600">Fecha Registro</span>
-                    <span className="font-medium text-gray-800">
-                      {userData.usuario.fecha_registro ? 
-                        new Date(userData.usuario.fecha_registro).toLocaleDateString('es-ES') : 
-                        'N/A'}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-
-
-              {/* Botón discreto para actualizar cache */}
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-center"
-              >
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={cargarCacheRegistros}
-                    disabled={cacheLoading}
-                    className="text-xs bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white px-3 py-1 rounded-lg transition-colors"
-                  >
-                    {cacheLoading ? (
-                      <>🔄 Actualizando...</>
-                    ) : (
-                      <>📊 Actualizar Registros ({registrosCache.length})</>
-                    )}
-                  </button>
-                  
-                  <button
-                    onClick={cargarCacheEventos}
-                    disabled={eventosCacheLoading}
-                    className="text-xs bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white px-3 py-1 rounded-lg transition-colors"
-                  >
-                    {eventosCacheLoading ? (
-                      <>🔄 Cargando...</>
-                    ) : (
-                      <>⚡ Cache Eventos ({eventosCache.size})</>
-                    )}
-                  </button>
-                </div>
-              </motion.div>
-
-              {/* Panel de ayuda rápida */}
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-blue-50 rounded-xl p-4 border border-blue-200"
-              >
-                <h4 className="font-semibold text-blue-800 mb-2 flex items-center">
-                  <AlertCircle size={16} className="mr-2" />
-                  Información del Sistema
-                </h4>
-                <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• QR de prueba activo</li>
-                  <li>• Modo de verificación: Manual</li>
-                  <li>• Punto de acceso: Entrada Principal</li>
-                  <li>• Staff: Recepción</li>
-                  <li>• Etiquetas: 50x50mm / 203 DPI</li>
-                </ul>
-              </motion.div>
-            </div>
           </div>
           </>
         ) : (
