@@ -33,7 +33,7 @@ import {
   Search
 } from 'lucide-react';
 
-const ClientesSala = () => {
+const VerificarPrueba = () => {
   
   // Cache de registros para búsqueda rápida
   const [registrosCache, setRegistrosCache] = useState([]);
@@ -68,7 +68,7 @@ const ClientesSala = () => {
   const [currentQR, setCurrentQR] = useState(null); // QR actualmente procesado
   
   // Estados para lector físico de QR
-  const [scannerMode, setScannerMode] = useState('camera'); // 'physical' o 'camera'
+  const [scannerMode, setScannerMode] = useState('physical'); // 'physical' o 'camera'
   const [physicalScannerInput, setPhysicalScannerInput] = useState('');
   const physicalScannerInputRef = useRef(null);
   const [isPhysicalScannerReady, setIsPhysicalScannerReady] = useState(true);
@@ -2373,4 +2373,4 @@ const ClientesSala = () => {
   );
 };
 
-export default ClientesSala;
+export default VerificarPrueba;

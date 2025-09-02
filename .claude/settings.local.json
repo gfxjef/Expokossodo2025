@@ -47,7 +47,9 @@
       "Read(c:\\Users\\USER\\Desktop\\python projects\\Whatsapp_expokssd\\attendance_notifier\\tests/**)",
       "Read(c:\\Users\\USER\\Desktop\\python projects\\Whatsapp_expokssd\\attendance_notifier\\tests/**)",
       "Read(c:\\Users\\USER\\Pictures\\Screenshots/**)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Read(C:\\Users\\jcamacho\\Desktop/**)",
+      "Read(C:\\Users\\jcamacho\\Desktop/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
