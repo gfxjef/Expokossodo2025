@@ -3782,6 +3782,12 @@ def verificar_acceso_sala():
         connection.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
+        # Consumir cualquier resultado restante para evitar "Unread result found"
+        try:
+            while cursor.nextset():
+                pass
+        except:
+            pass
         cursor.close()
         connection.close()
 
