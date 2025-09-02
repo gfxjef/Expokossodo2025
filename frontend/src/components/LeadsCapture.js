@@ -76,31 +76,40 @@ const LeadsCapture = () => {
       
       recognition.onresult = (event) => {
         let finalTranscript = '';
+        let interimTranscript = '';
         
-        for (let i = lastProcessedIndexRef.current; i < event.results.length; i++) {
+        // Solo procesar resultados NO procesados
+        for (let i = 0; i < event.results.length; i++) {
           const result = event.results[i];
           const transcript = result[0].transcript;
           
           if (result.isFinal) {
-            finalTranscript += transcript + ' ';
+            // Solo agregar si NO ha sido procesado antes
+            if (i >= lastProcessedIndexRef.current) {
+              finalTranscript += transcript + ' ';
+              console.log(`[FINAL] Índice ${i}: "${transcript}"`);
+            }
+          } else {
+            interimTranscript += transcript;
           }
         }
         
+        // Solo procesar texto final nuevo
         if (finalTranscript.trim()) {
           setUsoTranscripcion(true);
           
           setConsulta(prev => {
-            const cleanedText = cleanDuplicateText(finalTranscript.trim(), prev);
-            
-            if (!cleanedText) return prev;
+            // Simplemente agregar el texto nuevo, sin función de limpieza compleja
+            const newText = finalTranscript.trim();
             
             if (prev.trim() && !prev.trim().endsWith(',') && !prev.trim().endsWith('.') && !prev.trim().endsWith('!') && !prev.trim().endsWith('?')) {
-              return prev.trim() + ', ' + cleanedText;
+              return prev.trim() + ', ' + newText;
             }
             
-            return prev.trim() ? prev + ' ' + cleanedText : cleanedText;
+            return prev.trim() ? prev + ' ' + newText : newText;
           });
           
+          // Actualizar el índice solo DESPUÉS de procesar
           lastProcessedIndexRef.current = event.results.length;
         }
       };
@@ -122,7 +131,10 @@ const LeadsCapture = () => {
       };
       
       recognition.onend = () => {
+        console.log('Reconocimiento terminado. Estado grabación:', isRecordingRef.current);
+        
         if (isRecordingRef.current && !isEdge) {
+          // Para Chrome y otros navegadores: reiniciar sin resetear índice
           setTimeout(() => {
             if (isRecordingRef.current && recognitionRef.current) {
               try {
@@ -136,12 +148,13 @@ const LeadsCapture = () => {
             }
           }, 100);
         } else if (isRecordingRef.current && isEdge) {
+          // Para Edge: reiniciar con reseteo de índice porque no es continuo
           setTimeout(() => {
             if (isRecordingRef.current && recognitionRef.current) {
               try {
-                lastProcessedIndexRef.current = 0;
+                lastProcessedIndexRef.current = 0; // Solo resetear en Edge
                 recognitionRef.current.start();
-                console.log('Reconocimiento reiniciado para Edge');
+                console.log('Reconocimiento reiniciado para Edge (modo no-continuo)');
               } catch (error) {
                 setIsRecording(false);
                 isRecordingRef.current = false;
@@ -195,19 +208,24 @@ const LeadsCapture = () => {
     }
     
     if (isRecording) {
+      // Detener grabación
       isRecordingRef.current = false;
       recognition.stop();
       setIsRecording(false);
-      lastProcessedIndexRef.current = 0;
       console.log('Grabación detenida por el usuario');
+      // NO resetear el índice al detener
     } else {
+      // Iniciar grabación
       setError(null);
+      // Solo resetear el índice al INICIAR una nueva sesión de grabación
       lastProcessedIndexRef.current = 0;
+      console.log('Índice reseteado para nueva grabación');
+      
       try {
         recognition.start();
         setIsRecording(true);
         isRecordingRef.current = true;
-        console.log('Grabación iniciada');
+        console.log('Grabación iniciada con índice en 0');
       } catch (error) {
         console.error('Error iniciando reconocimiento:', error);
         setError('Error iniciando reconocimiento de voz');
