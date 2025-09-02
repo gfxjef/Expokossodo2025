@@ -629,6 +629,29 @@ const LeadsCapture = () => {
           </div>
         </div>
 
+        {/* Banner de estado de grabación prominente */}
+        {isRecording && (
+          <div className="bg-red-500/20 border-2 border-red-500 rounded-xl p-4 mb-4 animate-pulse">
+            <div className="flex items-center justify-center space-x-3">
+              <div className="w-4 h-4 bg-red-500 rounded-full animate-ping"></div>
+              <span className="text-red-300 font-bold text-lg">🎤 GRABANDO - Habla claramente</span>
+              <div className="w-4 h-4 bg-red-500 rounded-full animate-ping"></div>
+            </div>
+            <p className="text-center text-red-200 text-sm mt-2">
+              El texto aparecerá automáticamente. Presiona ⏹️ para terminar la grabación.
+            </p>
+          </div>
+        )}
+
+        {/* Toast flotante de estado */}
+        {isRecording && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+            <div className="bg-red-500 text-white px-6 py-3 rounded-full shadow-xl animate-bounce">
+              🎤 Escuchando... Habla claramente
+            </div>
+          </div>
+        )}
+
         {/* Formulario de Consulta - Altura Completa */}
         <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 flex-1 flex flex-col">
           <div className="flex-1 flex flex-col space-y-4">
@@ -649,8 +672,16 @@ const LeadsCapture = () => {
               <textarea
                 value={consulta}
                 onChange={(e) => setConsulta(e.target.value)}
-                placeholder="Escribe o usa el botón 🔴 para dictar la consulta del cliente..."
-                className="flex-1 w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#6cb79a] focus:border-transparent resize-none text-sm min-h-[200px]"
+                placeholder={isRecording 
+                  ? "🎤 Hablando... El texto aparecerá automáticamente aquí"
+                  : "Escribe o usa el botón 🔴 para dictar la consulta del cliente..."
+                }
+                className={`flex-1 w-full bg-white/10 backdrop-blur-sm border rounded-lg px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:border-transparent resize-none text-sm min-h-[200px] transition-all duration-300 ${
+                  isRecording 
+                    ? 'border-red-500 border-2 animate-pulse bg-red-500/5 focus:ring-red-500 shadow-lg shadow-red-500/20' 
+                    : 'border-white/20 focus:ring-[#6cb79a]'
+                }`}
+                disabled={isRecording}
               />
             </div>
 
@@ -658,17 +689,23 @@ const LeadsCapture = () => {
             <div className="flex items-center space-x-3">
               <button
                 onClick={handleGuardarConsulta}
-                disabled={loading || !consulta.trim()}
+                disabled={loading || !consulta.trim() || isRecording}
                 className={`flex-1 py-3 px-6 rounded-lg font-bold transition-all duration-300 ${
-                  loading || !consulta.trim()
-                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  loading || !consulta.trim() || isRecording
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
                     : 'bg-[#6cb79a] hover:bg-[#5aa485] text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02]'
                 }`}
+                title={isRecording ? 'Termina la grabación para guardar' : ''}
               >
                 {loading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>
                     Guardando...
+                  </>
+                ) : isRecording ? (
+                  <>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse inline-block mr-2"></div>
+                    🎤 Grabando...
                   </>
                 ) : (
                   '💾 Guardar Consulta'
@@ -679,10 +716,10 @@ const LeadsCapture = () => {
               <button
                 onClick={toggleRecording}
                 disabled={!recognition}
-                className={`w-12 h-12 rounded-full font-bold transition-all duration-300 flex items-center justify-center ${
+                className={`rounded-full font-bold transition-all duration-300 flex items-center justify-center ${
                   isRecording
-                    ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-lg'
-                    : 'bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl'
+                    ? 'w-16 h-16 bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-lg shadow-red-500/50 ring-4 ring-red-500/30 text-2xl'
+                    : 'w-12 h-12 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl'
                 } ${!recognition ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title={isRecording ? 'Detener grabación' : 'Iniciar grabación'}
               >
@@ -690,7 +727,7 @@ const LeadsCapture = () => {
               </button>
               
               {/* Botón de Limpiar */}
-              {consulta.trim() && (
+              {consulta.trim() && !isRecording && (
                 <button
                   onClick={clearConsulta}
                   className="w-12 h-12 rounded-full bg-gray-500 hover:bg-gray-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center"
