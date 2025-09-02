@@ -1,0 +1,39 @@
+{
+  "tabla": "expokossodo_asistencias_generales",
+  "fecha_backup": "2025-09-02T09:01:27.949251",
+  "registros": 4,
+  "datos": [
+    {
+      "id": 40,
+      "registro_id": 865,
+      "qr_escaneado": "jor51979603737docunp1756243305",
+      "fecha_escaneo": "2025-09-01T16:05:59",
+      "verificado_por": "Staff-Recepción",
+      "ip_verificacion": "127.0.0.1"
+    },
+    {
+      "id": 41,
+      "registro_id": 1110,
+      "qr_escaneado": "jor51968255746dirims1756749904",
+      "fecha_escaneo": "2025-09-01T16:06:51",
+      "verificado_por": "Staff-Recepción",
+      "ip_verificacion": "127.0.0.1"
+    },
+    {
+      "id": 42,
+      "registro_id": 932,
+      "qr_escaneado": "ric51990360028gersim1756317144",
+      "fecha_escaneo": "2025-09-01T16:14:01",
+      "verificado_por": "Staff-Recepción",
+      "ip_verificacion": "127.0.0.1"
+    },
+    {
+      "id": 43,
+      "registro_id": 1114,
+      "qr_escaneado": "jac960941218jefins1756756623",
+      "fecha_escaneo": "2025-09-01T17:17:17",
+      "verificado_por": "Staff-Recepción",
+      "ip_verificacion": "127.0.0.1"
+    }
+  ]
+}

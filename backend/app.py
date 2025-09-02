@@ -91,9 +91,7 @@ class TermalPrinter4BARCODE:
             "DIRECTION 1\r\n"
             "REFERENCE 0,0\r\n"
             "CLS\r\n"
-            # Nombre centrado con respecto al QR (mismo espaciado)
-            f'TEXT {center_x},{QR_Y - TEXT_OFFSET},"{FONT}",0,1,1,"{nombre_corto}"\r\n'
-            # QR nativo grande (colores correctos)
+            # Solo QR code, sin texto del nombre
             f'QRCODE {QR_X},{QR_Y},M,{QR_CELL},A,0,"{qr_text}"\r\n'
             "PRINT 1\r\n"
         ).encode("ascii")

@@ -1,0 +1,675 @@
+[2025-09-02 09:05:16] [INFO] ======================================================================
+[2025-09-02 09:05:16] [INFO] CONSOLIDACIÓN DE REGISTROS DUPLICADOS - EXPOKOSSODO 2025
+[2025-09-02 09:05:16] [INFO] Modo: EJECUCIÓN REAL
+[2025-09-02 09:05:16] [INFO] ======================================================================
+[2025-09-02 09:05:17] [INFO] ✅ Conexión a base de datos establecida
+[2025-09-02 09:05:17] [INFO] 📦 Creando backup de tablas...
+[2025-09-02 09:05:17] [INFO]   ✅ Backup de expokossodo_registros: 1047 registros en expokossodo_registros_backup_20250902_090517
+[2025-09-02 09:05:18] [INFO]   ✅ Backup de expokossodo_registro_eventos: 2327 registros en expokossodo_registro_eventos_backup_20250902_090517
+[2025-09-02 09:05:18] [INFO]   ✅ Backup de expokossodo_asistencias_generales: 4 registros en expokossodo_asistencias_generales_backup_20250902_090517
+[2025-09-02 09:05:19] [INFO]   ✅ Backup de expokossodo_asistencias_por_sala: 9 registros en expokossodo_asistencias_por_sala_backup_20250902_090517
+[2025-09-02 09:05:19] [INFO] 🔍 Buscando registros duplicados por número de teléfono...
+[2025-09-02 09:05:19] [INFO] 📊 Encontrados 40 grupos de números duplicados
+[2025-09-02 09:05:19] [INFO]   - Número: 930852410 | Registros: 5 | IDs: 33,862,863,868,934
+[2025-09-02 09:05:19] [INFO]   - Número: 966106700 | Registros: 5 | IDs: 105,106,107,108,109
+[2025-09-02 09:05:19] [INFO]   - Número: 940527945 | Registros: 4 | IDs: 58,1098,1099,1102
+[2025-09-02 09:05:19] [INFO]   - Número: 950571912 | Registros: 4 | IDs: 194,195,197,200
+[2025-09-02 09:05:19] [INFO]   - Número: 980787743 | Registros: 4 | IDs: 230,232,233,234
+[2025-09-02 09:05:19] [INFO]   ... y 35 grupos más
+[2025-09-02 09:05:19] [INFO] 
+==================================================
+[2025-09-02 09:05:19] [INFO] Procesando grupo 1 de 40
+[2025-09-02 09:05:19] [INFO] 
+📝 Procesando grupo con número: 930852410
+[2025-09-02 09:05:19] [INFO]   - ID principal (mantener): 33
+[2025-09-02 09:05:19] [INFO]   - IDs a eliminar: [862, 863, 868, 934]
+[2025-09-02 09:05:19] [INFO]   - Correos consolidados: labfq@lamolina.edu.pe, acampoverde@lamolina.edu.pe, bradacostacampos@gmail.com, laboratoriofisicoqui, acampoverde@lamolina.edu.pe, bradacostacampos@gmail.com, laboratoriofisicoquimicafial@gmail.com, ayatochirinosuribe@gmail.com
+[2025-09-02 09:05:19] [INFO]   - Eventos consolidados: [8, 16, 28]
+[2025-09-02 09:05:19] [INFO]   - Confirmado: False
+[2025-09-02 09:05:19] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:19] [INFO]   ✅ Registro principal 33 actualizado
+[2025-09-02 09:05:19] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:20] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:20] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:20] [INFO]   ✅ Eliminados 4 registros duplicados
+[2025-09-02 09:05:20] [INFO] 
+==================================================
+[2025-09-02 09:05:20] [INFO] Procesando grupo 2 de 40
+[2025-09-02 09:05:20] [INFO] 
+📝 Procesando grupo con número: 966106700
+[2025-09-02 09:05:20] [INFO]   - ID principal (mantener): 105
+[2025-09-02 09:05:20] [INFO]   - IDs a eliminar: [106, 107, 108, 109]
+[2025-09-02 09:05:20] [INFO]   - Correos consolidados: raul.mamani@unsch.edu.pe, profmamani@gmail.com, profmamani@hotmail.com, rm18801@gmail.com, ramaunsch, profmamani@gmail.com, profmamani@hotmail.com, rm18801@gmail.com, ramaunsch9@gmail.com
+[2025-09-02 09:05:20] [INFO]   - Eventos consolidados: [1, 5]
+[2025-09-02 09:05:20] [INFO]   - Confirmado: False
+[2025-09-02 09:05:20] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:20] [INFO]   ✅ Registro principal 105 actualizado
+[2025-09-02 09:05:20] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:22] [ERROR]   ❌ Error consolidando grupo: 1062 (23000): Duplicate entry '105-12' for key 'expokossodo_registro_eventos.unique_registro_evento'
+[2025-09-02 09:05:22] [INFO] 
+==================================================
+[2025-09-02 09:05:22] [INFO] Procesando grupo 3 de 40
+[2025-09-02 09:05:22] [INFO] 
+📝 Procesando grupo con número: 940527945
+[2025-09-02 09:05:22] [INFO]   - ID principal (mantener): 58
+[2025-09-02 09:05:22] [INFO]   - IDs a eliminar: [1098, 1099, 1102]
+[2025-09-02 09:05:22] [INFO]   - Correos consolidados: rcharam_af@unmsm.edu.pe, rosariochara551@gmail.com, rosariochara511@gmai.com, rosariochara511@gmail., rosariochara551@gmail.com, rosariochara511@gmai.com, rosariochara511@gmail.com
+[2025-09-02 09:05:22] [INFO]   - Eventos consolidados: [1, 6, 24, 26, 43, 45]
+[2025-09-02 09:05:22] [INFO]   - Confirmado: False
+[2025-09-02 09:05:22] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:22] [INFO]   ✅ Registro principal 58 actualizado
+[2025-09-02 09:05:22] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:23] [ERROR]   ❌ Error consolidando grupo: 1062 (23000): Duplicate entry '58-6' for key 'expokossodo_registro_eventos.unique_registro_evento'
+[2025-09-02 09:05:23] [INFO] 
+==================================================
+[2025-09-02 09:05:23] [INFO] Procesando grupo 4 de 40
+[2025-09-02 09:05:23] [INFO] 
+📝 Procesando grupo con número: 950571912
+[2025-09-02 09:05:23] [INFO]   - ID principal (mantener): 194
+[2025-09-02 09:05:23] [INFO]   - IDs a eliminar: [195, 197, 200]
+[2025-09-02 09:05:23] [INFO]   - Correos consolidados: carmen.rosa.22@hotmail.es, prettygirl@hotmail.com, caromi.prettygirl@hotmail.com, carmen.seminario.2, prettygirl@hotmail.com, caromi.prettygirl@hotmail.com, carmen.seminario.22@hotmail.com
+[2025-09-02 09:05:23] [INFO]   - Eventos consolidados: [2, 5, 12, 14, 23, 25, 32, 33]
+[2025-09-02 09:05:23] [INFO]   - Confirmado: False
+[2025-09-02 09:05:23] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:23] [INFO]   ✅ Registro principal 194 actualizado
+[2025-09-02 09:05:23] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:24] [ERROR]   ❌ Error consolidando grupo: 1062 (23000): Duplicate entry '194-23' for key 'expokossodo_registro_eventos.unique_registro_evento'
+[2025-09-02 09:05:24] [INFO] 
+==================================================
+[2025-09-02 09:05:24] [INFO] Procesando grupo 5 de 40
+[2025-09-02 09:05:24] [INFO] 
+📝 Procesando grupo con número: 980787743
+[2025-09-02 09:05:24] [INFO]   - ID principal (mantener): 230
+[2025-09-02 09:05:24] [INFO]   - IDs a eliminar: [232, 233, 234]
+[2025-09-02 09:05:24] [INFO]   - Correos consolidados: evelyncrv@outlook.com, evelyn.oncebay@gmail.com, evelyn.oncebaym@gmail.com, evelyn.oncebay@unmsm.edu, evelyn.oncebay@gmail.com, evelyn.oncebaym@gmail.com, evelyn.oncebay@unmsm.edu.pe
+[2025-09-02 09:05:24] [INFO]   - Eventos consolidados: [31, 33, 42, 46]
+[2025-09-02 09:05:24] [INFO]   - Confirmado: False
+[2025-09-02 09:05:24] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:24] [INFO]   ✅ Registro principal 230 actualizado
+[2025-09-02 09:05:24] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:25] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:25] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:25] [INFO]   ✅ Eliminados 3 registros duplicados
+[2025-09-02 09:05:25] [INFO] 
+==================================================
+[2025-09-02 09:05:25] [INFO] Procesando grupo 6 de 40
+[2025-09-02 09:05:25] [INFO] 
+📝 Procesando grupo con número: 922082180
+[2025-09-02 09:05:25] [INFO]   - ID principal (mantener): 196
+[2025-09-02 09:05:25] [INFO]   - IDs a eliminar: [198, 199]
+[2025-09-02 09:05:25] [INFO]   - Correos consolidados: gurreo_14@hotmail.com, julio.gurreonero@upn.edu.pe, gurreonero@hotmail.com, julio.gurreonero@upn.edu.pe, gurreonero@hotmail.com
+[2025-09-02 09:05:25] [INFO]   - Eventos consolidados: [2, 5, 12, 14]
+[2025-09-02 09:05:25] [INFO]   - Confirmado: False
+[2025-09-02 09:05:25] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:26] [INFO]   ✅ Registro principal 196 actualizado
+[2025-09-02 09:05:26] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:27] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:27] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:27] [INFO]   ✅ Eliminados 2 registros duplicados
+[2025-09-02 09:05:27] [INFO] 
+==================================================
+[2025-09-02 09:05:27] [INFO] Procesando grupo 7 de 40
+[2025-09-02 09:05:27] [INFO] 
+📝 Procesando grupo con número: 992276307
+[2025-09-02 09:05:27] [INFO]   - ID principal (mantener): 853
+[2025-09-02 09:05:27] [INFO]   - IDs a eliminar: [938, 941]
+[2025-09-02 09:05:27] [INFO]   - Correos consolidados: juancesar.toledo@unmsm.edu.pe, juancesar.toledo@unms.edupe, jcesartb@gmail.com, juancesar.toledo@unms.edupe, jcesartb@gmail.com
+[2025-09-02 09:05:27] [INFO]   - Eventos consolidados: [1, 2, 6, 22, 34]
+[2025-09-02 09:05:27] [INFO]   - Confirmado: False
+[2025-09-02 09:05:27] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:27] [INFO]   ✅ Registro principal 853 actualizado
+[2025-09-02 09:05:27] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:28] [ERROR]   ❌ Error consolidando grupo: 1062 (23000): Duplicate entry '853-2' for key 'expokossodo_registro_eventos.unique_registro_evento'
+[2025-09-02 09:05:28] [INFO] 
+==================================================
+[2025-09-02 09:05:28] [INFO] Procesando grupo 8 de 40
+[2025-09-02 09:05:28] [INFO] 
+📝 Procesando grupo con número: 942771240
+[2025-09-02 09:05:28] [INFO]   - ID principal (mantener): 43
+[2025-09-02 09:05:28] [INFO]   - IDs a eliminar: [857]
+[2025-09-02 09:05:28] [INFO]   - Correos consolidados: gianinacl29@gmail.com, 20190641@lqmolina.edu.pe, 20190641@lqmolina.edu.pe
+[2025-09-02 09:05:28] [INFO]   - Eventos consolidados: [5, 15, 26, 32, 52]
+[2025-09-02 09:05:28] [INFO]   - Confirmado: False
+[2025-09-02 09:05:28] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:28] [INFO]   ✅ Registro principal 43 actualizado
+[2025-09-02 09:05:28] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:29] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:29] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:29] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:29] [INFO] 
+==================================================
+[2025-09-02 09:05:29] [INFO] Procesando grupo 9 de 40
+[2025-09-02 09:05:29] [INFO] 
+📝 Procesando grupo con número: +51998672616
+[2025-09-02 09:05:29] [INFO]   - ID principal (mantener): 62
+[2025-09-02 09:05:29] [INFO]   - IDs a eliminar: [63]
+[2025-09-02 09:05:29] [INFO]   - Correos consolidados: terenceapi@gmail.com, t.api@stgmining.com, t.api@stgmining.com
+[2025-09-02 09:05:29] [INFO]   - Eventos consolidados: [52]
+[2025-09-02 09:05:29] [INFO]   - Confirmado: False
+[2025-09-02 09:05:29] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:29] [INFO]   ✅ Registro principal 62 actualizado
+[2025-09-02 09:05:29] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:29] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:30] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:30] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:30] [INFO] 
+==================================================
+[2025-09-02 09:05:30] [INFO] Procesando grupo 10 de 40
+[2025-09-02 09:05:30] [INFO] 
+📝 Procesando grupo con número: 943589444
+[2025-09-02 09:05:30] [INFO]   - ID principal (mantener): 79
+[2025-09-02 09:05:30] [INFO]   - IDs a eliminar: [80]
+[2025-09-02 09:05:30] [INFO]   - Correos consolidados: crenelia_mallqui@gmail.com, ferymarcalidad@gmail.com, ferymarcalidad@gmail.com
+[2025-09-02 09:05:30] [INFO]   - Eventos consolidados: [13, 33, 53]
+[2025-09-02 09:05:30] [INFO]   - Confirmado: False
+[2025-09-02 09:05:30] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:30] [INFO]   ✅ Registro principal 79 actualizado
+[2025-09-02 09:05:30] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:30] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:30] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:31] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:31] [INFO] 💾 Commit parcial realizado (10 grupos procesados)
+[2025-09-02 09:05:31] [INFO] 
+==================================================
+[2025-09-02 09:05:31] [INFO] Procesando grupo 11 de 40
+[2025-09-02 09:05:31] [INFO] 
+📝 Procesando grupo con número: 992568538
+[2025-09-02 09:05:31] [INFO]   - ID principal (mantener): 90
+[2025-09-02 09:05:31] [INFO]   - IDs a eliminar: [98]
+[2025-09-02 09:05:31] [INFO]   - Correos consolidados: neddacordovaibazeta@gmail.com, ibazetacordovanedda@gmail.com, ibazetacordovanedda@gmail.com
+[2025-09-02 09:05:31] [INFO]   - Eventos consolidados: [3, 8, 9, 13, 24, 26, 29, 36, 42, 45, 51, 53]
+[2025-09-02 09:05:31] [INFO]   - Confirmado: False
+[2025-09-02 09:05:31] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:31] [INFO]   ✅ Registro principal 90 actualizado
+[2025-09-02 09:05:31] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:32] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:32] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:32] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:32] [INFO] 
+==================================================
+[2025-09-02 09:05:32] [INFO] Procesando grupo 12 de 40
+[2025-09-02 09:05:32] [INFO] 
+📝 Procesando grupo con número: +51960280666
+[2025-09-02 09:05:32] [INFO]   - ID principal (mantener): 92
+[2025-09-02 09:05:32] [INFO]   - IDs a eliminar: [93]
+[2025-09-02 09:05:33] [INFO]   - Correos consolidados: gcalidad@laboratoriopym.com.pe, gcalidad.laboratoriopym@gmail.com, gcalidad.laboratoriopym@gmail.com
+[2025-09-02 09:05:33] [INFO]   - Eventos consolidados: [4, 5, 24, 32, 36, 41, 42, 49, 55]
+[2025-09-02 09:05:33] [INFO]   - Confirmado: False
+[2025-09-02 09:05:33] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:33] [INFO]   ✅ Registro principal 92 actualizado
+[2025-09-02 09:05:33] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:33] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:33] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:34] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:34] [INFO] 
+==================================================
+[2025-09-02 09:05:34] [INFO] Procesando grupo 13 de 40
+[2025-09-02 09:05:34] [INFO] 
+📝 Procesando grupo con número: 986496320
+[2025-09-02 09:05:34] [INFO]   - ID principal (mantener): 101
+[2025-09-02 09:05:34] [INFO]   - IDs a eliminar: [102]
+[2025-09-02 09:05:34] [INFO]   - Correos consolidados: clara.murga@upch.pe, clara.murga@hotmail.com, clara.murga@hotmail.com
+[2025-09-02 09:05:34] [INFO]   - Eventos consolidados: [5, 9, 11, 13, 16]
+[2025-09-02 09:05:34] [INFO]   - Confirmado: False
+[2025-09-02 09:05:34] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:34] [INFO]   ✅ Registro principal 101 actualizado
+[2025-09-02 09:05:34] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:34] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:34] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:35] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:35] [INFO] 
+==================================================
+[2025-09-02 09:05:35] [INFO] Procesando grupo 14 de 40
+[2025-09-02 09:05:35] [INFO] 
+📝 Procesando grupo con número: 943071414
+[2025-09-02 09:05:35] [INFO]   - ID principal (mantener): 116
+[2025-09-02 09:05:35] [INFO]   - IDs a eliminar: [118]
+[2025-09-02 09:05:35] [INFO]   - Correos consolidados: fanyhr46@gmail.com, caritafa9@yahoo.es, caritafa9@yahoo.es
+[2025-09-02 09:05:35] [INFO]   - Eventos consolidados: [5, 9, 13]
+[2025-09-02 09:05:35] [INFO]   - Confirmado: False
+[2025-09-02 09:05:35] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:35] [INFO]   ✅ Registro principal 116 actualizado
+[2025-09-02 09:05:35] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:35] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:35] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:36] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:36] [INFO] 
+==================================================
+[2025-09-02 09:05:36] [INFO] Procesando grupo 15 de 40
+[2025-09-02 09:05:36] [INFO] 
+📝 Procesando grupo con número: 991662758
+[2025-09-02 09:05:36] [INFO]   - ID principal (mantener): 135
+[2025-09-02 09:05:36] [INFO]   - IDs a eliminar: [136]
+[2025-09-02 09:05:36] [INFO]   - Correos consolidados: ktiza@insnsb.gob.pe, kattymirelly@gmail.com.pe, kattymirelly@gmail.com.pe
+[2025-09-02 09:05:36] [INFO]   - Eventos consolidados: [5, 15]
+[2025-09-02 09:05:36] [INFO]   - Confirmado: False
+[2025-09-02 09:05:36] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:36] [INFO]   ✅ Registro principal 135 actualizado
+[2025-09-02 09:05:36] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:37] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:37] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:37] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:37] [INFO] 
+==================================================
+[2025-09-02 09:05:37] [INFO] Procesando grupo 16 de 40
+[2025-09-02 09:05:37] [INFO] 
+📝 Procesando grupo con número: +51949333070
+[2025-09-02 09:05:37] [INFO]   - ID principal (mantener): 139
+[2025-09-02 09:05:37] [INFO]   - IDs a eliminar: [364]
+[2025-09-02 09:05:37] [INFO]   - Correos consolidados: jcubasf@unprg.edu.pe, cubasjose2812@gmail.com, cubasjose2812@gmail.com
+[2025-09-02 09:05:37] [INFO]   - Eventos consolidados: [5, 36]
+[2025-09-02 09:05:37] [INFO]   - Confirmado: False
+[2025-09-02 09:05:37] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:37] [INFO]   ✅ Registro principal 139 actualizado
+[2025-09-02 09:05:37] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:38] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:38] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:38] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:38] [INFO] 
+==================================================
+[2025-09-02 09:05:38] [INFO] Procesando grupo 17 de 40
+[2025-09-02 09:05:38] [INFO] 
+📝 Procesando grupo con número: 989645840
+[2025-09-02 09:05:38] [INFO]   - ID principal (mantener): 170
+[2025-09-02 09:05:38] [INFO]   - IDs a eliminar: [171]
+[2025-09-02 09:05:38] [INFO]   - Correos consolidados: jgomez@usil.ed.pe, jgomez@usil.edu.pe, jgomez@usil.edu.pe
+[2025-09-02 09:05:38] [INFO]   - Eventos consolidados: [6, 11, 13]
+[2025-09-02 09:05:38] [INFO]   - Confirmado: False
+[2025-09-02 09:05:38] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:38] [INFO]   ✅ Registro principal 170 actualizado
+[2025-09-02 09:05:38] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:39] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:39] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:39] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:39] [INFO] 
+==================================================
+[2025-09-02 09:05:39] [INFO] Procesando grupo 18 de 40
+[2025-09-02 09:05:39] [INFO] 
+📝 Procesando grupo con número: +51970639931
+[2025-09-02 09:05:39] [INFO]   - ID principal (mantener): 172
+[2025-09-02 09:05:39] [INFO]   - IDs a eliminar: [173]
+[2025-09-02 09:05:39] [INFO]   - Correos consolidados: hflores@chyvgraficos.com, hectorjorge01@gmail.com, hectorjorge01@gmail.com
+[2025-09-02 09:05:39] [INFO]   - Eventos consolidados: [13]
+[2025-09-02 09:05:39] [INFO]   - Confirmado: False
+[2025-09-02 09:05:39] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:39] [INFO]   ✅ Registro principal 172 actualizado
+[2025-09-02 09:05:39] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:40] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:40] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:40] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:40] [INFO] 
+==================================================
+[2025-09-02 09:05:40] [INFO] Procesando grupo 19 de 40
+[2025-09-02 09:05:40] [INFO] 
+📝 Procesando grupo con número: 962284711
+[2025-09-02 09:05:40] [INFO]   - ID principal (mantener): 181
+[2025-09-02 09:05:40] [INFO]   - IDs a eliminar: [182]
+[2025-09-02 09:05:40] [INFO]   - Correos consolidados: gabriel.lopez@upch.pe, gabriellopez21s19@gmail.com, gabriellopez21s19@gmail.com
+[2025-09-02 09:05:40] [INFO]   - Eventos consolidados: [3, 5]
+[2025-09-02 09:05:40] [INFO]   - Confirmado: False
+[2025-09-02 09:05:40] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:40] [INFO]   ✅ Registro principal 181 actualizado
+[2025-09-02 09:05:40] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:41] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:41] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:41] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:41] [INFO] 
+==================================================
+[2025-09-02 09:05:41] [INFO] Procesando grupo 20 de 40
+[2025-09-02 09:05:41] [INFO] 
+📝 Procesando grupo con número: +51937303375
+[2025-09-02 09:05:41] [INFO]   - ID principal (mantener): 186
+[2025-09-02 09:05:41] [INFO]   - IDs a eliminar: [187]
+[2025-09-02 09:05:41] [INFO]   - Correos consolidados: laboratorio@auricasac.com, eulogps@hotmail.com, eulogps@hotmail.com
+[2025-09-02 09:05:41] [INFO]   - Eventos consolidados: [2, 5]
+[2025-09-02 09:05:41] [INFO]   - Confirmado: False
+[2025-09-02 09:05:41] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:41] [INFO]   ✅ Registro principal 186 actualizado
+[2025-09-02 09:05:41] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:42] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:42] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:43] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:43] [INFO] 💾 Commit parcial realizado (20 grupos procesados)
+[2025-09-02 09:05:43] [INFO] 
+==================================================
+[2025-09-02 09:05:43] [INFO] Procesando grupo 21 de 40
+[2025-09-02 09:05:43] [INFO] 
+📝 Procesando grupo con número: +51926386451
+[2025-09-02 09:05:43] [INFO]   - ID principal (mantener): 204
+[2025-09-02 09:05:43] [INFO]   - IDs a eliminar: [521]
+[2025-09-02 09:05:43] [INFO]   - Correos consolidados: cquispequi28@gmail.com, cesar28e@hotmail.com, cesar28e@hotmail.com
+[2025-09-02 09:05:43] [INFO]   - Eventos consolidados: [42, 53]
+[2025-09-02 09:05:43] [INFO]   - Confirmado: False
+[2025-09-02 09:05:43] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:43] [INFO]   ✅ Registro principal 204 actualizado
+[2025-09-02 09:05:43] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:43] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:43] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:44] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:44] [INFO] 
+==================================================
+[2025-09-02 09:05:44] [INFO] Procesando grupo 22 de 40
+[2025-09-02 09:05:44] [INFO] 
+📝 Procesando grupo con número: 51 980040375
+[2025-09-02 09:05:44] [INFO]   - ID principal (mantener): 228
+[2025-09-02 09:05:44] [INFO]   - IDs a eliminar: [229]
+[2025-09-02 09:05:44] [INFO]   - Correos consolidados: whernandez79@yahoo.es, wilhergorritti@gmail.com, wilhergorritti@gmail.com
+[2025-09-02 09:05:44] [INFO]   - Eventos consolidados: [1, 8, 12, 13]
+[2025-09-02 09:05:44] [INFO]   - Confirmado: False
+[2025-09-02 09:05:44] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:44] [INFO]   ✅ Registro principal 228 actualizado
+[2025-09-02 09:05:44] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:45] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:45] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:45] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:45] [INFO] 
+==================================================
+[2025-09-02 09:05:45] [INFO] Procesando grupo 23 de 40
+[2025-09-02 09:05:45] [INFO] 
+📝 Procesando grupo con número: +51924571394
+[2025-09-02 09:05:45] [INFO]   - ID principal (mantener): 240
+[2025-09-02 09:05:45] [INFO]   - IDs a eliminar: [241]
+[2025-09-02 09:05:45] [INFO]   - Correos consolidados: jsalazar@sh.com.pe, roberst1977@gmail.com, roberst1977@gmail.com
+[2025-09-02 09:05:45] [INFO]   - Eventos consolidados: [22, 29, 36]
+[2025-09-02 09:05:45] [INFO]   - Confirmado: False
+[2025-09-02 09:05:45] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:45] [INFO]   ✅ Registro principal 240 actualizado
+[2025-09-02 09:05:45] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:46] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:46] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:46] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:46] [INFO] 
+==================================================
+[2025-09-02 09:05:46] [INFO] Procesando grupo 24 de 40
+[2025-09-02 09:05:46] [INFO] 
+📝 Procesando grupo con número: 980 739 352
+[2025-09-02 09:05:46] [INFO]   - ID principal (mantener): 255
+[2025-09-02 09:05:46] [INFO]   - IDs a eliminar: [256]
+[2025-09-02 09:05:46] [INFO]   - Correos consolidados: yuliana_c1503@hotmail.es, PROYRCTO@ADELMI.PE, PROYRCTO@ADELMI.PE
+[2025-09-02 09:05:46] [INFO]   - Eventos consolidados: [2]
+[2025-09-02 09:05:46] [INFO]   - Confirmado: False
+[2025-09-02 09:05:46] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:46] [INFO]   ✅ Registro principal 255 actualizado
+[2025-09-02 09:05:46] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:47] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:47] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:47] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:47] [INFO] 
+==================================================
+[2025-09-02 09:05:47] [INFO] Procesando grupo 25 de 40
+[2025-09-02 09:05:47] [INFO] 
+📝 Procesando grupo con número: 927938393
+[2025-09-02 09:05:47] [INFO]   - ID principal (mantener): 261
+[2025-09-02 09:05:47] [INFO]   - IDs a eliminar: [262]
+[2025-09-02 09:05:47] [INFO]   - Correos consolidados: hillaryhachillaa@gmail.com, hillaryhachillaa@gmail.con, hillaryhachillaa@gmail.con
+[2025-09-02 09:05:47] [INFO]   - Eventos consolidados: [3, 8, 12, 14, 23]
+[2025-09-02 09:05:47] [INFO]   - Confirmado: False
+[2025-09-02 09:05:47] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:47] [INFO]   ✅ Registro principal 261 actualizado
+[2025-09-02 09:05:47] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:48] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:48] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:48] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:48] [INFO] 
+==================================================
+[2025-09-02 09:05:48] [INFO] Procesando grupo 26 de 40
+[2025-09-02 09:05:48] [INFO] 
+📝 Procesando grupo con número: 902047353
+[2025-09-02 09:05:48] [INFO]   - ID principal (mantener): 269
+[2025-09-02 09:05:48] [INFO]   - IDs a eliminar: [270]
+[2025-09-02 09:05:48] [INFO]   - Correos consolidados: raulttant@gmail.com, raul.comettant@upsjb.edu.pe, raul.comettant@upsjb.edu.pe
+[2025-09-02 09:05:48] [INFO]   - Eventos consolidados: [13, 15]
+[2025-09-02 09:05:48] [INFO]   - Confirmado: False
+[2025-09-02 09:05:48] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:48] [INFO]   ✅ Registro principal 269 actualizado
+[2025-09-02 09:05:48] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:49] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:49] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:49] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:49] [INFO] 
+==================================================
+[2025-09-02 09:05:49] [INFO] Procesando grupo 27 de 40
+[2025-09-02 09:05:49] [INFO] 
+📝 Procesando grupo con número: +51999594954
+[2025-09-02 09:05:49] [INFO]   - ID principal (mantener): 282
+[2025-09-02 09:05:49] [INFO]   - IDs a eliminar: [283]
+[2025-09-02 09:05:49] [INFO]   - Correos consolidados: elipher21@gmail.com, payanape@hotmail.com, payanape@hotmail.com
+[2025-09-02 09:05:49] [INFO]   - Eventos consolidados: [8, 13]
+[2025-09-02 09:05:49] [INFO]   - Confirmado: False
+[2025-09-02 09:05:49] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:49] [INFO]   ✅ Registro principal 282 actualizado
+[2025-09-02 09:05:49] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:50] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:50] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:50] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:50] [INFO] 
+==================================================
+[2025-09-02 09:05:50] [INFO] Procesando grupo 28 de 40
+[2025-09-02 09:05:50] [INFO] 
+📝 Procesando grupo con número: 987180640
+[2025-09-02 09:05:50] [INFO]   - ID principal (mantener): 293
+[2025-09-02 09:05:50] [INFO]   - IDs a eliminar: [294]
+[2025-09-02 09:05:50] [INFO]   - Correos consolidados: yaned_h@hotmail.com, yanet.huaman@yanbal.com, yanet.huaman@yanbal.com
+[2025-09-02 09:05:50] [INFO]   - Eventos consolidados: [24, 25, 27, 32, 35, 36]
+[2025-09-02 09:05:50] [INFO]   - Confirmado: False
+[2025-09-02 09:05:50] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:50] [INFO]   ✅ Registro principal 293 actualizado
+[2025-09-02 09:05:50] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:51] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:51] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:51] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:51] [INFO] 
+==================================================
+[2025-09-02 09:05:51] [INFO] Procesando grupo 29 de 40
+[2025-09-02 09:05:51] [INFO] 
+📝 Procesando grupo con número: 949409997
+[2025-09-02 09:05:51] [INFO]   - ID principal (mantener): 295
+[2025-09-02 09:05:51] [INFO]   - IDs a eliminar: [297]
+[2025-09-02 09:05:51] [INFO]   - Correos consolidados: sandra.millones@yanbal.com, sajesmi@gamil.com, sajesmi@gamil.com
+[2025-09-02 09:05:51] [INFO]   - Eventos consolidados: [25]
+[2025-09-02 09:05:51] [INFO]   - Confirmado: False
+[2025-09-02 09:05:51] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:51] [INFO]   ✅ Registro principal 295 actualizado
+[2025-09-02 09:05:51] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:52] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:52] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:52] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:52] [INFO] 
+==================================================
+[2025-09-02 09:05:52] [INFO] Procesando grupo 30 de 40
+[2025-09-02 09:05:52] [INFO] 
+📝 Procesando grupo con número: 943936851
+[2025-09-02 09:05:52] [INFO]   - ID principal (mantener): 296
+[2025-09-02 09:05:52] [INFO]   - IDs a eliminar: [298]
+[2025-09-02 09:05:52] [INFO]   - Correos consolidados: cristina.gastelo@yanbal.com, cristigastelo@gmail.com, cristigastelo@gmail.com
+[2025-09-02 09:05:52] [INFO]   - Eventos consolidados: [21]
+[2025-09-02 09:05:52] [INFO]   - Confirmado: False
+[2025-09-02 09:05:52] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:52] [INFO]   ✅ Registro principal 296 actualizado
+[2025-09-02 09:05:52] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:53] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:53] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:53] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:53] [INFO] 💾 Commit parcial realizado (30 grupos procesados)
+[2025-09-02 09:05:53] [INFO] 
+==================================================
+[2025-09-02 09:05:53] [INFO] Procesando grupo 31 de 40
+[2025-09-02 09:05:53] [INFO] 
+📝 Procesando grupo con número: +51956924084
+[2025-09-02 09:05:53] [INFO]   - ID principal (mantener): 516
+[2025-09-02 09:05:53] [INFO]   - IDs a eliminar: [856]
+[2025-09-02 09:05:53] [INFO]   - Correos consolidados: juan.tejada@unica.edu.pe, tejada_lcsd@hotmail.com, tejada_lcsd@hotmail.com
+[2025-09-02 09:05:53] [INFO]   - Eventos consolidados: [3, 8, 15, 25, 33]
+[2025-09-02 09:05:53] [INFO]   - Confirmado: False
+[2025-09-02 09:05:53] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:53] [INFO]   ✅ Registro principal 516 actualizado
+[2025-09-02 09:05:53] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:54] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:54] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:54] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:54] [INFO] 
+==================================================
+[2025-09-02 09:05:54] [INFO] Procesando grupo 32 de 40
+[2025-09-02 09:05:54] [INFO] 
+📝 Procesando grupo con número: +51908894060
+[2025-09-02 09:05:54] [INFO]   - ID principal (mantener): 591
+[2025-09-02 09:05:54] [INFO]   - IDs a eliminar: [795]
+[2025-09-02 09:05:54] [INFO]   - Correos consolidados: richardramosramos@gmail.com, richardramosrosales@gmail.com, richardramosrosales@gmail.com
+[2025-09-02 09:05:54] [INFO]   - Eventos consolidados: [27, 52]
+[2025-09-02 09:05:54] [INFO]   - Confirmado: False
+[2025-09-02 09:05:54] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:54] [INFO]   ✅ Registro principal 591 actualizado
+[2025-09-02 09:05:54] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:55] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:55] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:55] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:55] [INFO] 
+==================================================
+[2025-09-02 09:05:55] [INFO] Procesando grupo 33 de 40
+[2025-09-02 09:05:55] [INFO] 
+📝 Procesando grupo con número: +51940635471
+[2025-09-02 09:05:55] [INFO]   - ID principal (mantener): 858
+[2025-09-02 09:05:55] [INFO]   - IDs a eliminar: [869]
+[2025-09-02 09:05:55] [INFO]   - Correos consolidados: jdesouza@lamolina.edu.pe, jdesouza17@hotmail.com, jdesouza17@hotmail.com
+[2025-09-02 09:05:55] [INFO]   - Eventos consolidados: [5, 34, 52, 53]
+[2025-09-02 09:05:55] [INFO]   - Confirmado: False
+[2025-09-02 09:05:55] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:55] [INFO]   ✅ Registro principal 858 actualizado
+[2025-09-02 09:05:55] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:56] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:56] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:56] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:56] [INFO] 
+==================================================
+[2025-09-02 09:05:56] [INFO] Procesando grupo 34 de 40
+[2025-09-02 09:05:56] [INFO] 
+📝 Procesando grupo con número: 969403788
+[2025-09-02 09:05:56] [INFO]   - ID principal (mantener): 870
+[2025-09-02 09:05:56] [INFO]   - IDs a eliminar: [888]
+[2025-09-02 09:05:56] [INFO]   - Correos consolidados: kventuro@ulima.edu.pe, katty_2_205@hotmail.com, katty_2_205@hotmail.com
+[2025-09-02 09:05:56] [INFO]   - Eventos consolidados: [24, 25, 29, 34, 41, 48, 49, 53]
+[2025-09-02 09:05:56] [INFO]   - Confirmado: False
+[2025-09-02 09:05:56] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:56] [INFO]   ✅ Registro principal 870 actualizado
+[2025-09-02 09:05:56] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:57] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:57] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:57] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:57] [INFO] 
+==================================================
+[2025-09-02 09:05:57] [INFO] Procesando grupo 35 de 40
+[2025-09-02 09:05:57] [INFO] 
+📝 Procesando grupo con número: +51995364232
+[2025-09-02 09:05:57] [INFO]   - ID principal (mantener): 878
+[2025-09-02 09:05:57] [INFO]   - IDs a eliminar: [880]
+[2025-09-02 09:05:57] [INFO]   - Correos consolidados: ejchal811@gmail.com, echuquihuacchaa@uni.pe, echuquihuacchaa@uni.pe
+[2025-09-02 09:05:57] [INFO]   - Eventos consolidados: [1, 42, 52]
+[2025-09-02 09:05:57] [INFO]   - Confirmado: False
+[2025-09-02 09:05:57] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:58] [INFO]   ✅ Registro principal 878 actualizado
+[2025-09-02 09:05:58] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:58] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:58] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:58] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:58] [INFO] 
+==================================================
+[2025-09-02 09:05:58] [INFO] Procesando grupo 36 de 40
+[2025-09-02 09:05:58] [INFO] 
+📝 Procesando grupo con número: 997 533 784
+[2025-09-02 09:05:58] [INFO]   - ID principal (mantener): 906
+[2025-09-02 09:05:58] [INFO]   - IDs a eliminar: [922]
+[2025-09-02 09:05:58] [INFO]   - Correos consolidados: pedro.escate@alpayana.com, pescate@alpayana.com, pescate@alpayana.com
+[2025-09-02 09:05:59] [INFO]   - Eventos consolidados: [44, 45, 51]
+[2025-09-02 09:05:59] [INFO]   - Confirmado: False
+[2025-09-02 09:05:59] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:05:59] [INFO]   ✅ Registro principal 906 actualizado
+[2025-09-02 09:05:59] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:05:59] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:05:59] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:05:59] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:05:59] [INFO] 
+==================================================
+[2025-09-02 09:05:59] [INFO] Procesando grupo 37 de 40
+[2025-09-02 09:05:59] [INFO] 
+📝 Procesando grupo con número: 980739352
+[2025-09-02 09:05:59] [INFO]   - ID principal (mantener): 1014
+[2025-09-02 09:05:59] [INFO]   - IDs a eliminar: [1016]
+[2025-09-02 09:05:59] [INFO]   - Correos consolidados: ingstefanyfv@hotmail.com, ingstefanyfv@gmail.com, ingstefanyfv@gmail.com
+[2025-09-02 09:05:59] [INFO]   - Eventos consolidados: [12]
+[2025-09-02 09:05:59] [INFO]   - Confirmado: False
+[2025-09-02 09:05:59] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:06:00] [INFO]   ✅ Registro principal 1014 actualizado
+[2025-09-02 09:06:00] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:06:00] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:06:00] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:06:00] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:06:00] [INFO] 
+==================================================
+[2025-09-02 09:06:00] [INFO] Procesando grupo 38 de 40
+[2025-09-02 09:06:00] [INFO] 
+📝 Procesando grupo con número: 921 979 021
+[2025-09-02 09:06:00] [INFO]   - ID principal (mantener): 1040
+[2025-09-02 09:06:00] [INFO]   - IDs a eliminar: [1041]
+[2025-09-02 09:06:00] [INFO]   - Correos consolidados: edelaguila@slabperu.com, sjulca@slabperu.com, sjulca@slabperu.com
+[2025-09-02 09:06:00] [INFO]   - Eventos consolidados: [3, 8, 12, 14]
+[2025-09-02 09:06:00] [INFO]   - Confirmado: False
+[2025-09-02 09:06:00] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:06:00] [INFO]   ✅ Registro principal 1040 actualizado
+[2025-09-02 09:06:00] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:06:01] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:06:01] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:06:01] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:06:01] [INFO] 
+==================================================
+[2025-09-02 09:06:01] [INFO] Procesando grupo 39 de 40
+[2025-09-02 09:06:01] [INFO] 
+📝 Procesando grupo con número: 982553318
+[2025-09-02 09:06:01] [INFO]   - ID principal (mantener): 1108
+[2025-09-02 09:06:01] [INFO]   - IDs a eliminar: [1111]
+[2025-09-02 09:06:01] [INFO]   - Correos consolidados: yemerson.encarnacion@iqfarma.com, jaguilar@iqfarma.com, jaguilar@iqfarma.com
+[2025-09-02 09:06:01] [INFO]   - Eventos consolidados: [16, 49]
+[2025-09-02 09:06:01] [INFO]   - Confirmado: False
+[2025-09-02 09:06:01] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:06:01] [INFO]   ✅ Registro principal 1108 actualizado
+[2025-09-02 09:06:01] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:06:02] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:06:02] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:06:02] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:06:02] [INFO] 
+==================================================
+[2025-09-02 09:06:02] [INFO] Procesando grupo 40 de 40
+[2025-09-02 09:06:02] [INFO] 
+📝 Procesando grupo con número: 942766250
+[2025-09-02 09:06:02] [INFO]   - ID principal (mantener): 1117
+[2025-09-02 09:06:02] [INFO]   - IDs a eliminar: [1121]
+[2025-09-02 09:06:02] [INFO]   - Correos consolidados: ciencias04@ware.pe, ciencias04@warem.pe, ciencias04@warem.pe
+[2025-09-02 09:06:02] [INFO]   - Eventos consolidados: [7, 22, 27, 29]
+[2025-09-02 09:06:02] [INFO]   - Confirmado: False
+[2025-09-02 09:06:02] [INFO]   - Asistencia confirmada: False
+[2025-09-02 09:06:02] [INFO]   ✅ Registro principal 1117 actualizado
+[2025-09-02 09:06:02] [INFO]   📎 Actualizando relaciones registro-eventos...
+[2025-09-02 09:06:02] [INFO]   📎 Actualizando asistencias generales...
+[2025-09-02 09:06:03] [INFO]   📎 Actualizando asistencias por sala...
+[2025-09-02 09:06:03] [INFO]   ✅ Eliminados 1 registros duplicados
+[2025-09-02 09:06:03] [INFO] 💾 Commit parcial realizado (40 grupos procesados)
+[2025-09-02 09:06:03] [INFO] 
+🔍 Validando resultados...
+[2025-09-02 09:06:03] [WARN]   ⚠️ Aún quedan 4 números duplicados
+[2025-09-02 09:06:03] [INFO]   ✅ Integridad referencial mantenida
+[2025-09-02 09:06:03] [INFO] 
+======================================================================
+[2025-09-02 09:06:03] [INFO] 📊 ESTADÍSTICAS FINALES
+[2025-09-02 09:06:03] [INFO] ======================================================================
+[2025-09-02 09:06:03] [INFO] Grupos encontrados: 40
+[2025-09-02 09:06:03] [INFO] Registros consolidados: 36
+[2025-09-02 09:06:03] [INFO] Registros eliminados: 42
+[2025-09-02 09:06:03] [INFO] Relaciones actualizadas: 100
+[2025-09-02 09:06:03] [INFO] 
+⚠️ Errores encontrados: 4
+[2025-09-02 09:06:03] [INFO]   - Grupo 966106700: 1062 (23000): Duplicate entry '105-12' for key 'expokossodo_registro_eventos.unique_registro_evento'
+[2025-09-02 09:06:03] [INFO]   - Grupo 940527945: 1062 (23000): Duplicate entry '58-6' for key 'expokossodo_registro_eventos.unique_registro_evento'
+[2025-09-02 09:06:03] [INFO]   - Grupo 950571912: 1062 (23000): Duplicate entry '194-23' for key 'expokossodo_registro_eventos.unique_registro_evento'
+[2025-09-02 09:06:03] [INFO]   - Grupo 992276307: 1062 (23000): Duplicate entry '853-2' for key 'expokossodo_registro_eventos.unique_registro_evento'
+[2025-09-02 09:06:03] [INFO] 
+📄 Log completo guardado en: consolidacion_log_20250902_090516.txt
+[2025-09-02 09:06:03] [INFO] ✅ Conexión a base de datos cerrada

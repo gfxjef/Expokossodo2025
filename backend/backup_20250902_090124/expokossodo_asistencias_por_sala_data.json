@@ -1,0 +1,97 @@
+{
+  "tabla": "expokossodo_asistencias_por_sala",
+  "fecha_backup": "2025-09-02T09:01:28.303249",
+  "registros": 9,
+  "datos": [
+    {
+      "id": 21,
+      "registro_id": 932,
+      "evento_id": 22,
+      "qr_escaneado": "ric51990360028gersim1756317144",
+      "fecha_ingreso": "2025-09-01T16:52:49",
+      "asesor_verificador": "Staff-Sala",
+      "ip_verificacion": "10.214.104.89",
+      "notas": "Agregado y registrado por Staff-Sala - Sobrecupo autorizado"
+    },
+    {
+      "id": 22,
+      "registro_id": 1074,
+      "evento_id": 22,
+      "qr_escaneado": "may51900512375metmet1756662312",
+      "fecha_ingreso": "2025-09-01T16:54:17",
+      "asesor_verificador": "Staff-Sala",
+      "ip_verificacion": "10.214.238.93",
+      "notas": "Agregado y registrado por Staff-Sala - Sobrecupo autorizado"
+    },
+    {
+      "id": 23,
+      "registro_id": 1110,
+      "evento_id": 8,
+      "qr_escaneado": "jor51968255746dirims1756749904",
+      "fecha_ingreso": "2025-09-01T16:56:09",
+      "asesor_verificador": "Staff-Sala",
+      "ip_verificacion": "10.214.3.27",
+      "notas": "Agregado y registrado por Staff-Sala - Sobrecupo autorizado"
+    },
+    {
+      "id": 24,
+      "registro_id": 1110,
+      "evento_id": 4,
+      "qr_escaneado": "jor51968255746dirims1756749904",
+      "fecha_ingreso": "2025-09-01T17:01:12",
+      "asesor_verificador": "Staff-Sala",
+      "ip_verificacion": "10.214.238.93",
+      "notas": "Agregado y registrado por Staff-Sala - Sobrecupo autorizado"
+    },
+    {
+      "id": 25,
+      "registro_id": 1110,
+      "evento_id": 1,
+      "qr_escaneado": "jor51968255746dirims1756749904",
+      "fecha_ingreso": "2025-09-01T17:22:52",
+      "asesor_verificador": "Staff-Sala",
+      "ip_verificacion": "10.214.74.253",
+      "notas": "Agregado y registrado por Staff-Sala - Sobrecupo autorizado"
+    },
+    {
+      "id": 26,
+      "registro_id": 1110,
+      "evento_id": 28,
+      "qr_escaneado": "jor51968255746dirims1756749904",
+      "fecha_ingreso": "2025-09-01T17:38:38",
+      "asesor_verificador": "Staff-Sala",
+      "ip_verificacion": "10.214.104.89",
+      "notas": "Agregado y registrado por Staff-Sala - Sobrecupo autorizado"
+    },
+    {
+      "id": 27,
+      "registro_id": 905,
+      "evento_id": 2,
+      "qr_escaneado": "alf51995087640ingcon1756252512",
+      "fecha_ingreso": "2025-09-02T00:13:06",
+      "asesor_verificador": "Staff-Sala",
+      "ip_verificacion": "10.214.104.89",
+      "notas": "Agregado y registrado por Staff-Sala - Sobrecupo autorizado"
+    },
+    {
+      "id": 28,
+      "registro_id": 1068,
+      "evento_id": 44,
+      "qr_escaneado": "hid51966003824supite1756649216",
+      "fecha_ingreso": "2025-09-02T03:13:59",
+      "asesor_verificador": "Staff-Sala",
+      "ip_verificacion": "127.0.0.1",
+      "notas": "Agregado y registrado por Staff-Sala - Sobrecupo autorizado"
+    },
+    {
+      "id": 29,
+      "registro_id": 214,
+      "evento_id": 44,
+      "qr_escaneado": "ana51930852410tecuna1756243237",
+      "fecha_ingreso": "2025-09-02T03:17:31",
+      "asesor_verificador": "Staff-Sala",
+      "ip_verificacion": "127.0.0.1",
+      "notas": "Agregado y registrado por Staff-Sala - Sobrecupo autorizado"
+    }
+  ]
+}

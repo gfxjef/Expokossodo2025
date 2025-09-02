@@ -1,0 +1,46 @@
+[2025-09-02 09:01:24] [INFO] ======================================================================
+[2025-09-02 09:01:24] [INFO] BACKUP DE BASE DE DATOS - EXPOKOSSODO 2025
+[2025-09-02 09:01:24] [INFO] ======================================================================
+[2025-09-02 09:01:25] [INFO] ✅ Conexión a base de datos establecida
+[2025-09-02 09:01:25] [INFO] 📁 Directorio de backup creado: backup_20250902_090124
+[2025-09-02 09:01:25] [INFO] 
+📊 Iniciando exportación de tablas...
+[2025-09-02 09:01:25] [INFO] 📊 Exportando tabla: expokossodo_registros
+[2025-09-02 09:01:26] [INFO]   ✅ expokossodo_registros: 1047 registros exportados (0.83 MB)
+[2025-09-02 09:01:26] [INFO] 📊 Exportando tabla: expokossodo_registro_eventos
+[2025-09-02 09:01:27] [INFO]   ✅ expokossodo_registro_eventos: 2327 registros exportados (0.39 MB)
+[2025-09-02 09:01:27] [INFO] 📊 Exportando tabla: expokossodo_eventos
+[2025-09-02 09:01:27] [ERROR] ❌ Error exportando tabla expokossodo_eventos: Object of type date is not JSON serializable
+[2025-09-02 09:01:27] [INFO] 📊 Exportando tabla: expokossodo_asistencias_generales
+[2025-09-02 09:01:27] [INFO]   ✅ expokossodo_asistencias_generales: 4 registros exportados (0.00 MB)
+[2025-09-02 09:01:28] [INFO] 📊 Exportando tabla: expokossodo_asistencias_por_sala
+[2025-09-02 09:01:28] [INFO]   ✅ expokossodo_asistencias_por_sala: 9 registros exportados (0.01 MB)
+[2025-09-02 09:01:28] [WARN] ⚠️ Tabla expokossodo_qr_registros no existe, saltando...
+[2025-09-02 09:01:28] [INFO] 📊 Exportando tabla: expokossodo_fecha_info
+[2025-09-02 09:01:28] [ERROR] ❌ Error exportando tabla expokossodo_fecha_info: Object of type date is not JSON serializable
+[2025-09-02 09:01:28] [INFO] 📊 Exportando tabla: expokossodo_marcas
+[2025-09-02 09:01:29] [INFO]   ✅ expokossodo_marcas: 13 registros exportados (0.01 MB)
+[2025-09-02 09:01:29] [WARN] ⚠️ Tabla expokossodo_asesores no existe, saltando...
+[2025-09-02 09:01:29] [WARN] ⚠️ Tabla expokossodo_asesor_marcas no existe, saltando...
+[2025-09-02 09:01:29] [WARN] ⚠️ Tabla expokossodo_leads no existe, saltando...
+[2025-09-02 09:01:29] [INFO] 📊 Exportando tabla: fb_leads
+[2025-09-02 09:01:31] [INFO]   ✅ fb_leads: 733 registros exportados (1.53 MB)
+[2025-09-02 09:01:31] [INFO] 📝 Script de restauración creado: backup_20250902_090124\restaurar_backup.py
+[2025-09-02 09:01:31] [INFO] 📄 README creado: backup_20250902_090124\README.md
+[2025-09-02 09:01:31] [INFO] 🗜️ Comprimiendo backup...
+[2025-09-02 09:01:31] [INFO] ✅ Backup comprimido: backup_20250902_090124.zip (0.44 MB)
+[2025-09-02 09:01:31] [INFO] 
+======================================================================
+[2025-09-02 09:01:31] [INFO] 📊 ESTADÍSTICAS DEL BACKUP
+[2025-09-02 09:01:31] [INFO] ======================================================================
+[2025-09-02 09:01:31] [INFO] Tablas respaldadas: 6/12
+[2025-09-02 09:01:31] [INFO] Total de registros: 4,133
+[2025-09-02 09:01:31] [INFO] Tamaño total: 2.76 MB
+[2025-09-02 09:01:31] [INFO] Directorio: C:\Users\jcamacho\Desktop\works\Python Proyects\registro_expokossodo\backend\backup_20250902_090124
+[2025-09-02 09:01:31] [INFO] 
+⚠️ Errores encontrados: 2
+[2025-09-02 09:01:31] [INFO]   - expokossodo_eventos: Object of type date is not JSON serializable
+[2025-09-02 09:01:31] [INFO]   - expokossodo_fecha_info: Object of type date is not JSON serializable
+[2025-09-02 09:01:31] [INFO] 
+📄 Log completo guardado en: backup_log_20250902_090124.txt
+[2025-09-02 09:01:31] [INFO] ✅ Conexión a base de datos cerrada
