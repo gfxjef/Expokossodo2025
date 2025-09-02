@@ -59,7 +59,7 @@ const ClientesSala = () => {
   });
   
   // Estados y refs para el scanner QR
-  const [scannerActive, setScannerActive] = useState(false); // Cámara desactivada por defecto
+  const [scannerActive, setScannerActive] = useState(true); // Cámara activada por defecto
   const [scannerLoading, setScannerLoading] = useState(false);
   const processingRef = useRef(false);
   const cooldownTimeoutRef = useRef(null);
@@ -110,6 +110,9 @@ const ClientesSala = () => {
     // Si está en modo lector físico, hacer focus en el input
     if (scannerMode === 'physical' && physicalScannerInputRef.current) {
       physicalScannerInputRef.current.focus();
+    } else if (scannerMode === 'camera') {
+      // Activar cámara automáticamente si está en modo cámara
+      setScannerActive(true);
     }
   }, []); // Array vacío = solo se ejecuta al montar
 
@@ -1168,147 +1171,40 @@ const ClientesSala = () => {
       {/* Header con estadísticas */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-blue-600 text-white p-2 rounded-lg">
-                <Activity size={24} />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-800">Sistema de Verificación</h1>
-                <p className="text-sm text-gray-500">ExpoKossodo 2025 - Entrada Principal</p>
-              </div>
+          <div className="flex items-center justify-center space-x-4">
+            {/* Toggle de modo de scanner */}
+            <div className="flex items-center space-x-2 bg-white border rounded-lg px-4 py-2">
+              <button
+                onClick={toggleScannerMode}
+                className="flex items-center space-x-2 hover:bg-gray-50 rounded px-2 py-1 transition-colors"
+              >
+                {scannerMode === 'physical' ? (
+                  <>
+                    <Keyboard size={18} className="text-blue-600" />
+                    <ToggleLeft size={24} className="text-blue-600" />
+                  </>
+                ) : (
+                  <>
+                    <Camera size={18} className="text-green-600" />
+                    <ToggleRight size={24} className="text-green-600" />
+                  </>
+                )}
+              </button>
             </div>
 
-            {/* Indicador de Scanner y Estadísticas */}
-            <div className="flex items-center space-x-6">
-              {/* Toggle de modo de scanner */}
-              <div className="flex items-center space-x-2 bg-white border rounded-lg px-4 py-2">
-                <button
-                  onClick={toggleScannerMode}
-                  className="flex items-center space-x-2 hover:bg-gray-50 rounded px-2 py-1 transition-colors"
-                >
-                  {scannerMode === 'physical' ? (
-                    <>
-                      <Keyboard size={18} className="text-blue-600" />
-                      <span className="text-sm font-medium text-gray-700">Lector Físico</span>
-                      <ToggleLeft size={24} className="text-blue-600" />
-                    </>
-                  ) : (
-                    <>
-                      <Camera size={18} className="text-green-600" />
-                      <span className="text-sm font-medium text-gray-700">Cámara</span>
-                      <ToggleRight size={24} className="text-green-600" />
-                    </>
-                  )}
-                </button>
-              </div>
+            {/* Botón de búsqueda de usuario */}
+            <button
+              onClick={() => setShowBuscarModal(true)}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+              title="Buscar usuario registrado"
+            >
+              <Search size={24} />
+            </button>
 
-              {/* Indicador de estado del scanner */}
-              <div className="flex items-center space-x-3 bg-white border rounded-lg px-4 py-2">
-                <div className="flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${
-                    scannerMode === 'physical' ? 
-                      (isPhysicalScannerReady ? 'bg-green-500 animate-pulse' : 'bg-gray-400') :
-                      (scannerActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400')
-                  }`} />
-                  {scannerMode === 'physical' ? (
-                    <>
-                      <Keyboard size={16} className={isPhysicalScannerReady ? 'text-green-600' : 'text-gray-400'} />
-                      <span className="text-sm font-medium text-gray-700">
-                        {isPhysicalScannerReady ? 'Lector Listo' : 'Lector Inactivo'}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Camera size={16} className={scannerActive ? 'text-green-600' : 'text-gray-400'} />
-                      <span className="text-sm font-medium text-gray-700">
-                        {scannerActive ? 'Cámara Activa' : 'Cámara Inactiva'}
-                      </span>
-                    </>
-                  )}
-                </div>
-                {scanCooldown && (
-                  <div className="flex items-center space-x-1">
-                    <Wifi size={14} className="text-orange-500 animate-pulse" />
-                    <span className="text-xs text-orange-600">Cooldown</span>
-                  </div>
-                )}
-                {scannerLoading && (
-                  <div className="flex items-center space-x-1">
-                    <RefreshCw size={14} className="text-blue-500 animate-spin" />
-                    <span className="text-xs text-blue-600">Procesando...</span>
-                  </div>
-                )}
-                {currentQR && (
-                  <span className="text-xs text-gray-500 font-mono">
-                    QR: {currentQR.substring(0, 8)}...
-                  </span>
-                )}
-              </div>
-
-              {/* Indicador del QR escaneado */}
-              <div className="flex items-center space-x-3 bg-white border rounded-lg px-4 py-2">
-                <div className="flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${
-                    currentQR ? 'bg-green-500' : 'bg-gray-400'
-                  }`} />
-                  {currentQR ? (
-                    <CheckCircle size={16} className="text-green-600" />
-                  ) : (
-                    <AlertCircle size={16} className="text-gray-600" />
-                  )}
-                  <span className="text-sm font-medium text-gray-700">
-                    {currentQR ? 'QR Escaneado' : 'Sin QR'}
-                  </span>
-                </div>
-                {currentQR && (
-                  <span className="text-xs text-gray-500 font-mono">
-                    {currentQR.substring(0, 8)}...
-                  </span>
-                )}
-              </div>
-
-              {/* Botón de búsqueda de usuario */}
-              <button
-                onClick={() => setShowBuscarModal(true)}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
-                title="Buscar usuario registrado"
-              >
-                <Search size={24} />
-                <span className="hidden lg:inline font-medium">Buscar Usuario</span>
-              </button>
-
-              {/* Botón de registro rápido */}
-              <button
-                onClick={() => setShowRegistroModal(true)}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
-                title="Registro rápido sin eventos"
-              >
-                <Plus size={28} className="font-bold" />
-                <span className="hidden lg:inline font-medium">Nuevo Registro</span>
-              </button>
-
-              {/* Estadísticas en tiempo real */}
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{stats.confirmados}</div>
-                <div className="text-xs text-gray-500">Confirmados</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">{stats.pendientes}</div>
-                <div className="text-xs text-gray-500">Pendientes</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{registrosCache.length}</div>
-                <div className="text-xs text-gray-500">Total en cache</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{cacheLoading ? '⏳' : '✓'}</div>
-                <div className="text-xs text-gray-500">Cache status</div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm font-medium text-gray-600">{stats.ultimaVerificacion}</div>
-                <div className="text-xs text-gray-500">Última verificación</div>
-              </div>
+            {/* Estadística del cache */}
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">{registrosCache.length}</div>
+              <div className="text-xs text-gray-500">Total en cache</div>
             </div>
           </div>
         </div>
