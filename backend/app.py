@@ -3714,6 +3714,13 @@ def verificar_acceso_sala():
         """, (data['qr_code'],))
         
         usuario = cursor.fetchone()
+        # Consumir resultados restantes después del primer fetchone
+        try:
+            while cursor.nextset():
+                pass
+        except:
+            pass
+        
         if not usuario:
             return jsonify({"error": "Usuario no encontrado"}), 404
         
@@ -3726,6 +3733,13 @@ def verificar_acceso_sala():
         """, (data['evento_id'], usuario['id']))
         
         evento = cursor.fetchone()
+        # Consumir resultados restantes después del segundo fetchone
+        try:
+            while cursor.nextset():
+                pass
+        except:
+            pass
+        
         if not evento:
             return jsonify({
                 "error": "Usuario no registrado en este evento",
@@ -3739,7 +3753,15 @@ def verificar_acceso_sala():
             WHERE registro_id = %s AND evento_id = %s
         """, (usuario['id'], data['evento_id']))
         
-        if cursor.fetchone():
+        asistencia_existente = cursor.fetchone()
+        # Consumir resultados restantes para evitar "Unread result found"
+        try:
+            while cursor.nextset():
+                pass
+        except:
+            pass
+        
+        if asistencia_existente:
             return jsonify({
                 "error": "Usuario ya registró ingreso a esta sala",
                 "usuario": usuario['nombres'],
