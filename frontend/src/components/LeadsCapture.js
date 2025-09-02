@@ -23,6 +23,8 @@ const LeadsCapture = () => {
   const isRecordingRef = useRef(false);
   const finalBoundaryRef = useRef(0);
   const recognitionRef = useRef(null);
+  const stableTextRef = useRef('');
+  const lastFinalRef = useRef('');
   const [usoTranscripcion, setUsoTranscripcion] = useState(false);
   const [historialLoading, setHistorialLoading] = useState(false);
 
@@ -40,6 +42,13 @@ const LeadsCapture = () => {
     }
   }, []);
 
+  const longestCommonPrefix = (a, b) => {
+    const len = Math.min(a.length, b.length);
+    let i = 0;
+    while (i < len && a[i] === b[i]) i++;
+    return a.slice(0, i);
+  };
+
   const initializeSpeechRecognition = () => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -55,31 +64,58 @@ const LeadsCapture = () => {
       recognition.maxAlternatives = 1;
       
       recognition.onresult = (event) => {
-        // Recolecta SOLO los 'finales' nuevos desde el límite actual
-        let newPieces = [];
-        let newBoundary = finalBoundaryRef.current;
+        // Buscar el último índice que sea final
+        let lastFinalIndex = -1;
+        for (let i = event.results.length - 1; i >= 0; i--) {
+          if (event.results[i].isFinal) { 
+            lastFinalIndex = i; 
+            break; 
+          }
+        }
+        
+        if (lastFinalIndex < 0) {
+          // Solo interim results, no procesamos nada
+          return;
+        }
 
-        for (let i = finalBoundaryRef.current; i < event.results.length; i++) {
-          const r = event.results[i];
-          if (r.isFinal) {
-            newPieces.push(r[0].transcript.trim());
-            newBoundary = i + 1; // avanzamos el límite hasta después de este final
-            console.log(`[FINAL] Índice ${i}: "${r[0].transcript.trim()}"`);
-          } else {
-            // De aquí en adelante son 'interim'; nos detenemos.
-            break;
+        const currentFinal = (event.results[lastFinalIndex][0]?.transcript || '').trim();
+        if (!currentFinal) return;
+        
+        if (currentFinal === lastFinalRef.current) {
+          // Final repetido exactamente igual; no agregamos nada
+          console.log(`[FINAL] (igual, ignorado): "${currentFinal}"`);
+          return;
+        }
+
+        // Calcula solo el sufijo nuevo respecto a lo ya consolidado
+        const prevStable = stableTextRef.current;
+        let toAppend = '';
+
+        if (currentFinal.startsWith(prevStable)) {
+          toAppend = currentFinal.slice(prevStable.length);
+        } else {
+          // Si el motor reescribió parte del texto, usa el prefijo común
+          const lcp = longestCommonPrefix(prevStable, currentFinal);
+          toAppend = currentFinal.slice(lcp.length);
+          if (lcp !== prevStable) {
+            console.log(`[LCP] detectado: "${lcp}" (prev: "${prevStable}")`);
           }
         }
 
-        if (newPieces.length) {
-          const chunk = newPieces.join(' ').replace(/\s+/g, ' ').trim();
-
-          // Sin comas automáticas. Solo espacio si ya hay texto.
-          setConsulta((prev) => (prev ? `${prev} ${chunk}`.replace(/\s+/g, ' ') : chunk));
-
-          setUsoTranscripcion(true);
-          finalBoundaryRef.current = newBoundary; // marcamos hasta dónde ya procesamos
+        toAppend = toAppend.replace(/\s+/g, ' ').trim();
+        if (toAppend) {
+          setConsulta((t) => (t ? `${t} ${toAppend}`.replace(/\s+/g, ' ') : toAppend));
+          stableTextRef.current = (prevStable + ' ' + toAppend).replace(/\s+/g, ' ').trim();
+          console.log(`[FINAL] [${lastFinalIndex}] nuevo → añade: "${toAppend}"`);
+        } else {
+          // No hay sufijo nuevo; solo actualiza el estable por si cambió mínimamente
+          stableTextRef.current = currentFinal;
+          console.log(`[FINAL] [${lastFinalIndex}] sin sufijo nuevo (solo sincroniza estable)`);
         }
+
+        setUsoTranscripcion(true);
+        lastFinalRef.current = currentFinal;
+        finalBoundaryRef.current = event.results.length;
       };
       
       recognition.onstart = () => {
@@ -103,6 +139,7 @@ const LeadsCapture = () => {
         
         if (isRecordingRef.current) {
           finalBoundaryRef.current = 0; // nuevo ciclo, nuevo límite
+          console.log('Reiniciando con boundary=0 (estable se conserva)');
           
           const restart = () => {
             try {
@@ -177,9 +214,9 @@ const LeadsCapture = () => {
     } else {
       // Iniciar grabación
       setError(null);
-      // Solo resetear el boundary al INICIAR una nueva sesión de grabación
+      // No borres el estable aquí: puede ser una reanudación
       finalBoundaryRef.current = 0;
-      console.log('Boundary reseteado para nueva grabación');
+      console.log('Boundary reseteado a 0 (estable se conserva)');
       
       try {
         recognition.start();
@@ -198,6 +235,8 @@ const LeadsCapture = () => {
   const clearConsulta = () => {
     setConsulta('');
     finalBoundaryRef.current = 0;
+    stableTextRef.current = '';
+    lastFinalRef.current = '';
     setUsoTranscripcion(false);
   };
 
@@ -353,6 +392,8 @@ const LeadsCapture = () => {
     processingRef.current = false;
     setUsoTranscripcion(false);
     finalBoundaryRef.current = 0;
+    stableTextRef.current = '';
+    lastFinalRef.current = '';
     
     if (isRecording && recognition) {
       isRecordingRef.current = false;
